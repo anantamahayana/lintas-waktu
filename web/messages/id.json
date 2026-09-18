@@ -167,7 +167,9 @@
     "theDay": "Hari itu",
     "film": "Film highlight",
     "next": "Berikutnya",
-    "playFilm": "Putar film"
+    "playFilm": "Putar film",
+    "more": "Karya lain yang mungkin kamu suka",
+    "all": "Semua karya"
   },
   "services": {
     "eyebrow": "Layanan",

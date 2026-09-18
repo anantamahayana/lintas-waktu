@@ -236,7 +236,12 @@ export function getProject(slug: string) {
   return projects.find((p) => p.slug === slug);
 }
 
-export function nextProject(slug: string) {
+/** Three related projects: same category first, then the rest, in order after the current one. */
+export function relatedProjects(slug: string, n = 3) {
   const i = projects.findIndex((p) => p.slug === slug);
-  return projects[(i + 1) % projects.length];
+  const cur = projects[i];
+  const rest = [...projects.slice(i + 1), ...projects.slice(0, i)];
+  const same = rest.filter((p) => p.category === cur?.category);
+  const other = rest.filter((p) => p.category !== cur?.category);
+  return [...same, ...other].slice(0, n);
 }

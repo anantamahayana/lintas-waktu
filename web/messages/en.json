@@ -167,7 +167,9 @@
     "theDay": "The day",
     "film": "Highlight film",
     "next": "Next",
-    "playFilm": "Play film"
+    "playFilm": "Play film",
+    "more": "More work you might like",
+    "all": "All work"
   },
   "services": {
     "eyebrow": "Services",

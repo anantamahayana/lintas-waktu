@@ -7,7 +7,7 @@ import { routing } from "@/i18n/routing";
 import { Photo } from "@/components/ui/Photo";
 import { Reveal } from "@/components/ui/Reveal";
 import { Gallery } from "@/components/work/Gallery";
-import { getProject, nextProject, projects } from "@/lib/projects";
+import { getProject, relatedProjects, projects } from "@/lib/projects";
 
 type Params = Promise<{ locale: string; slug: string }>;
 
@@ -27,7 +27,7 @@ export default async function ProjectPage({ params }: { params: Params }) {
   const p = getProject(slug);
   if (!p) notFound();
   const t = await getTranslations();
-  const next = nextProject(slug);
+  const related = relatedProjects(slug);
 
   return (
     <article>
@@ -72,18 +72,32 @@ export default async function ProjectPage({ params }: { params: Params }) {
         </section>
       )}
 
-      <Link href={`/work/${next.slug}`} className="group block border-t border-line">
-        <div className="wrap gutter py-12 lg:py-16 flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div className="flex flex-col gap-2 text-center sm:text-left">
-            <span className="t-mono text-mute">{t("project.next")}</span>
-            <span className="t-display-sm">{next.title}</span>
-            <span className="t-mono text-faint">{t(`categories.${next.category}`)} · {next.location}</span>
-          </div>
-          <div className="w-[140px] lg:w-[180px] aspect-[4/5] shrink-0">
-            <Photo seed={next.cover} sizes="180px" className="h-full w-full" />
-          </div>
+      {/* More work — three related projects to choose from */}
+      <section className="border-t border-line">
+        <div className="wrap gutter py-16 lg:py-24 flex flex-col items-center gap-10 lg:gap-14">
+          <Reveal className="flex flex-col items-center text-center gap-3">
+            <span className="t-mono text-mute">{t("project.more")}</span>
+          </Reveal>
+          <ul className="grid grid-cols-1 sm:grid-cols-3 gap-8 lg:gap-10 w-full">
+            {related.map((r, i) => (
+              <Reveal as="li" key={r.slug} delay={i * 100}>
+                <Link href={`/work/${r.slug}`} className="group flex flex-col items-center text-center gap-4">
+                  <ViewTransition name={`photo-${r.slug}`} share="morph" default="none">
+                    <div className="w-full aspect-[4/5]">
+                      <Photo seed={r.cover} alt={r.title} sizes="(min-width:640px) 30vw, 100vw" className="h-full w-full" />
+                    </div>
+                  </ViewTransition>
+                  <div className="flex flex-col gap-1">
+                    <span className="t-caption">{r.title}</span>
+                    <span className="t-mono text-mute">{t(`categories.${r.category}`)} · {r.location}</span>
+                  </div>
+                </Link>
+              </Reveal>
+            ))}
+          </ul>
+          <Reveal delay={300}><Link href="/work" className="action">{t("project.all")}</Link></Reveal>
         </div>
-      </Link>
+      </section>
     </article>
   );
 }
