@@ -35,10 +35,26 @@
       "line1": "Not packages. Not deliverables.",
       "line2": "Days, kept with care.",
       "items": {
-        "wedding": { "title": "Wedding", "desc": "Full-day photo, film, or both. Intimate ceremonies, elopements and receptions across Bali.", "from": "From IDR 12M · USD 750" },
-        "prewedding": { "title": "Pre-wedding", "desc": "A slow session in the place you chose Bali for — cliffs, rice terraces, or the quiet beach at dawn.", "from": "From IDR 4.5M · USD 280" },
-        "event": { "title": "Event", "desc": "Corporate gatherings, community celebrations, launches. Documented, not staged.", "from": "From IDR 3M · USD 190" },
-        "personal": { "title": "Personal", "desc": "Personal branding, graduation, family portraits. One hour, one location, you.", "from": "From IDR 1.5M · USD 95" }
+        "wedding": {
+          "title": "Wedding",
+          "desc": "Full-day photo, film, or both. Intimate ceremonies, elopements and receptions across Bali.",
+          "from": "From IDR 12M · USD 750"
+        },
+        "prewedding": {
+          "title": "Pre-wedding",
+          "desc": "A slow session in the place you chose Bali for — cliffs, rice terraces, or the quiet beach at dawn.",
+          "from": "From IDR 4.5M · USD 280"
+        },
+        "event": {
+          "title": "Event",
+          "desc": "Corporate gatherings, community celebrations, launches. Documented, not staged.",
+          "from": "From IDR 3M · USD 190"
+        },
+        "personal": {
+          "title": "Personal",
+          "desc": "Personal branding, graduation, family portraits. One hour, one location, you.",
+          "from": "From IDR 1.5M · USD 95"
+        }
       }
     },
     "behind": {
@@ -52,10 +68,22 @@
       "line1": "Nothing here is rushed.",
       "line2": "Including the photographs.",
       "steps": [
-        { "title": "Conversation", "desc": "We talk about your day, not a price list." },
-        { "title": "The day", "desc": "Present, quiet, never in the way." },
-        { "title": "Choose your photos", "desc": "A private online gallery. Pick what you love, leave a note." },
-        { "title": "Delivery", "desc": "Edited, printed if you like, kept for years." }
+        {
+          "title": "Conversation",
+          "desc": "We talk about your day, not a price list."
+        },
+        {
+          "title": "The day",
+          "desc": "Present, quiet, never in the way."
+        },
+        {
+          "title": "Choose your photos",
+          "desc": "A private online gallery. Pick what you love, leave a note."
+        },
+        {
+          "title": "Delivery",
+          "desc": "Edited, printed if you like, kept for years."
+        }
       ]
     },
     "testimonial": {
@@ -83,5 +111,27 @@
     "reach": "Reach",
     "privacy": "Privacy",
     "rights": "© {year} Lintas Waktu"
+  },
+  "categories": {
+    "all": "All",
+    "wedding": "Wedding",
+    "prewedding": "Pre-wedding",
+    "event": "Event",
+    "personal": "Personal"
+  },
+  "work": {
+    "eyebrow": "Selected work · 2024 — 2026",
+    "line1": "Days worth",
+    "line2": "returning to.",
+    "lead": "A selection of weddings, sessions and events across Bali. Every set is edited by hand; nothing here is a preset.",
+    "empty": "Nothing in this category yet.",
+    "filterLabel": "Filter by category"
+  },
+  "project": {
+    "back": "All work",
+    "theDay": "The day",
+    "film": "Highlight film",
+    "next": "Next",
+    "playFilm": "Play film"
   }
 }

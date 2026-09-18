@@ -35,10 +35,26 @@
       "line1": "Bukan paket. Bukan deliverable.",
       "line2": "Hari-hari, disimpan dengan hati-hati.",
       "items": {
-        "wedding": { "title": "Wedding", "desc": "Foto, film, atau keduanya sepanjang hari. Upacara intim, elopement, dan resepsi di seluruh Bali.", "from": "Mulai IDR 12 jt · USD 750" },
-        "prewedding": { "title": "Pre-wedding", "desc": "Sesi santai di tempat yang membuatmu memilih Bali — tebing, sawah, atau pantai sepi saat fajar.", "from": "Mulai IDR 4,5 jt · USD 280" },
-        "event": { "title": "Acara", "desc": "Acara perusahaan, perayaan komunitas, peluncuran. Didokumentasikan, bukan diatur.", "from": "Mulai IDR 3 jt · USD 190" },
-        "personal": { "title": "Personal", "desc": "Personal branding, wisuda, potret keluarga. Satu jam, satu lokasi, kamu.", "from": "Mulai IDR 1,5 jt · USD 95" }
+        "wedding": {
+          "title": "Wedding",
+          "desc": "Foto, film, atau keduanya sepanjang hari. Upacara intim, elopement, dan resepsi di seluruh Bali.",
+          "from": "Mulai IDR 12 jt · USD 750"
+        },
+        "prewedding": {
+          "title": "Pre-wedding",
+          "desc": "Sesi santai di tempat yang membuatmu memilih Bali — tebing, sawah, atau pantai sepi saat fajar.",
+          "from": "Mulai IDR 4,5 jt · USD 280"
+        },
+        "event": {
+          "title": "Acara",
+          "desc": "Acara perusahaan, perayaan komunitas, peluncuran. Didokumentasikan, bukan diatur.",
+          "from": "Mulai IDR 3 jt · USD 190"
+        },
+        "personal": {
+          "title": "Personal",
+          "desc": "Personal branding, wisuda, potret keluarga. Satu jam, satu lokasi, kamu.",
+          "from": "Mulai IDR 1,5 jt · USD 95"
+        }
       }
     },
     "behind": {
@@ -52,10 +68,22 @@
       "line1": "Tidak ada yang terburu-buru di sini.",
       "line2": "Termasuk fotonya.",
       "steps": [
-        { "title": "Obrolan", "desc": "Kita bicara tentang harimu, bukan daftar harga." },
-        { "title": "Hari-H", "desc": "Hadir, tenang, tidak pernah menghalangi." },
-        { "title": "Pilih fotomu", "desc": "Galeri online privat. Pilih yang kamu suka, tinggalkan catatan." },
-        { "title": "Pengiriman", "desc": "Diedit, dicetak jika mau, disimpan bertahun-tahun." }
+        {
+          "title": "Obrolan",
+          "desc": "Kita bicara tentang harimu, bukan daftar harga."
+        },
+        {
+          "title": "Hari-H",
+          "desc": "Hadir, tenang, tidak pernah menghalangi."
+        },
+        {
+          "title": "Pilih fotomu",
+          "desc": "Galeri online privat. Pilih yang kamu suka, tinggalkan catatan."
+        },
+        {
+          "title": "Pengiriman",
+          "desc": "Diedit, dicetak jika mau, disimpan bertahun-tahun."
+        }
       ]
     },
     "testimonial": {
@@ -83,5 +111,27 @@
     "reach": "Hubungi",
     "privacy": "Privasi",
     "rights": "© {year} Lintas Waktu"
+  },
+  "categories": {
+    "all": "Semua",
+    "wedding": "Wedding",
+    "prewedding": "Pre-wedding",
+    "event": "Acara",
+    "personal": "Personal"
+  },
+  "work": {
+    "eyebrow": "Karya pilihan · 2024 — 2026",
+    "line1": "Hari-hari yang layak",
+    "line2": "dikunjungi lagi.",
+    "lead": "Pilihan wedding, sesi, dan acara di seluruh Bali. Setiap set diedit satu per satu; tidak ada preset di sini.",
+    "empty": "Belum ada karya di kategori ini.",
+    "filterLabel": "Saring menurut kategori"
+  },
+  "project": {
+    "back": "Semua karya",
+    "theDay": "Hari itu",
+    "film": "Film highlight",
+    "next": "Berikutnya",
+    "playFilm": "Putar film"
   }
 }

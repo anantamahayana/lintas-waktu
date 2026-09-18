@@ -37,10 +37,23 @@ const photos = {
   cta: U("1621311616895-ea7369886a29"),
 } as const;
 
-const fallback = U("1693576588167-2e7148490dc5");
+// Pool for seeds not listed above (project galleries etc.) — picked by hash
+const pool = [
+  "1693576588167-2e7148490dc5", "1693576587780-31fa6109191a", "1611328899715-96406c154508",
+  "1621311616895-ea7369886a29", "1558516771-69938e11c13a", "1656558136312-71b8f36bea25",
+  "1544091441-9cca7fbe8923", "1561834637-5ab8857d190d", "1542897644-e04428948020",
+  "1678895575027-42c28b790963", "1584365280669-74efeef30305", "1575573334553-4d5633270377",
+  "1700751474902-067ef1de7cab", "1625759190925-a67568fd123b", "1613871352838-08d682c95aae",
+].map(U);
 
-/** Returns a sized Unsplash URL for the slot; unknown seeds get the fallback. */
+function hash(s: string) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+/** Returns a sized Unsplash URL for the slot; unknown seeds pick from the pool. */
 export function dummyPhoto(seed: string, width = 1600): string {
-  const base = (photos as Record<string, string>)[seed] ?? fallback;
+  const base = (photos as Record<string, string>)[seed] ?? pool[hash(seed) % pool.length];
   return `${base}?w=${width}&q=80&auto=format&fit=crop`;
 }

@@ -7,6 +7,7 @@ import { setRequestLocale } from "next-intl/server";
 import { routing } from "@/i18n/routing";
 import { SiteNav } from "@/components/site/SiteNav";
 import { SiteFooter } from "@/components/site/SiteFooter";
+import { REVEAL_SCRIPT } from "@/components/ui/Reveal";
 import "../globals.css";
 
 const inter = Inter({
@@ -52,8 +53,8 @@ export default async function LocaleLayout({
     // class before React hydrates, which is intentional.
     <html lang={locale} className={`${inter.variable} ${instrumentSerif.variable}`} suppressHydrationWarning>
       <body className="min-h-dvh p-3 lg:p-6">
-        {/* Marks JS availability before first paint so .reveal can hide safely (no-JS stays visible) */}
-        <Script id="js-flag" strategy="beforeInteractive">{"document.documentElement.classList.add('js')"}</Script>
+        {/* Pre-hydration: js flag + scroll-reveal observer (see components/ui/Reveal) */}
+        <Script id="reveal" strategy="beforeInteractive">{REVEAL_SCRIPT}</Script>
         <NextIntlClientProvider>
           <div className="paper min-h-[calc(100dvh-1.5rem)] lg:min-h-[calc(100dvh-3rem)] flex flex-col">
             <SiteNav />
