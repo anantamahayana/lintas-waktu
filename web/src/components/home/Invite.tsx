@@ -3,9 +3,10 @@ import { Link } from "@/i18n/navigation";
 import { Photo } from "@/components/ui/Photo";
 import { Reveal } from "@/components/ui/Reveal";
 import { waLink } from "@/lib/site";
+import type { SiteInfo } from "@/lib/content";
 
 /** Closing invitation: a wide photograph, then the ask, centred. */
-export function Invite() {
+export function Invite({ site }: { site: SiteInfo }) {
   const t = useTranslations("home.invite");
   const c = useTranslations("cta");
   return (
@@ -19,7 +20,7 @@ export function Invite() {
         <Reveal delay={160}><p className="t-body max-w-[52ch]">{t("body")}</p></Reveal>
         <Reveal delay={240} className="flex flex-col sm:flex-row items-center gap-3 pt-2">
           <Link href="/contact" className="ink-btn">{t("cta")}</Link>
-          <a href={waLink()} className="action">{c("whatsapp")}</a>
+          <a href={waLink(undefined, site.whatsapp.number)} className="action">{c("whatsapp")}</a>
         </Reveal>
       </div>
     </section>

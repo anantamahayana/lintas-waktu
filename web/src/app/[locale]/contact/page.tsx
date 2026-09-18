@@ -4,7 +4,8 @@ import { pageMeta } from "@/lib/seo";
 import { Photo } from "@/components/ui/Photo";
 import { Reveal } from "@/components/ui/Reveal";
 import { ContactForm } from "@/components/contact/ContactForm";
-import { site, waLink } from "@/lib/site";
+import { waLink } from "@/lib/site";
+import { getSite } from "@/lib/content";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -22,9 +23,10 @@ export default async function ContactPage({
   const { kind } = await searchParams;
   setRequestLocale(locale);
   const t = await getTranslations("contact");
+  const site = await getSite();
 
   const channels = [
-    { k: "whatsapp", v: site.whatsapp.display, href: waLink() },
+    { k: "whatsapp", v: site.whatsapp.display, href: waLink(undefined, site.whatsapp.number) },
     { k: "email", v: site.email, href: `mailto:${site.email}` },
     { k: "instagram", v: `@${site.instagram}`, href: `https://instagram.com/${site.instagram}` },
   ] as const;
@@ -51,7 +53,7 @@ export default async function ContactPage({
           <Photo seed="contact-1" sizes="33vw" className="h-full w-full" />
         </Reveal>
         <Reveal delay={100} className="relative lg:col-span-7 lg:col-start-6 border border-line p-6 sm:p-8 lg:p-10">
-          <ContactForm initialKind={kind} />
+          <ContactForm initialKind={kind} whatsapp={site.whatsapp.number} />
         </Reveal>
       </section>
     </div>

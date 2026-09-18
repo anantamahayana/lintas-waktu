@@ -43,6 +43,25 @@ export async function POST(req: Request) {
 
   const payload = { ...body, receivedAt: new Date().toISOString() };
 
+  // 1) the backend, when configured (stores it for /admin/inquiries)
+  const api = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL;
+  if (api) {
+    try {
+      const res = await fetch(`${api}/api/public/inquiries`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (res.status === 429) return NextResponse.json({ ok: false, error: "rate_limited" }, { status: 429 });
+      if (!res.ok) throw new Error(`api ${res.status}`);
+      return NextResponse.json({ ok: true });
+    } catch (e) {
+      console.error("[inquiry] api forward failed", e);
+      // fall through to webhook / log so the message is never silently lost
+    }
+  }
+
+  // 2) optional webhook
   const hook = process.env.INQUIRY_WEBHOOK_URL;
   if (hook) {
     try {

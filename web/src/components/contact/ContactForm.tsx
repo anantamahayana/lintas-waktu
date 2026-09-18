@@ -14,7 +14,7 @@ type Values = {
   date: string; location: string; budget: string; message: string; website: string;
 };
 
-export function ContactForm({ initialKind = "" }: { initialKind?: string }) {
+export function ContactForm({ initialKind = "", whatsapp }: { initialKind?: string; whatsapp?: string }) {
   const t = useTranslations("contact.form");
   const locale = useLocale();
   const [v, setV] = useState<Values>({
@@ -56,7 +56,7 @@ export function ContactForm({ initialKind = "" }: { initialKind?: string }) {
   }
 
   if (status === "sent") {
-    const wa = waLink(`Hi Lintas Waktu — ${v.name} here. I just sent an inquiry about a ${v.kind} (${v.date || "date TBC"}).`);
+    const wa = waLink(`Hi Lintas Waktu — ${v.name} here. I just sent an inquiry about a ${v.kind} (${v.date || "date TBC"}).`, whatsapp);
     return (
       <div className="flex flex-col gap-6 py-6">
         <p className="t-statement max-w-[24ch]">{t("sentTitle", { name: v.name.split(" ")[0] })}</p>

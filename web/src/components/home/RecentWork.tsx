@@ -3,10 +3,10 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { Photo } from "@/components/ui/Photo";
 import { Reveal } from "@/components/ui/Reveal";
-import type { Project } from "@/lib/projects";
+import type { SiteProject } from "@/lib/content";
 
 /** Three portraits, titled; each morphs into its project page. */
-export function RecentWork({ projects }: { projects: Project[] }) {
+export function RecentWork({ projects }: { projects: SiteProject[] }) {
   const t = useTranslations();
   return (
     <section className="wrap gutter py-20 lg:py-28 flex flex-col items-center gap-12 lg:gap-16">
@@ -21,7 +21,7 @@ export function RecentWork({ projects }: { projects: Project[] }) {
             <Link href={`/work/${p.slug}`} className="group flex flex-col gap-4">
               <ViewTransition name={`photo-${p.slug}`} share="morph" default="none">
                 <div className="aspect-[4/5]">
-                  <Photo seed={p.cover} alt={p.title} sizes="(min-width:640px) 30vw, 100vw" className="h-full w-full" />
+                  <Photo src={p.coverSrc} seed={p.cover} alt={p.title} sizes="(min-width:640px) 30vw, 100vw" className="h-full w-full" />
                 </div>
               </ViewTransition>
               <div className="flex flex-col gap-1">

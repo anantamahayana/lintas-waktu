@@ -9,35 +9,40 @@ import { routing } from "@/i18n/routing";
 import { Photo } from "@/components/ui/Photo";
 import { Reveal } from "@/components/ui/Reveal";
 import { Gallery } from "@/components/work/Gallery";
-import { getProject, relatedProjects, projects } from "@/lib/projects";
+import { projects as placeholders } from "@/lib/projects";
+import { getProject, getProjects, related } from "@/lib/content";
 
 type Params = Promise<{ locale: string; slug: string }>;
 
 export function generateStaticParams() {
-  return routing.locales.flatMap((locale) => projects.map((p) => ({ locale, slug: p.slug })));
+  // Placeholder slugs are pre-rendered; real projects render on demand
+  return routing.locales.flatMap((locale) => placeholders.map((p) => ({ locale, slug: p.slug })));
 }
+
+export const dynamicParams = true;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { locale, slug } = await params;
-  const p = getProject(slug);
+  const p = await getProject(slug, locale);
   if (!p) return {};
-  return pageMeta(locale, `/work/${slug}`, { title: p.title, description: p.pull, image: dummyPhoto(p.cover, 1200) });
+  return pageMeta(locale, `/work/${slug}`, { title: p.title, description: p.pull, image: p.coverSrc ?? dummyPhoto(p.cover, 1200) });
 }
 
 export default async function ProjectPage({ params }: { params: Params }) {
   const { locale, slug } = await params;
   setRequestLocale(locale);
-  const p = getProject(slug);
+  const p = await getProject(slug, locale);
   if (!p) notFound();
   const t = await getTranslations();
-  const related = relatedProjects(slug);
+  const all = await getProjects(locale);
+  const relatedProjects = related(all.some((x) => x.slug === slug) ? all : [p, ...all], slug);
 
   return (
     <article>
       {/* Hero — the morph target */}
       <ViewTransition name={`photo-${p.slug}`} share="morph" default="none">
         <div className="h-[70vh] lg:h-[84vh] w-full">
-          <Photo seed={p.cover} alt={p.title} priority sizes="100vw" className="h-full w-full" />
+          <Photo src={p.coverSrc} seed={p.cover} alt={p.title} priority sizes="100vw" className="h-full w-full" />
         </div>
       </ViewTransition>
 
@@ -55,7 +60,7 @@ export default async function ProjectPage({ params }: { params: Params }) {
         </Reveal>
       </header>
 
-      <Gallery seeds={p.gallery} title={p.title} />
+      <Gallery seeds={p.gallery} srcs={p.gallerySrcs} title={p.title} />
 
       <section className="wrap gutter py-16 lg:py-24 flex flex-col items-center text-center gap-5">
         <Reveal><span className="t-mono text-mute">{t("project.theDay")}</span></Reveal>
@@ -82,12 +87,12 @@ export default async function ProjectPage({ params }: { params: Params }) {
             <span className="t-mono text-mute">{t("project.more")}</span>
           </Reveal>
           <ul className="grid grid-cols-1 sm:grid-cols-3 gap-8 lg:gap-10 w-full">
-            {related.map((r, i) => (
+            {relatedProjects.map((r, i) => (
               <Reveal as="li" key={r.slug} delay={i * 100}>
                 <Link href={`/work/${r.slug}`} className="group flex flex-col items-center text-center gap-4">
                   <ViewTransition name={`photo-${r.slug}`} share="morph" default="none">
                     <div className="w-full aspect-[4/5]">
-                      <Photo seed={r.cover} alt={r.title} sizes="(min-width:640px) 30vw, 100vw" className="h-full w-full" />
+                      <Photo src={r.coverSrc} seed={r.cover} alt={r.title} sizes="(min-width:640px) 30vw, 100vw" className="h-full w-full" />
                     </div>
                   </ViewTransition>
                   <div className="flex flex-col gap-1">

@@ -1,10 +1,12 @@
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { site, waLink } from "@/lib/site";
+import { waLink } from "@/lib/site";
+import { getSite } from "@/lib/content";
 
 /** Centred, symmetrical, like the end of a printed programme. */
-export function SiteFooter() {
-  const t = useTranslations();
+export async function SiteFooter() {
+  const t = await getTranslations();
+  const site = await getSite();
   const links = [["work", "/work"], ["services", "/services"], ["about", "/about"], ["contact", "/contact"]] as const;
   return (
     <footer className="border-t border-line">
@@ -19,7 +21,7 @@ export function SiteFooter() {
           ))}
         </nav>
         <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 t-small text-mute">
-          <a className="link" href={waLink()}>WhatsApp {site.whatsapp.display}</a>
+          <a className="link" href={waLink(undefined, site.whatsapp.number)}>WhatsApp {site.whatsapp.display}</a>
           <a className="link" href={`mailto:${site.email}`}>{site.email}</a>
           <a className="link" href={`https://instagram.com/${site.instagram}`}>@{site.instagram}</a>
         </div>

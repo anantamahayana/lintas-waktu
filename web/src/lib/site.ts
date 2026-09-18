@@ -14,7 +14,7 @@ export const site = {
 } as const;
 
 /** wa.me link with an optional pre-filled message */
-export function waLink(text?: string) {
-  const base = `https://wa.me/${site.whatsapp.number}`;
+export function waLink(text?: string, number: string = site.whatsapp.number) {
+  const base = `https://wa.me/${number}`;
   return text ? `${base}?text=${encodeURIComponent(text)}` : base;
 }

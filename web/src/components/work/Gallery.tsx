@@ -10,7 +10,7 @@ import { Reveal } from "@/components/ui/Reveal";
  * lights off — a full-screen darkroom viewer with keyboard/swipe nav.
  * The viewer is plain CSS transitions; images stay next/image.
  */
-export function Gallery({ seeds, title }: { seeds: string[]; title: string }) {
+export function Gallery({ seeds, srcs, title }: { seeds: string[]; srcs?: string[]; title: string }) {
   const [open, setOpen] = useState<number | null>(null);
   const [dragX, setDragX] = useState<number | null>(null);
 
@@ -51,7 +51,7 @@ export function Gallery({ seeds, title }: { seeds: string[]; title: string }) {
                   aria-label={`${title} — ${idx + 1}/${seeds.length}`}
                   className={clsx("block w-full text-left cursor-zoom-in", row.length === 1 ? "aspect-[3/2]" : "aspect-[4/5]")}
                 >
-                  <Photo seed={seeds[idx]} sizes={row.length === 1 ? "100vw" : row.length === 2 ? "50vw" : "(min-width:1024px) 33vw, 50vw"} className="h-full w-full" />
+                  <Photo src={srcs?.[idx]} seed={seeds[idx]} sizes={row.length === 1 ? "100vw" : row.length === 2 ? "50vw" : "(min-width:1024px) 33vw, 50vw"} className="h-full w-full" />
                 </button>
               </Reveal>
             ))}
@@ -83,7 +83,7 @@ export function Gallery({ seeds, title }: { seeds: string[]; title: string }) {
         </div>
         <div className="relative flex-1 min-h-0 gutter pb-6 select-none">
           {open !== null && (
-            <Photo key={seeds[open]} seed={seeds[open]} sizes="100vw" className="h-full w-full !overflow-visible bg-transparent [&_img]:!object-contain" />
+            <Photo key={seeds[open]} src={srcs?.[open]} seed={seeds[open]} sizes="100vw" className="h-full w-full !overflow-visible bg-transparent [&_img]:!object-contain" />
           )}
           <button type="button" aria-label="Previous" onClick={() => step(-1)} className="absolute inset-y-0 left-0 w-1/3 cursor-w-resize" />
           <button type="button" aria-label="Next" onClick={() => step(1)} className="absolute inset-y-0 right-0 w-1/3 cursor-e-resize" />

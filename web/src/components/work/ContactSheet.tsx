@@ -6,10 +6,11 @@ import clsx from "clsx";
 import { Link } from "@/i18n/navigation";
 import { Photo } from "@/components/ui/Photo";
 import { Reveal } from "@/components/ui/Reveal";
-import { categories, type Category, type Project } from "@/lib/projects";
+import { categories, type Category } from "@/lib/projects";
+import type { SiteProject } from "@/lib/content";
 
 /** Portfolio: quiet text filters, three portrait columns, serif captions. */
-export function ContactSheet({ projects }: { projects: Project[] }) {
+export function ContactSheet({ projects }: { projects: SiteProject[] }) {
   const t = useTranslations();
   const [cat, setCat] = useState<Category | "all">("all");
   const shown = useMemo(() => (cat === "all" ? projects : projects.filter((p) => p.category === cat)), [cat, projects]);
@@ -36,7 +37,7 @@ export function ContactSheet({ projects }: { projects: Project[] }) {
             <Link href={`/work/${p.slug}`} className="group flex flex-col items-center text-center gap-4">
               <ViewTransition name={`photo-${p.slug}`} share="morph" default="none">
                 <div className="w-full aspect-[4/5]">
-                  <Photo seed={p.cover} alt={p.title} sizes="(min-width:1024px) 33vw, (min-width:640px) 50vw, 100vw" className="h-full w-full" />
+                  <Photo src={p.coverSrc} seed={p.cover} alt={p.title} sizes="(min-width:1024px) 33vw, (min-width:640px) 50vw, 100vw" className="h-full w-full" />
                 </div>
               </ViewTransition>
               <div className="flex flex-col gap-1">
