@@ -1,12 +1,13 @@
 import Image from "next/image";
 import clsx from "clsx";
+import { dummyPhoto } from "@/lib/dummy-photos";
 
 /**
  * Photograph slot.
  *
  * `src` — real image URL (later supplied by the admin / CMS).
- * Without `src` it shows a deterministic dummy photo from picsum.photos,
- * keyed by `seed`, so the same slot always shows the same picture.
+ * Without `src` it shows a context-appropriate dummy photo (see
+ * lib/dummy-photos.ts) keyed by `seed`, so each slot is stable.
  * Rendered through next/image (fill) so AVIF/WebP, sizing and lazy-loading
  * work now and don't change when real photos arrive.
  */
@@ -31,7 +32,7 @@ export function Photo({
   sizes?: string;
   priority?: boolean;
 }) {
-  const url = src ?? `https://picsum.photos/seed/${encodeURIComponent(seed)}/1200/1500`;
+  const url = src ?? dummyPhoto(seed);
   return (
     <div
       className={clsx("relative overflow-hidden photo-hover bg-paper-deep", rounded, className)}

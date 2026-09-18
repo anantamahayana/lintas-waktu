@@ -7,8 +7,8 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
     remotePatterns: [
-      // Temporary dummy photos until real ones are uploaded via the admin
-      { protocol: "https", hostname: "picsum.photos" },
+      // Temporary dummy photos (lib/dummy-photos.ts) until real ones are uploaded via the admin
+      { protocol: "https", hostname: "images.unsplash.com" },
     ],
   },
 };
