@@ -18,3 +18,9 @@ Thumbs.db
 .vscode/
 # claude local
 .claude/settings.local.json
+# api
+api/.venv/
+api/cache/
+api/uploads/
+api/backups/
+api/service_account.json
