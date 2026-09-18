@@ -5,6 +5,7 @@ import Script from "next/script";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { setRequestLocale } from "next-intl/server";
 import { routing } from "@/i18n/routing";
+import { SITE_URL } from "@/lib/seo";
 import { SiteNav } from "@/components/site/SiteNav";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { REVEAL_SCRIPT } from "@/components/ui/Reveal";
@@ -26,6 +27,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "Lintas Waktu — Wedding & Film Photographer, Bali",
     template: "%s — Lintas Waktu",

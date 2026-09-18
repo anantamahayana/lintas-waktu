@@ -345,7 +345,31 @@
         "b3": "IDR 15–30 jt / USD 950–1,9 rb",
         "b4": "Di atas IDR 30 jt / USD 1,9 rb",
         "b5": "Kita bicarakan"
-      }
+      },
+      "ph": {
+        "name": "Ayu Lestari",
+        "partner": "Marco Rossi",
+        "email": "kamu@contoh.com",
+        "based": "Jakarta, Indonesia",
+        "date": "Juni 2027",
+        "location": "Uluwatu, atau belum tahu"
+      },
+      "errorGeneric": "Terjadi kesalahan — coba lewat WhatsApp atau email."
     }
+  },
+  "notFound": {
+    "eyebrow": "404 · Halaman tidak ditemukan",
+    "title": "Momen ini sudah berlalu. <em>Halamannya tidak ada.</em>",
+    "body": "Tautannya mungkin lama, atau galeri yang dituju sudah kedaluwarsa. Kalau kamu dikirimi tautan galeri, minta yang baru kepada kami.",
+    "home": "Kembali ke beranda",
+    "whatsapp": "WhatsApp kami"
+  },
+  "meta": {
+    "title": "Lintas Waktu — Fotografer Wedding & Film, Bali",
+    "description": "Fotografi & film wedding, pre-wedding, acara, dan personal independen di Bali. Dipotret pelan, diedit dengan tangan, diserahkan lewat galeri privat.",
+    "work": "Portofolio wedding, pre-wedding, acara, dan sesi personal di seluruh Bali.",
+    "services": "Fotografi & film wedding, pre-wedding, acara, dan personal di Bali — cakupan, paket, dan jawaban.",
+    "about": "Tentang Lintas Waktu — fotografer & pembuat film independen berbasis di Bali.",
+    "contact": "Ceritakan tentang harimu. WhatsApp, email, atau kirim pertanyaan."
   }
 }

@@ -1,8 +1,9 @@
 # Lintas Waktu — Brand & Design System
 
-Versi 0.1 · 18 September 2026 · Sumber kebenaran: file Figma [PROJECT LTS-WKT](https://www.figma.com/design/EvV2Sx1fGok8wpLDXQ9mPh/PROJECT-LTS-WKT), page *Lintas Waktu — Website*
+Versi 1.0 · 19 September 2026 · Arah: **Classic editorial** (arah ketiga, dipilih setelah dua prototipe)
+Sumber kebenaran: **kode di `web/`** (`src/app/globals.css`, komponen). File Figma masih menggambarkan arah pertama dan **belum diperbarui** — jangan dijadikan acuan sampai disinkronkan.
 
-Dokumen ini merangkum keputusan desain yang ada di Figma agar (1) kode memakai nama token yang sama persis, dan (2) saat palet/logo brand final tersedia, jelas apa yang diganti di mana.
+> Riwayat arah: (1) krem/serif/kartu — `c46f177`; (2) "light table" putih + garis waktu — `fb8c95f`; (3) classic editorial — `494d794` dan seterusnya. Fondasi teknis sama untuk ketiganya.
 
 ---
 
@@ -22,104 +23,69 @@ Dokumen ini merangkum keputusan desain yang ada di Figma agar (1) kode memakai n
 
 ---
 
-## 2. Warna — koleksi Figma `LW / Color`
+## 2. Warna — `@theme` di `web/src/app/globals.css`
 
-Semua fill, stroke, dan teks di Figma terikat ke token ini. **Ganti nilai token → seluruh desain ikut.** Nama token di kode (Tailwind/CSS) harus sama.
+Sengaja **tanpa warna aksen**. Warna datang dari foto.
 
 | Token | Hex | Dipakai untuk |
 |---|---|---|
-| `bg/canvas` | `#C9CAB9` | Latar di luar "kartu kertas" (sage abu) |
-| `bg/paper` | `#F6F3EB` | Latar utama halaman, kartu |
-| `bg/paper-deep` | `#EDE9DD` | Section bergantian, kartu admin, panel form |
-| `bg/green` | `#2F4A3A` | Strip gelap (Services, Values), video frame, hover tombol Ink |
-| `bg/green-deep` | `#22362B` | Band judul di atas strip hijau |
-| `bg/highlight` | `#DCD9C6` | Latar frasa italic di headline, ikon panduan |
-| `text/ink` | `#1C1B18` | Teks utama, tombol primer, layar gelap (intro, menu mobile, bar pilihan) |
-| `text/mute` | `#6F6D64` | Teks sekunder, eyebrow, label |
-| `text/faint` | `#A3A196` | Placeholder, copyright, teks tersier |
-| `text/on-dark` | `#F6F3EB` | Teks di atas ink/green |
-| `text/on-dark-mute` | `#B9C4B8` | Teks sekunder di atas ink/green |
-| `line/default` | `#DAD6C8` | Garis pemisah, border tombol ghost, underline field |
-| `line/on-dark` | `#4A6455` | Garis pemisah di atas green |
-| `accent/olive` | `#7C8A5A` | Status "deadline soon" / "replied" di admin |
-| `accent/gold` | `#C9A84C` | **Hanya di galeri klien & admin proofing**: state terpilih, progress bar, tombol Send, status "choosing" |
+| `white` | `#FBFAF7` | Latar halaman (putih pecah, bukan krem) |
+| `ink` | `#1F1E1C` | Teks utama, tombol isi |
+| `mute` | `#77756F` | Body text, label |
+| `faint` | `#AEACA5` | Placeholder, teks tersier, tautan nonaktif |
+| `line` | `#E6E4DE` | Garis tipis: pemisah section, bingkai field/form, kolom paket |
+| `dark` | `#2A2926` | **Satu** section gelap hangat per halaman (Behind the camera, Values), lightbox, blok film |
+| `on-dark` / `on-dark-mute` | `#F3F1EC` / `#B9B6AE` | Teks di atas `dark` |
+| `error` | `#A3402F` | Hanya validasi form |
 
-Di luar token, satu warna khusus: **error** `#A3402F` (merah bata redup) — untuk pesan validasi form dan toast error saja. Sengaja tidak dimasukkan ke palet brand.
-
-Placeholder foto memakai gradasi `#8E9A7A → #4F6250`; ini bukan warna brand dan hilang saat foto asli masuk.
-
-### Saat palet final tersedia
-Yang paling mungkin berubah: `bg/canvas`, `bg/green`, `bg/green-deep`, `accent/gold`. Yang sebaiknya dipertahankan mendekati sekarang: `bg/paper` dan `text/ink` — kontras dan nuansa "kertas" adalah inti dari tampilan editorial ini.
+Nav saat scroll memakai kelas `.glass`: `white` 72% + `backdrop-filter: blur(18px) saturate(140%)`.
 
 ---
 
-## 3. Tipografi — text style Figma
+## 3. Tipografi
 
-| Keluarga | Font | Peran |
-|---|---|---|
-| Display | **Instrument Serif** Regular + Italic | Headline, wordmark, angka besar (counter, statistik), kutipan |
-| Body | **Inter** Regular / Medium / Semi Bold | Paragraf, label, tombol, navigasi |
-
-Keduanya Google Fonts (gratis). Kandidat pengganti display bila brand final butuh karakter lain: *Fraunces*, *Cormorant Garamond*, *Newsreader* — semua tersedia di Figma & Google Fonts, cukup ganti font family di text style.
-
-| Style | Desktop | Mobile (`· M`) | Catatan |
+| Peran | Font | Kelas | Ukuran |
 |---|---|---|---|
-| Display/Hero | 88 / 0.98 / −2 | 40 / 1.0 / −1 | Hero, CTA penutup, 404 |
-| Display/H2 | 56 / 1.05 / −1 | 34 / 1.08 / −0.5 | Judul section |
-| Display/H3 | 32 / 1.15 / −0.5 | 24 / 1.2 / 0 | Judul kartu, FAQ, judul karya |
-| Display/Wordmark | 24 | — | "Lintas Waktu" di nav/footer |
-| Body/Lead | 18 / 1.55 | 16 / 1.55 | Paragraf pembuka |
-| Body/Default | 15 / 1.6 | sama | Paragraf |
-| Body/Medium | 15 / 1.4 | sama | Label tombol |
-| Body/Small | 13 / 1.5 | sama | Meta, catatan, footer |
-| Label/Eyebrow | 11 / 1.2 / +1.6, UPPERCASE | sama | Label di atas judul, kategori |
-| Label/Nav | 14 | sama | Tautan navigasi |
+| Judul hero | **Cormorant Garamond** Regular, UPPERCASE, tracking 0.06em | `.t-display` | clamp 32–64px |
+| Judul section | Cormorant Regular, sentence case, kata penekanan `<em>` italic | `.t-display-sm` | clamp 30–46px |
+| Kutipan / pernyataan | Cormorant Italic | `.t-statement` | clamp 22–32px |
+| Caption kartu | Cormorant Regular | `.t-caption` | 18–20px |
+| Wordmark | Cormorant Italic (seperti tanda tangan) | `.t-wordmark` | 22px (footer 28px) |
+| Label kecil | **Inter** 11px UPPERCASE tracking 0.18em | `.t-mono` | 11px |
+| Body | Inter 14–15px, warna `mute` | `.t-body` | 14–15px |
 
-Format: ukuran px / line-height (rasio) / letter-spacing px. Setiap Display punya pasangan *Italic*.
-
-### Pola headline
-Dua baris. Baris 1 Regular, baris 2 **Italic di dalam kotak `bg/highlight`** (padding 10–14px horizontal, radius 4). Baris 2 adalah kalimat yang "mengubah makna" baris 1.
-
-> Moments pass. **The photographs don't.**
-> Nothing here is rushed. **Including the photographs.**
-> No team. No vendor desk. **Just the person who was there.**
+Pola judul: eyebrow kecil di atas → judul serif → satu kalimat italic atau body. Selalu **rata tengah** kecuali di split section (Behind, Services, About intro).
 
 ---
 
-## 4. Layout
+## 4. Layout & komponen
 
 | Prinsip | Nilai |
 |---|---|
-| Kanvas | Desktop 1440, mobile 390. Konten di dalam "kartu kertas" (`bg/paper`, radius 6) di atas `bg/canvas`, margin 24 (desktop) / 12 (mobile) |
-| Gutter dalam | 40px desktop, 20px mobile |
-| Jarak antar-section | 96–128px desktop, 56–72px mobile |
-| Grid foto | Baris rata atas-bawah, gap 20–24px desktop / 6–12px mobile. Ritme dari **pola per baris** (2:1 → 3 sejajar → 1:2 → 2 sejajar), bukan dari masonry acak |
-| Sudut | Foto 8px, kartu 10–12px, tombol/chip pill (999), dialog 20–24px |
-| Tombol | Pill. Ink = primer, Ghost = sekunder, Gold = hanya galeri klien. Satu CTA utama per layar |
-| Field | Underline saja (tanpa kotak), label eyebrow di atas |
-| Section gelap | Strip `bg/green` dengan band judul `bg/green-deep` — maksimal satu per halaman |
-| Gerak (untuk kode) | Scroll-reveal lembut, hover foto scale 1.05 dalam 500ms, tanpa parallax berat |
+| Kolom | `.wrap` maks 1200px, gutter 20px / 40px |
+| Komposisi | Simetris, rata tengah. Grid 3 kolom untuk kartu portrait (rasio 4:5 / 3:4), kartu tengah boleh turun 40px |
+| Foto | Tanpa radius, tanpa bayangan. Hover: zoom 1.03 dalam 1,2 s |
+| Section | Dipisah garis `line` 1px atau ruang 80–112px; **satu** section `dark` per halaman |
+| Tombol | `.action` = kotak bergaris tipis, label `.t-mono` (isi ink saat hover); `.action-light` di atas foto/gelap; `.ink-btn` = isi arang untuk aksi utama form |
+| Field | `.field` kotak 48px, garis `line`, fokus garis `ink` 2px; select dengan chevron sendiri; form dibingkai |
+| Nav | Sticky. Tiga bagian: tautan · wordmark · tautan + EN/ID. Setelah 80px: 84→64px, garis tipis, latar `.glass`. Tidak pernah menghilang |
+| Gerak | Reveal on-scroll (opacity + 14px, 900ms) lewat skrip pra-hidrasi; morph foto→hero halaman (React `ViewTransition`, 600ms); lightbox gelap fade 500ms; semua hormat `prefers-reduced-motion` |
+
+Komponen kode: `SiteNav`, `SiteFooter`, `Photo` (next/image + dummy), `Reveal`, `Faq`, `Packages`, `ContactForm`, `ContactSheet` (grid Work), `Gallery` (galeri + darkroom), section Home: `Hero`, `Intro`, `Behind`, `RecentWork`, `KindWords`, `Invite`.
 
 ---
 
-## 5. Komponen (Figma → kode)
+## 5. Peta halaman (kode)
 
-| Komponen Figma | Property | Padanan kode |
-|---|---|---|
-| `Site / Nav`, `Site / Nav · M` | — | `<SiteNav>` |
-| `Site / Footer`, `Site / Footer · M` | — | `<SiteFooter>` |
-| `Photo / Placeholder` | — | `<Photo>` (next/image), ganti fill dengan gambar |
-| `Package Card` | Name, Tagline, Price, Includes | `<PackageCard>` |
-| `Form / Field` | Label, Placeholder | `<Field>` |
-| `Button` | Kind: Ink/Ghost/Gold · State: Default/Hover/Focus/Disabled | `<Button kind>` |
-| `Filter Chip` | State: Default/Hover/Active | `<Chip>` |
-| `Form Field / States` | Default/Focus/Filled/Error/Disabled | state CSS `<Field>` |
-| `Gallery / Tile` | Selected, Has note, Maybe, Extra, Dimmed (boolean) | `PhotoTile.jsx` di photo-selection-platform |
-| `Admin / Sidebar` | — | `AdminShell.jsx` |
+1. **Home** — hero foto + judul tengah dan catatan samping → intro + 3 kartu → section gelap "behind the camera" → 3 karya terbaru → testimoni → foto lebar + undangan
+2. **Work** — filter teks, grid 3 kolom portrait, caption serif
+3. **Project** — hero (morph target), caption + fakta di tengah, galeri (2·3·1·2) + lightbox gelap, cerita, film, **3 karya terkait**
+4. **Services** — banner, indeks 01–04, 4 blok berselang, "investment" 3 kolom, FAQ
+5. **About** — potret + pernyataan, values (gelap), strip foto, fakta, CTA
+6. **Contact** — kanal di tengah, foto kiri + form berbingkai
+7. **404** (per-locale dan root), sitemap, robots, OG image
 
----
-
-## 6. Peta layar di Figma
+## 6. Peta layar di Figma (arah pertama — usang)
 
 Satu page, lima section:
 

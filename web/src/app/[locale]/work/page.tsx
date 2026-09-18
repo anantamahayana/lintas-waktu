@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { pageMeta } from "@/lib/seo";
 import { Reveal } from "@/components/ui/Reveal";
 import { ContactSheet } from "@/components/work/ContactSheet";
 import { projects } from "@/lib/projects";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: "nav" });
-  return { title: t("work") };
+  return pageMeta(locale, "/work", { titleKey: "work" });
 }
 
 export default async function WorkPage({ params }: { params: Promise<{ locale: string }> }) {

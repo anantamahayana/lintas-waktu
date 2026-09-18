@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { ViewTransition } from "react";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { pageMeta } from "@/lib/seo";
+import { dummyPhoto } from "@/lib/dummy-photos";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { Photo } from "@/components/ui/Photo";
@@ -16,9 +18,10 @@ export function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
-  const { slug } = await params;
+  const { locale, slug } = await params;
   const p = getProject(slug);
-  return p ? { title: p.title, description: p.pull } : {};
+  if (!p) return {};
+  return pageMeta(locale, `/work/${slug}`, { title: p.title, description: p.pull, image: dummyPhoto(p.cover, 1200) });
 }
 
 export default async function ProjectPage({ params }: { params: Params }) {

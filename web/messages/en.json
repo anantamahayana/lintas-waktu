@@ -345,7 +345,31 @@
         "b3": "IDR 15–30M / USD 950–1.9k",
         "b4": "Over IDR 30M / USD 1.9k",
         "b5": "Let’s talk"
-      }
+      },
+      "ph": {
+        "name": "Ayu Lestari",
+        "partner": "Marco Rossi",
+        "email": "you@example.com",
+        "based": "Melbourne, Australia",
+        "date": "June 2027",
+        "location": "Uluwatu, or not sure yet"
+      },
+      "errorGeneric": "Something went wrong — please try WhatsApp or email."
     }
+  },
+  "notFound": {
+    "eyebrow": "404 · Page not found",
+    "title": "This moment has passed. <em>The page didn’t.</em>",
+    "body": "The link may be old, or the gallery it pointed to has expired. If you were sent a gallery link, ask us for a fresh one.",
+    "home": "Back to home",
+    "whatsapp": "WhatsApp us"
+  },
+  "meta": {
+    "title": "Lintas Waktu — Wedding & Film Photographer, Bali",
+    "description": "Independent wedding, pre-wedding, event and personal photography & film in Bali. Photographed slowly, edited by hand, delivered through a private gallery.",
+    "work": "Portfolio of weddings, pre-weddings, events and personal sessions across Bali.",
+    "services": "Wedding, pre-wedding, event and personal photography & film in Bali — coverage, packages and answers.",
+    "about": "About Lintas Waktu — an independent photographer & filmmaker based in Bali.",
+    "contact": "Tell us about your day. WhatsApp, email, or send an inquiry."
   }
 }

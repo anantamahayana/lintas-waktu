@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { pageMeta } from "@/lib/seo";
 import { Link } from "@/i18n/navigation";
 import { Photo } from "@/components/ui/Photo";
 import { Reveal } from "@/components/ui/Reveal";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: "nav" });
-  return { title: t("about") };
+  return pageMeta(locale, "/about", { titleKey: "about" });
 }
 
 export default async function AboutPage({ params }: { params: Promise<{ locale: string }> }) {

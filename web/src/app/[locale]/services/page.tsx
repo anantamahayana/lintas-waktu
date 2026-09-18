@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { pageMeta } from "@/lib/seo";
 import clsx from "clsx";
 import { Link } from "@/i18n/navigation";
 import { Photo } from "@/components/ui/Photo";
@@ -11,8 +12,7 @@ const keys = ["wedding", "prewedding", "event", "personal"] as const;
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: "nav" });
-  return { title: t("services") };
+  return pageMeta(locale, "/services", { titleKey: "services" });
 }
 
 export default async function ServicesPage({ params }: { params: Promise<{ locale: string }> }) {

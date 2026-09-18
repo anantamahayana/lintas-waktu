@@ -72,16 +72,16 @@ export function ContactForm({ initialKind = "" }: { initialKind?: string }) {
 
       <div className="grid sm:grid-cols-2 gap-x-6 gap-y-5">
         <Field label={t("name")} error={errors.name}>
-          <input className={clsx("field", errors.name && "field-error")} value={v.name} onChange={set("name")} autoComplete="name" placeholder="Ayu Lestari" />
+          <input className={clsx("field", errors.name && "field-error")} value={v.name} onChange={set("name")} autoComplete="name" placeholder={t("ph.name")} />
         </Field>
         <Field label={t("partner")} optional={t("optional")}>
-          <input className="field" value={v.partner} onChange={set("partner")} placeholder="Marco Rossi" />
+          <input className="field" value={v.partner} onChange={set("partner")} placeholder={t("ph.partner")} />
         </Field>
         <Field label={t("email")} error={errors.email}>
-          <input type="email" className={clsx("field", errors.email && "field-error")} value={v.email} onChange={set("email")} autoComplete="email" placeholder="you@example.com" />
+          <input type="email" className={clsx("field", errors.email && "field-error")} value={v.email} onChange={set("email")} autoComplete="email" placeholder={t("ph.email")} />
         </Field>
         <Field label={t("based")} optional={t("optional")}>
-          <input className="field" value={v.based} onChange={set("based")} placeholder="Melbourne, Australia" />
+          <input className="field" value={v.based} onChange={set("based")} placeholder={t("ph.based")} />
         </Field>
         <Field label={t("kind")} error={errors.kind}>
           <select className={clsx("field", errors.kind && "field-error", !v.kind && "text-faint")} value={v.kind} onChange={set("kind")}>
@@ -90,10 +90,10 @@ export function ContactForm({ initialKind = "" }: { initialKind?: string }) {
           </select>
         </Field>
         <Field label={t("date")} optional={t("optional")}>
-          <input className="field" value={v.date} onChange={set("date")} placeholder="June 2027" />
+          <input className="field" value={v.date} onChange={set("date")} placeholder={t("ph.date")} />
         </Field>
         <Field label={t("location")} optional={t("optional")}>
-          <input className="field" value={v.location} onChange={set("location")} placeholder="Uluwatu, or not sure yet" />
+          <input className="field" value={v.location} onChange={set("location")} placeholder={t("ph.location")} />
         </Field>
         <Field label={t("budget")} optional={t("optional")}>
           <select className={clsx("field", !v.budget && "text-faint")} value={v.budget} onChange={set("budget")}>
@@ -118,7 +118,7 @@ export function ContactForm({ initialKind = "" }: { initialKind?: string }) {
           {status === "sending" ? t("sending") : t("submit")}
         </button>
       </div>
-      {status === "error" && <p className="t-small text-error">Something went wrong — please try WhatsApp or email.</p>}
+      {status === "error" && <p className="t-small text-error">{t("errorGeneric")}</p>}
     </form>
   );
 }
