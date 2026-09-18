@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Instrument_Serif } from "next/font/google";
+import { Manrope, Geist_Mono } from "next/font/google";
 import { notFound } from "next/navigation";
 import Script from "next/script";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
@@ -8,19 +8,21 @@ import { routing } from "@/i18n/routing";
 import { SiteNav } from "@/components/site/SiteNav";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { REVEAL_SCRIPT } from "@/components/ui/Reveal";
+import { TimelineProvider } from "@/components/timeline/TimelineContext";
+import { Timeline } from "@/components/timeline/Timeline";
 import "../globals.css";
 
-const inter = Inter({
+const manrope = Manrope({
   subsets: ["latin"],
-  variable: "--font-inter",
+  weight: ["200", "300", "400", "500"],
+  variable: "--font-manrope",
   display: "swap",
 });
 
-const instrumentSerif = Instrument_Serif({
+const geistMono = Geist_Mono({
   subsets: ["latin"],
-  weight: "400",
-  style: ["normal", "italic"],
-  variable: "--font-instrument-serif",
+  weight: ["400", "500"],
+  variable: "--font-geist-mono",
   display: "swap",
 });
 
@@ -29,8 +31,7 @@ export const metadata: Metadata = {
     default: "Lintas Waktu — Wedding & Film Photographer, Bali",
     template: "%s — Lintas Waktu",
   },
-  description:
-    "Independent wedding, pre-wedding, event and personal photography & film in Bali.",
+  description: "Independent wedding, pre-wedding, event and personal photography & film in Bali.",
 };
 
 export function generateStaticParams() {
@@ -49,18 +50,17 @@ export default async function LocaleLayout({
   setRequestLocale(locale);
 
   return (
-    // suppressHydrationWarning: the beforeInteractive script below adds the `js`
-    // class before React hydrates, which is intentional.
-    <html lang={locale} className={`${inter.variable} ${instrumentSerif.variable}`} suppressHydrationWarning>
-      <body className="min-h-dvh p-3 lg:p-6">
-        {/* Pre-hydration: js flag + scroll-reveal observer (see components/ui/Reveal) */}
+    // suppressHydrationWarning: the pre-hydration script adds the `js` class on purpose
+    <html lang={locale} className={`${manrope.variable} ${geistMono.variable}`} suppressHydrationWarning>
+      <body className="min-h-dvh pb-[var(--timeline-h)]">
         <Script id="reveal" strategy="beforeInteractive">{REVEAL_SCRIPT}</Script>
         <NextIntlClientProvider>
-          <div className="paper min-h-[calc(100dvh-1.5rem)] lg:min-h-[calc(100dvh-3rem)] flex flex-col">
+          <TimelineProvider>
             <SiteNav />
-            <main className="flex-1">{children}</main>
+            <main>{children}</main>
             <SiteFooter />
-          </div>
+            <Timeline />
+          </TimelineProvider>
         </NextIntlClientProvider>
       </body>
     </html>

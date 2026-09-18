@@ -58,18 +58,17 @@ export function ContactForm({ initialKind = "" }: { initialKind?: string }) {
   if (status === "sent") {
     const wa = waLink(`Hi Lintas Waktu — ${v.name} here. I just sent an inquiry about a ${v.kind} (${v.date || "date TBC"}).`);
     return (
-      <div className="flex flex-col items-center text-center gap-4 py-10">
-        <span className="h-12 w-12 rounded-full bg-ink text-paper flex items-center justify-center text-lg">✓</span>
-        <p className="t-h2 font-display italic">{t("sentTitle", { name: v.name.split(" ")[0] })}</p>
-        <p className="t-body text-mute max-w-[440px]">{t("sentBody")}</p>
-        <a href={wa} className="btn-ghost mt-2">{t("sentWhatsapp")}</a>
+      <div className="flex flex-col gap-6 py-6">
+        <p className="t-statement max-w-[24ch]">{t("sentTitle", { name: v.name.split(" ")[0] })}</p>
+        <p className="t-body text-mute max-w-[48ch]">{t("sentBody")}</p>
+        <a href={wa} className="action">{t("sentWhatsapp")}</a>
       </div>
     );
   }
 
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-7">
-      <h2 className="t-h3">{t("title")}</h2>
+      <h2 className="t-mono text-mute">{t("title")}</h2>
 
       <div className="grid sm:grid-cols-2 gap-x-8 gap-y-6">
         <Field label={t("name")} error={errors.name}>
@@ -115,7 +114,7 @@ export function ContactForm({ initialKind = "" }: { initialKind?: string }) {
 
       <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-4 pt-2">
         <p className="t-small text-mute">{t("privacy")}</p>
-        <button type="submit" disabled={status === "sending"} className="btn-ink">
+        <button type="submit" disabled={status === "sending"} className="ink-btn">
           {status === "sending" ? t("sending") : t("submit")}
         </button>
       </div>
@@ -127,9 +126,9 @@ export function ContactForm({ initialKind = "" }: { initialKind?: string }) {
 function Field({ label, optional, error, children }: { label: string; optional?: string; error?: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="eyebrow">
+      <span className="t-mono text-mute">
         {label}
-        {optional && <span className="normal-case tracking-normal text-faint"> ({optional})</span>}
+        {optional && <span className="text-faint"> · {optional}</span>}
       </span>
       {children}
       {error && <span className="t-small text-error">{error}</span>}

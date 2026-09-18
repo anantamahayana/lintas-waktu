@@ -21,12 +21,12 @@ export function Faq({ items }: { items: { q: string; a: string }[] }) {
               aria-expanded={isOpen}
               aria-controls={`${id}-${i}`}
               onClick={() => setOpen(isOpen ? null : i)}
-              className="w-full flex items-start justify-between gap-6 py-5 lg:py-6 text-left"
+              className="w-full flex items-start justify-between gap-6 py-4 lg:py-5 text-left"
             >
-              <span className="t-h3">{it.q}</span>
+              <span className="t-body font-medium">{it.q}</span>
               <span
                 aria-hidden
-                className={clsx("t-h3 text-mute transition-transform duration-500 ease-out-soft", isOpen && "rotate-45")}
+                className={clsx("t-mono text-mute transition-transform duration-500 ease-out-soft pt-1", isOpen && "rotate-45")}
               >
                 +
               </span>
@@ -36,7 +36,7 @@ export function Faq({ items }: { items: { q: string; a: string }[] }) {
               className={clsx("grid transition-[grid-template-rows] duration-500 ease-out-soft", isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}
             >
               <div className="overflow-hidden">
-                <p className="t-body text-mute max-w-[640px] pb-6">{it.a}</p>
+                <p className="t-body text-mute max-w-[60ch] pb-5">{it.a}</p>
               </div>
             </div>
           </li>

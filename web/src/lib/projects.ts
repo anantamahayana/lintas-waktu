@@ -218,6 +218,20 @@ export const projects: Project[] = [
 
 export const categories: Category[] = ["wedding", "prewedding", "event", "personal"];
 
+const MONTHS = ["january","february","march","april","may","june","july","august","september","october","november","december"];
+
+/** "June 2026" → "2026-06" (for the timeline) */
+export function whenOf(p: Project) {
+  const [mon, year] = p.date.split(" ");
+  const m = MONTHS.indexOf(mon.toLowerCase()) + 1;
+  return `${year}-${String(m || 1).padStart(2, "0")}`;
+}
+
+/** Frame number in the contact sheet, e.g. "LW-0012" */
+export function frameOf(p: Project) {
+  return `LW-${String(projects.indexOf(p) + 1).padStart(4, "0")}`;
+}
+
 export function getProject(slug: string) {
   return projects.find((p) => p.slug === slug);
 }

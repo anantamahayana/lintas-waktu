@@ -17,9 +17,10 @@ export function Photo({
   alt = "",
   className,
   ratio,
-  rounded = "rounded-lg",
+  rounded = "",
   sizes = "(min-width: 1024px) 33vw, 100vw",
   priority = false,
+  eager = false,
 }: {
   src?: string;
   seed?: string;
@@ -31,11 +32,13 @@ export function Photo({
   /** next/image sizes hint — set per layout for best performance */
   sizes?: string;
   priority?: boolean;
+  /** load immediately without preload hint (e.g. hidden crossfade layers) */
+  eager?: boolean;
 }) {
   const url = src ?? dummyPhoto(seed);
   return (
     <div
-      className={clsx("relative overflow-hidden photo-hover bg-paper-deep", rounded, className)}
+      className={clsx("relative overflow-hidden photo-hover bg-line", rounded, className)}
       style={ratio ? { aspectRatio: ratio } : undefined}
     >
       <Image
@@ -44,6 +47,7 @@ export function Photo({
         fill
         sizes={sizes}
         priority={priority}
+        loading={eager ? "eager" : undefined}
         className="object-cover"
       />
     </div>
