@@ -3,6 +3,7 @@ import { Link } from "@/i18n/navigation";
 import { Headline } from "@/components/ui/Headline";
 import { Photo } from "@/components/ui/Photo";
 import { Reveal } from "@/components/ui/Reveal";
+import { waLink } from "@/lib/site";
 
 export function ClosingCta() {
   const t = useTranslations("home.cta");
@@ -13,7 +14,7 @@ export function ClosingCta() {
         <Headline size="hero" line1={t("line1")} line2={t("line2")} />
         <p className="t-lead text-mute max-w-[520px]">{t("body")}</p>
         <div className="flex flex-col sm:flex-row gap-3">
-          <a href="https://wa.me/62" className="btn-ink">{c("whatsapp")}</a>
+          <a href={waLink()} className="btn-ink">{c("whatsapp")}</a>
           <Link href="/contact" className="btn-ghost">{c("inquiry")}</Link>
         </div>
       </Reveal>

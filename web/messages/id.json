@@ -133,5 +133,182 @@
     "film": "Film highlight",
     "next": "Berikutnya",
     "playFilm": "Putar film"
+  },
+  "services": {
+    "eyebrow": "Layanan",
+    "line1": "Empat jenis hari.",
+    "line2": "Satu cara bekerja.",
+    "lead": "Foto, film, atau keduanya — setiap layanan di bawah dikerjakan oleh orang yang sama, diedit satu per satu, dan diserahkan lewat galeri privat tempat kamu memilih favoritmu.",
+    "ask": "Tanya tentang {name}",
+    "items": {
+      "wedding": {
+        "title": "Wedding",
+        "sub": "Seharian penuh, disimpan dengan jujur.",
+        "body": "Dari persiapan sampai dansa terakhir. Kami bekerja tenang, tanpa daftar pose, dan memfilmkan ikrar secara utuh jika kamu mau. Upacara intim dan elopement sangat disambut — enam puluh tamu atau enam.",
+        "includes": "Foto · Film · Foto + Film",
+        "from": "Mulai IDR 12.000.000 / USD 750"
+      },
+      "prewedding": {
+        "title": "Pre-wedding",
+        "sub": "Pagi yang pelan di tempat yang membuatmu memilih Bali.",
+        "body": "Dua sampai tiga jam, satu atau dua lokasi — tebing Uluwatu, sawah Sidemen, atau pantai sebelum orang bangun. Tanpa properti, tanpa pose paksaan; kita jalan dan mengobrol.",
+        "includes": "2–3 jam · 1–2 lokasi · 80+ foto",
+        "from": "Mulai IDR 4.500.000 / USD 280"
+      },
+      "event": {
+        "title": "Acara",
+        "sub": "Didokumentasikan, bukan diatur.",
+        "body": "Acara perusahaan, peluncuran, festival, dan perayaan komunitas. Kami meliput ruangan, pembicara, dan momen di antaranya — dikirim dalam 72 jam bila kamu butuh cepat.",
+        "includes": "Setengah atau sehari penuh · Opsi edit hari-H",
+        "from": "Mulai IDR 3.000.000 / USD 190"
+      },
+      "personal": {
+        "title": "Personal",
+        "sub": "Satu jam. Satu lokasi. Kamu.",
+        "body": "Personal branding, wisuda, potret keluarga. Sesi santai yang berakhir dengan foto yang benar-benar kamu pakai — di profil, di dinding, atau di kulkas ibumu.",
+        "includes": "60 menit · 30+ foto · Siap web + cetak",
+        "from": "Mulai IDR 1.500.000 / USD 95"
+      }
+    },
+    "packages": {
+      "eyebrow": "Paket wedding · mulai dari",
+      "note": "Harga belum termasuk perjalanan ke luar Bali dan pajak 11%. Cakupan khusus selalu bisa — ceritakan yang penting, kami bentuk."
+    },
+    "faq": {
+      "eyebrow": "Pertanyaan",
+      "title": "Yang biasa ditanyakan sebelum bertanya.",
+      "items": [
+        {
+          "q": "Seberapa jauh sebelumnya kami harus memesan?",
+          "a": "Untuk wedding di musim kemarau (Mei–September), 6–10 bulan. Sesi dan acara sering bisa diatur dalam beberapa minggu."
+        },
+        {
+          "q": "Apakah kalian bepergian ke luar Bali?",
+          "a": "Ya — Lombok, Jawa, dan lebih jauh sesuai permintaan. Biaya perjalanan dan menginap dihitung terpisah."
+        },
+        {
+          "q": "Bagaimana kami menerima fotonya?",
+          "a": "Lewat galeri online privat tempat kamu memilih favorit. Edit final selesai dalam 4–6 minggu untuk wedding, 10 hari untuk sesi."
+        },
+        {
+          "q": "Bisakah kami mendapat file RAW?",
+          "a": "Tidak. File mentah bukan bagian dari paket mana pun; editnya adalah karyanya."
+        },
+        {
+          "q": "Apakah kalian bekerja dengan pasangan dari luar negeri?",
+          "a": "Sebagian besar pasangan wedding kami tinggal di luar negeri. Kami merencanakan lewat video call dan WhatsApp, dalam bahasa Inggris atau Indonesia."
+        }
+      ]
+    }
+  },
+  "about": {
+    "eyebrow": "Tentang",
+    "line1": "Lintas Waktu berarti",
+    "line2": "melintasi waktu.",
+    "lead": "Itulah alasan semua ini ada: bukan untuk membuat gambar yang indah dari sebuah hari, tapi membuat hari yang bisa kamu masuki lagi — sepuluh tahun kemudian, di sore yang buruk, bersama orang-orang yang ada di sana dan yang sudah tidak ada.",
+    "body": "Saya memotret dan memfilmkan secara independen dari Bali. Belum ada tim di balik nama ini; saat kamu menulis ke Lintas Waktu, kamu menulis ke saya, dan sayalah yang datang. Itu membatasi berapa hari yang bisa saya ambil dalam setahun — dan memang itu intinya.",
+    "values": {
+      "eyebrow": "Cara kami bekerja",
+      "line1": "Tiga hal yang kami pegang.",
+      "line2": "Sisanya bisa dibicarakan.",
+      "items": [
+        {
+          "title": "Hadir, bukan menonjol",
+          "body": "Cukup dekat untuk melihat, cukup jauh untuk tidak terlihat. Tanpa daftar pose, tanpa berteriak di ruangan."
+        },
+        {
+          "title": "Diedit dengan tangan",
+          "body": "Setiap foto diwarnai satu per satu. Tanpa edit massal AI, tanpa preset yang dijual sebagai gaya."
+        },
+        {
+          "title": "Kamu yang memilih",
+          "body": "Kamu memilih favoritmu di galeri privat. Kami menyelesaikan yang kamu pilih, bukan yang kami tebak."
+        }
+      ]
+    },
+    "facts": {
+      "eyebrow": "Singkatnya",
+      "title": "Bagian praktisnya.",
+      "items": [
+        {
+          "k": "Berbasis di",
+          "v": "Bali, Indonesia — tersedia di seluruh pulau dan ke luar dengan perjanjian"
+        },
+        {
+          "k": "Bahasa",
+          "v": "Inggris, Bahasa Indonesia"
+        },
+        {
+          "k": "Bekerja sejak",
+          "v": "2022"
+        },
+        {
+          "k": "Foto",
+          "v": "Mirrorless full-frame, dua bodi, lensa prime"
+        },
+        {
+          "k": "Film",
+          "v": "4K, gimbal, audio terpisah untuk ikrar"
+        },
+        {
+          "k": "Backup",
+          "v": "Rekam dua kartu, backup off-site di malam yang sama"
+        }
+      ]
+    },
+    "cta": {
+      "line1": "Cukup tentang kami.",
+      "line2": "Ceritakan tentang harimu."
+    }
+  },
+  "contact": {
+    "eyebrow": "Kontak",
+    "line1": "Ceritakan tentang",
+    "line2": "harimu.",
+    "lead": "Beberapa baris sudah cukup. Kami balas dalam sehari, biasanya lebih cepat — dalam bahasa Inggris atau Indonesia.",
+    "channels": {
+      "whatsapp": "WhatsApp",
+      "whatsappNote": "Tercepat · 09.00–20.00 WITA",
+      "email": "Email",
+      "emailNote": "Untuk brief yang detail",
+      "instagram": "Instagram",
+      "instagramNote": "Karya terbaru, cerita"
+    },
+    "form": {
+      "title": "Atau kirim pertanyaan",
+      "name": "Namamu",
+      "partner": "Pasangan / perusahaan",
+      "email": "Email",
+      "based": "Kamu tinggal di mana?",
+      "kind": "Hari seperti apa?",
+      "date": "Tanggal (atau kira-kira)",
+      "location": "Lokasi di Bali",
+      "budget": "Kisaran budget",
+      "message": "Ceritakan tentang harinya",
+      "messagePh": "Siapa, di mana, apa yang paling penting — apa saja.",
+      "optional": "opsional",
+      "submit": "Kirim pertanyaan",
+      "sending": "Mengirim…",
+      "privacy": "Hanya dipakai untuk membalasmu. Tanpa newsletter.",
+      "required": "Mohon diisi.",
+      "invalidEmail": "Masukkan alamat email yang valid.",
+      "sentTitle": "Terima kasih, {name}. Sudah kami terima.",
+      "sentBody": "Kami balas dalam sehari, biasanya lebih cepat. Kalau mendesak, WhatsApp paling cepat.",
+      "sentWhatsapp": "Lanjutkan di WhatsApp",
+      "kinds": {
+        "wedding": "Wedding",
+        "prewedding": "Pre-wedding",
+        "event": "Acara",
+        "personal": "Personal",
+        "other": "Belum yakin"
+      },
+      "budgets": {
+        "b1": "Di bawah IDR 5 jt / USD 300",
+        "b2": "IDR 5–15 jt / USD 300–950",
+        "b3": "IDR 15–30 jt / USD 950–1,9 rb",
+        "b4": "Di atas IDR 30 jt / USD 1,9 rb",
+        "b5": "Kita bicarakan"
+      }
+    }
   }
 }

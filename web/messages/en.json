@@ -133,5 +133,182 @@
     "film": "Highlight film",
     "next": "Next",
     "playFilm": "Play film"
+  },
+  "services": {
+    "eyebrow": "Services",
+    "line1": "Four kinds of days.",
+    "line2": "One way of working.",
+    "lead": "Photo, film, or both — every service below is shot by the same person, edited by hand, and delivered through a private gallery where you choose your favourites.",
+    "ask": "Ask about {name}",
+    "items": {
+      "wedding": {
+        "title": "Wedding",
+        "sub": "The whole day, kept honestly.",
+        "body": "From preparations to the last dance. We work quietly, without posing lists, and film the vows in full if you wish. Intimate ceremonies and elopements are welcome — sixty guests or six.",
+        "includes": "Photo · Film · Photo + Film",
+        "from": "From IDR 12.000.000 / USD 750"
+      },
+      "prewedding": {
+        "title": "Pre-wedding",
+        "sub": "A slow morning in the place you chose Bali for.",
+        "body": "Two to three hours, one or two locations — cliffs at Uluwatu, rice terraces in Sidemen, or the beach before anyone is awake. No props, no forced poses; we walk and talk.",
+        "includes": "2–3 hours · 1–2 locations · 80+ photographs",
+        "from": "From IDR 4.500.000 / USD 280"
+      },
+      "event": {
+        "title": "Event",
+        "sub": "Documented, not staged.",
+        "body": "Corporate gatherings, launches, festivals and community celebrations. We cover the room, the speakers, and the moments between — delivered within 72 hours when you need them fast.",
+        "includes": "Half-day or full-day · Optional same-day edit",
+        "from": "From IDR 3.000.000 / USD 190"
+      },
+      "personal": {
+        "title": "Personal",
+        "sub": "One hour. One location. You.",
+        "body": "Personal branding, graduation, family portraits. A relaxed session that ends with photographs you will actually use — on your profile, your wall, or your mother’s fridge.",
+        "includes": "60 minutes · 30+ photographs · Web-ready + print",
+        "from": "From IDR 1.500.000 / USD 95"
+      }
+    },
+    "packages": {
+      "eyebrow": "Wedding packages · starting from",
+      "note": "Prices exclude travel outside Bali and 11% tax. Custom coverage is always possible — tell us what matters and we will shape it."
+    },
+    "faq": {
+      "eyebrow": "Questions",
+      "title": "Things people ask before they ask.",
+      "items": [
+        {
+          "q": "How far in advance should we book?",
+          "a": "For weddings in the dry season (May–September), 6–10 months. Sessions and events can often be arranged within a few weeks."
+        },
+        {
+          "q": "Do you travel outside Bali?",
+          "a": "Yes — Lombok, Java and further on request. Travel and stay are quoted separately."
+        },
+        {
+          "q": "How do we receive the photographs?",
+          "a": "Through a private online gallery where you pick your favourites. Final edits follow within 4–6 weeks for weddings, 10 days for sessions."
+        },
+        {
+          "q": "Can we get the RAW files?",
+          "a": "No. Unedited files are not part of any package; the edit is the work."
+        },
+        {
+          "q": "Do you work with international couples?",
+          "a": "Most of our wedding couples live abroad. We plan over video calls and WhatsApp, in English or Bahasa Indonesia."
+        }
+      ]
+    }
+  },
+  "about": {
+    "eyebrow": "About",
+    "line1": "Lintas Waktu means",
+    "line2": "across time.",
+    "lead": "It is the reason this exists: not to make a beautiful picture of a day, but to make a day you can walk back into — ten years on, on a bad afternoon, with the people who were there and the ones who no longer are.",
+    "body": "I photograph and film independently from Bali. There is no team behind the name yet; when you write to Lintas Waktu, you write to me, and I am the one who shows up. That is a limitation on how many days I can take in a year, and it is the point.",
+    "values": {
+      "eyebrow": "How we work",
+      "line1": "Three things we hold to.",
+      "line2": "Everything else is negotiable.",
+      "items": [
+        {
+          "title": "Present, not prominent",
+          "body": "We stay close enough to see, far enough not to be seen. No posing lists, no shouting across the room."
+        },
+        {
+          "title": "Edited by hand",
+          "body": "Every photograph is graded one by one. No AI batch edits, no presets sold as a look."
+        },
+        {
+          "title": "Yours to choose",
+          "body": "You pick your favourites in a private gallery. We finish what you chose, not what we guessed."
+        }
+      ]
+    },
+    "facts": {
+      "eyebrow": "In short",
+      "title": "The practical part.",
+      "items": [
+        {
+          "k": "Based in",
+          "v": "Bali, Indonesia — available across the island and by arrangement beyond"
+        },
+        {
+          "k": "Languages",
+          "v": "English, Bahasa Indonesia"
+        },
+        {
+          "k": "Working since",
+          "v": "2022"
+        },
+        {
+          "k": "Photo",
+          "v": "Full-frame mirrorless, two bodies, prime lenses"
+        },
+        {
+          "k": "Film",
+          "v": "4K, gimbal-stabilised, separate audio for vows"
+        },
+        {
+          "k": "Backup",
+          "v": "Dual-card recording, off-site backup the same night"
+        }
+      ]
+    },
+    "cta": {
+      "line1": "Enough about us.",
+      "line2": "Tell us about your day."
+    }
+  },
+  "contact": {
+    "eyebrow": "Contact",
+    "line1": "Tell us about",
+    "line2": "your day.",
+    "lead": "A few lines are enough. We reply within a day, usually sooner — in English or Bahasa Indonesia.",
+    "channels": {
+      "whatsapp": "WhatsApp",
+      "whatsappNote": "Fastest · 09:00–20:00 WITA",
+      "email": "Email",
+      "emailNote": "For detailed briefs",
+      "instagram": "Instagram",
+      "instagramNote": "Recent work, stories"
+    },
+    "form": {
+      "title": "Or send an inquiry",
+      "name": "Your name",
+      "partner": "Partner / company",
+      "email": "Email",
+      "based": "Where are you based?",
+      "kind": "What kind of day?",
+      "date": "Date (or roughly)",
+      "location": "Location in Bali",
+      "budget": "Budget range",
+      "message": "Tell us about the day",
+      "messagePh": "Who, where, what matters most — anything you like.",
+      "optional": "optional",
+      "submit": "Send inquiry",
+      "sending": "Sending…",
+      "privacy": "We only use this to reply to you. No newsletter.",
+      "required": "Please fill this in.",
+      "invalidEmail": "Please enter a valid email address.",
+      "sentTitle": "Thank you, {name}. We’ve got it.",
+      "sentBody": "We reply within a day, usually sooner. If it’s urgent, WhatsApp is fastest.",
+      "sentWhatsapp": "Continue on WhatsApp",
+      "kinds": {
+        "wedding": "Wedding",
+        "prewedding": "Pre-wedding",
+        "event": "Event",
+        "personal": "Personal",
+        "other": "Not sure yet"
+      },
+      "budgets": {
+        "b1": "Under IDR 5M / USD 300",
+        "b2": "IDR 5–15M / USD 300–950",
+        "b3": "IDR 15–30M / USD 950–1.9k",
+        "b4": "Over IDR 30M / USD 1.9k",
+        "b5": "Let’s talk"
+      }
+    }
   }
 }

@@ -18,14 +18,14 @@ const packages = [
 const fmtIDR = (n: number) => "IDR " + n.toLocaleString("id-ID");
 const fmtUSD = (n: number) => "USD " + n.toLocaleString("en-US");
 
-export function Packages() {
+export function Packages({ eyebrow, note }: { eyebrow?: string; note?: string } = {}) {
   const t = useTranslations("home.packages");
   const [cur, setCur] = useState<"IDR" | "USD">("IDR");
 
   return (
     <section className="bg-paper-deep gutter py-16 lg:py-28 flex flex-col items-start lg:items-center gap-8 lg:gap-12">
       <Reveal className="flex flex-col items-start lg:items-center gap-4">
-        <p className="eyebrow">{t("eyebrow")}</p>
+        <p className="eyebrow">{eyebrow ?? t("eyebrow")}</p>
         <Headline line1={t("line1")} line2={t("line2")} className="lg:text-center" />
         <div role="group" aria-label="Currency" className="mt-2 inline-flex rounded-full border border-line p-1">
           {(["IDR", "USD"] as const).map((c) => (
@@ -61,6 +61,7 @@ export function Packages() {
           </Reveal>
         ))}
       </div>
+      {note && <p className="t-small text-mute max-w-[560px] lg:text-center">{note}</p>}
     </section>
   );
 }

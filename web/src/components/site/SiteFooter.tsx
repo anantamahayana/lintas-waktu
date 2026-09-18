@@ -1,5 +1,6 @@
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
+import { site, waLink } from "@/lib/site";
 
 export function SiteFooter() {
   const t = useTranslations();
@@ -34,9 +35,9 @@ export function SiteFooter() {
           ))}
         </FooterCol>
         <FooterCol title={t("footer.reach")}>
-          <a href="mailto:hello@lintaswaktu.com" className="hover:text-mute transition-colors">hello@lintaswaktu.com</a>
-          <a href="https://wa.me/62" className="hover:text-mute transition-colors">WhatsApp +62 8xx</a>
-          <a href="https://instagram.com/lintaswaktu" className="hover:text-mute transition-colors">Instagram @lintaswaktu</a>
+          <a href={`mailto:${site.email}`} className="hover:text-mute transition-colors">{site.email}</a>
+          <a href={waLink()} className="hover:text-mute transition-colors">WhatsApp {site.whatsapp.display}</a>
+          <a href={`https://instagram.com/${site.instagram}`} className="hover:text-mute transition-colors">Instagram @{site.instagram}</a>
         </FooterCol>
       </div>
       <div className="mt-10 flex items-center justify-between t-small text-faint">
