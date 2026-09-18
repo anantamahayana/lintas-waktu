@@ -23,7 +23,15 @@
       "eyebrow": "Fotografer wedding & film independen · Bali",
       "line1": "Momen berlalu.",
       "line2": "Fotonya tidak.",
-      "lead": "Wedding, pre-wedding, acara, dan cerita personal — difoto dan difilmkan pelan-pelan, dengan intensi, agar bisa dikunjungi kembali lama setelah harinya lewat."
+      "lead": "Wedding, pre-wedding, acara, dan cerita personal — difoto dan difilmkan pelan-pelan, dengan intensi, agar bisa dikunjungi kembali lama setelah harinya lewat.",
+      "est": "Sejak 2022 · Bali",
+      "title1": "Fotografi Wedding",
+      "title2": "& Film",
+      "tagline": "Momen berlalu. Fotonya tidak.",
+      "left": "Berbasis di Bali",
+      "right": "Terbuka untuk luar negeri",
+      "cta1": "Layanan kami",
+      "cta2": "Hubungi kami"
     },
     "work": {
       "eyebrow": "Karya pilihan",
@@ -61,7 +69,9 @@
       "eyebrow": "Di balik kamera",
       "line1": "Tanpa tim. Tanpa meja vendor.",
       "line2": "Hanya orang yang ada di sana.",
-      "body": "Lintas Waktu dijalankan secara independen. Dari obrolan pertama sampai hari kamu menerima file, kamu bekerja langsung dengan fotografernya — orang yang sama yang berdiri di sampingmu hari itu dan ingat rasanya."
+      "body": "Lintas Waktu dijalankan secara independen. Dari obrolan pertama sampai hari kamu menerima file, kamu bekerja langsung dengan fotografernya — orang yang sama yang berdiri di sampingmu hari itu dan ingat rasanya.",
+      "title": "Fotografi dengan <em>sentuhan personal</em>",
+      "quote": "“Kami tidak sekadar mengambil gambar — kami menyimpan jam-jam yang ingin kamu masuki lagi.”"
     },
     "process": {
       "eyebrow": "Cara kerja",
@@ -102,6 +112,31 @@
       "line1": "Ceritakan tentang",
       "line2": "harimu.",
       "body": "Tanggal di Bali cepat penuh di musim kemarau (Mei–September). Pesan singkat sudah cukup untuk memulai — kami balas dalam sehari."
+    },
+    "intro": {
+      "eyebrow": "Mari lebih dekat",
+      "title": "Seni <em>menyimpan</em> sebuah hari, <em>untuk</em> tahun-tahun setelahnya",
+      "body": "Kami memotret dan memfilmkan wedding, pre-wedding, acara, dan cerita personal di seluruh Bali. Tenang, tanpa daftar pose, diedit dengan tangan — agar yang kamu terima terasa seperti harinya, bukan katalognya."
+    },
+    "cards": {
+      "eyebrow": "Yang kami potret",
+      "wedding": "Wedding & Elopement",
+      "prewedding": "Pre-wedding & Lamaran",
+      "personal": "Personal & Brand"
+    },
+    "recent": {
+      "eyebrow": "Karya terbaru",
+      "title": "Hari-hari yang layak <em>dikunjungi lagi</em>",
+      "cta": "Lihat portofolio"
+    },
+    "kind": {
+      "eyebrow": "Kata mereka"
+    },
+    "invite": {
+      "eyebrow": "Mari bicara",
+      "title": "Ceritakan tentang <em>harimu</em>",
+      "body": "Tanggal di Bali cepat penuh di musim kemarau (Mei–September). Pesan singkat sudah cukup untuk memulai — kami balas dalam sehari.",
+      "cta": "Hubungi kami"
     }
   },
   "footer": {

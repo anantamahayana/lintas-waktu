@@ -40,7 +40,7 @@ export function Gallery({ seeds, title }: { seeds: string[]; title: string }) {
 
   return (
     <>
-      <div className="gutter flex flex-col gap-3 lg:gap-5">
+      <div className="wrap gutter flex flex-col gap-3 lg:gap-5">
         {rows.map((row, ri) => (
           <div key={ri} className={clsx("grid gap-3 lg:gap-5", row.length === 1 ? "grid-cols-1" : row.length === 2 ? "grid-cols-2" : "grid-cols-2 lg:grid-cols-3")}>
             {row.map((idx, k) => (
@@ -76,7 +76,7 @@ export function Gallery({ seeds, title }: { seeds: string[]; title: string }) {
           if (Math.abs(dx) > 60) step(dx < 0 ? 1 : -1);
         }}
       >
-        <div className="flex items-center justify-between gutter h-[var(--nav-h)] t-mono text-on-dark-mute">
+        <div className="flex items-center justify-between gutter h-[64px] t-mono text-on-dark-mute">
           <span>{title}</span>
           <span>{open !== null ? `${String(open + 1).padStart(2, "0")} / ${String(seeds.length).padStart(2, "0")}` : ""}</span>
           <button type="button" onClick={close} className="link text-on-dark">Close</button>

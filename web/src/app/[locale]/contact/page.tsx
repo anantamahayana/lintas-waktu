@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { Photo } from "@/components/ui/Photo";
 import { Reveal } from "@/components/ui/Reveal";
 import { ContactForm } from "@/components/contact/ContactForm";
 import { site, waLink } from "@/lib/site";
@@ -29,25 +30,27 @@ export default async function ContactPage({
   ] as const;
 
   return (
-    <div className="pt-[calc(var(--nav-h)+40px)] lg:pt-[calc(var(--nav-h)+72px)] pb-8">
-      <header className="gutter pb-12 lg:pb-20 flex flex-col gap-6">
+    <div>
+      <section className="wrap gutter pt-12 lg:pt-20 pb-12 lg:pb-16 flex flex-col items-center text-center gap-5">
         <Reveal><span className="t-mono text-mute">{t("eyebrow")}</span></Reveal>
-        <Reveal delay={60}><h1 className="t-display max-w-[12ch]">{t("line1")} <span className="font-light">{t("line2")}</span></h1></Reveal>
-        <Reveal delay={120}><p className="t-body text-mute max-w-[48ch]">{t("lead")}</p></Reveal>
-      </header>
-
-      <section className="gutter grid lg:grid-cols-12 gap-12 lg:gap-16 border-t border-line pt-10 lg:pt-16">
-        <Reveal className="lg:col-span-4">
-          <ul className="flex flex-col">
-            {channels.map((ch) => (
-              <li key={ch.k} className="py-4 border-b border-line flex flex-col gap-1">
-                <span className="t-mono text-mute">{t(`channels.${ch.k}`)} · <span className="text-faint">{t(`channels.${ch.k}Note`)}</span></span>
-                <a href={ch.href} className="link t-body self-start">{ch.v}</a>
-              </li>
-            ))}
-          </ul>
+        <Reveal delay={80}><h1 className="t-display-sm">{t("line1")} <em>{t("line2")}</em></h1></Reveal>
+        <Reveal delay={160}><p className="t-body max-w-[52ch]">{t("lead")}</p></Reveal>
+        <Reveal delay={240} as="ul" className="flex flex-wrap justify-center gap-x-10 gap-y-4 pt-4">
+          {channels.map((ch) => (
+            <li key={ch.k} className="flex flex-col items-center gap-1">
+              <span className="t-mono text-faint">{t(`channels.${ch.k}`)}</span>
+              <a href={ch.href} className="link t-caption">{ch.v}</a>
+              <span className="t-small text-mute">{t(`channels.${ch.k}Note`)}</span>
+            </li>
+          ))}
         </Reveal>
-        <Reveal delay={100} className="relative lg:col-span-7 lg:col-start-6">
+      </section>
+
+      <section className="wrap gutter pb-20 lg:pb-28 grid lg:grid-cols-12 gap-12 lg:gap-16 items-start">
+        <Reveal className="hidden lg:block lg:col-span-4 aspect-[4/5] lg:sticky lg:top-8">
+          <Photo seed="contact-1" sizes="33vw" className="h-full w-full" />
+        </Reveal>
+        <Reveal delay={100} className="relative lg:col-span-7 lg:col-start-6 border-t border-line pt-10">
           <ContactForm initialKind={kind} />
         </Reveal>
       </section>

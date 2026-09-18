@@ -14,19 +14,12 @@ export default async function WorkPage({ params }: { params: Promise<{ locale: s
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("work");
-
   return (
-    <div className="pt-[calc(var(--nav-h)+40px)] lg:pt-[calc(var(--nav-h)+72px)] pb-8">
-      <header className="gutter pb-10 lg:pb-16 grid lg:grid-cols-12 gap-6 items-end">
-        <Reveal className="lg:col-span-8">
-          <h1 className="t-display">
-            {t("line1")} <span className="font-light">{t("line2")}</span>
-          </h1>
-        </Reveal>
-        <Reveal delay={100} className="lg:col-span-4 flex flex-col gap-3">
-          <span className="t-mono text-mute">{t("eyebrow")}</span>
-          <p className="t-body text-mute max-w-[40ch]">{t("lead")}</p>
-        </Reveal>
+    <div className="wrap gutter pt-12 lg:pt-20 pb-20 lg:pb-28">
+      <header className="flex flex-col items-center text-center gap-5 pb-12 lg:pb-16">
+        <Reveal><span className="t-mono text-mute">{t("eyebrow")}</span></Reveal>
+        <Reveal delay={80}><h1 className="t-display-sm">{t("line1")} <em>{t("line2")}</em></h1></Reveal>
+        <Reveal delay={160}><p className="t-body max-w-[56ch]">{t("lead")}</p></Reveal>
       </header>
       <ContactSheet projects={projects} />
     </div>

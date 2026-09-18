@@ -7,8 +7,7 @@ import { routing } from "@/i18n/routing";
 import { Photo } from "@/components/ui/Photo";
 import { Reveal } from "@/components/ui/Reveal";
 import { Gallery } from "@/components/work/Gallery";
-import { ProjectTimeline } from "@/components/work/ProjectTimeline";
-import { frameOf, getProject, nextProject, projects, whenOf } from "@/lib/projects";
+import { getProject, nextProject, projects } from "@/lib/projects";
 
 type Params = Promise<{ locale: string; slug: string }>;
 
@@ -31,29 +30,23 @@ export default async function ProjectPage({ params }: { params: Params }) {
   const next = nextProject(slug);
 
   return (
-    <article className="pt-[var(--nav-h)]">
-      <ProjectTimeline id={p.slug} when={whenOf(p)} label={`${p.title}, ${p.location}`} />
-
+    <article>
       {/* Hero — the morph target */}
       <ViewTransition name={`photo-${p.slug}`} share="morph" default="none">
-        <div className="h-[calc(100dvh-var(--nav-h)-var(--timeline-h))] w-full">
+        <div className="h-[70vh] lg:h-[84vh] w-full">
           <Photo seed={p.cover} alt={p.title} priority sizes="100vw" className="h-full w-full" />
         </div>
       </ViewTransition>
 
-      {/* Caption row, contact-sheet style */}
-      <header className="gutter pt-6 lg:pt-8 pb-12 lg:pb-20 grid lg:grid-cols-12 gap-6">
-        <Reveal className="lg:col-span-7 flex flex-col gap-5">
-          <span className="t-mono text-faint">{frameOf(p)} · {whenOf(p).replace("-", " · ")}</span>
-          <h1 className="t-display-sm">{p.title}</h1>
-          <p className="t-statement max-w-[28ch] font-extralight">{p.pull}</p>
-        </Reveal>
-        <Reveal delay={100} as="dl" className="lg:col-span-4 lg:col-start-9 flex flex-col t-mono">
-          <div className="flex justify-between gap-4 py-2.5 border-b border-line"><dt className="text-mute">{t("nav.work")}</dt><dd>{t(`categories.${p.category}`)}</dd></div>
+      <header className="wrap gutter pt-12 lg:pt-16 pb-12 lg:pb-16 flex flex-col items-center text-center gap-5">
+        <Reveal><span className="t-mono text-mute">{t(`categories.${p.category}`)} · {p.location} · {p.date}</span></Reveal>
+        <Reveal delay={80}><h1 className="t-display-sm">{p.title}</h1></Reveal>
+        <Reveal delay={160}><p className="t-statement max-w-[36ch] text-balance">{p.pull}</p></Reveal>
+        <Reveal delay={240} as="dl" className="flex flex-wrap justify-center gap-x-10 gap-y-3 pt-4">
           {p.facts.map((f) => (
-            <div key={f.label} className="flex justify-between gap-4 py-2.5 border-b border-line">
-              <dt className="text-mute">{f.label}</dt>
-              <dd className="text-right normal-case tracking-normal">{f.value}</dd>
+            <div key={f.label} className="flex flex-col items-center gap-1">
+              <dt className="t-mono text-faint">{f.label}</dt>
+              <dd className="t-small text-ink">{f.value}</dd>
             </div>
           ))}
         </Reveal>
@@ -61,17 +54,17 @@ export default async function ProjectPage({ params }: { params: Params }) {
 
       <Gallery seeds={p.gallery} title={p.title} />
 
-      <section className="gutter py-16 lg:py-28 grid lg:grid-cols-12 gap-8">
-        <Reveal className="lg:col-span-3 t-mono text-mute">{t("project.theDay")}</Reveal>
-        <Reveal delay={80} className="lg:col-span-6 t-body text-mute max-w-[60ch]">{p.body}</Reveal>
+      <section className="wrap gutter py-16 lg:py-24 flex flex-col items-center text-center gap-5">
+        <Reveal><span className="t-mono text-mute">{t("project.theDay")}</span></Reveal>
+        <Reveal delay={80}><p className="t-body max-w-[60ch]">{p.body}</p></Reveal>
       </section>
 
       {p.film && (
-        <section className="gutter pb-16 lg:pb-28">
+        <section className="wrap gutter pb-16 lg:pb-24">
           <Reveal>
             <button type="button" aria-label={t("project.playFilm")} className="group relative w-full aspect-video bg-dark flex items-center justify-center text-on-dark">
               <span className="t-mono absolute left-5 top-5 text-on-dark-mute">{t("project.film")} · {p.film.duration}</span>
-              <span className="h-12 w-12 border border-on-dark/40 rounded-full flex items-center justify-center transition-transform duration-700 ease-out-soft group-hover:scale-110">
+              <span className="h-14 w-14 border border-on-dark/50 rounded-full flex items-center justify-center transition-transform duration-700 ease-out-soft group-hover:scale-110">
                 <span className="ml-0.5 border-y-[6px] border-y-transparent border-l-[10px] border-l-on-dark" />
               </span>
             </button>
@@ -79,14 +72,15 @@ export default async function ProjectPage({ params }: { params: Params }) {
         </section>
       )}
 
-      <Link href={`/work/${next.slug}`} className="group block gutter py-10 lg:py-16 border-t border-line">
-        <div className="flex items-end justify-between gap-6">
-          <div className="flex flex-col gap-3">
-            <span className="t-mono text-mute">{t("project.next")} · {whenOf(next).replace("-", " · ")}</span>
+      <Link href={`/work/${next.slug}`} className="group block border-t border-line">
+        <div className="wrap gutter py-12 lg:py-16 flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div className="flex flex-col gap-2 text-center sm:text-left">
+            <span className="t-mono text-mute">{t("project.next")}</span>
             <span className="t-display-sm">{next.title}</span>
+            <span className="t-mono text-faint">{t(`categories.${next.category}`)} · {next.location}</span>
           </div>
-          <div className="w-[120px] lg:w-[200px] aspect-[4/5] shrink-0">
-            <Photo seed={next.cover} sizes="200px" className="h-full w-full" />
+          <div className="w-[140px] lg:w-[180px] aspect-[4/5] shrink-0">
+            <Photo seed={next.cover} sizes="180px" className="h-full w-full" />
           </div>
         </div>
       </Link>

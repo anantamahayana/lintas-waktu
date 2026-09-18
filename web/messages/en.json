@@ -23,7 +23,15 @@
       "eyebrow": "Independent wedding & film photographer · Bali",
       "line1": "Moments pass.",
       "line2": "The photographs don’t.",
-      "lead": "Wedding, pre-wedding, events and personal stories — photographed and filmed slowly, with intention, so they can be revisited long after the day is gone."
+      "lead": "Wedding, pre-wedding, events and personal stories — photographed and filmed slowly, with intention, so they can be revisited long after the day is gone.",
+      "est": "Est. 2022 · Bali",
+      "title1": "Wedding & Film",
+      "title2": "Photography",
+      "tagline": "Moments pass. The photographs don’t.",
+      "left": "Based in Bali",
+      "right": "Open for worldwide",
+      "cta1": "Our services",
+      "cta2": "Inquire now"
     },
     "work": {
       "eyebrow": "Selected work",
@@ -61,7 +69,9 @@
       "eyebrow": "Behind the camera",
       "line1": "No team. No vendor desk.",
       "line2": "Just the person who was there.",
-      "body": "Lintas Waktu is run independently. From the first conversation to the day you receive your files, you work directly with the photographer — the same person who stood beside you on the day and remembers how it felt."
+      "body": "Lintas Waktu is run independently. From the first conversation to the day you receive your files, you work directly with the photographer — the same person who stood beside you on the day and remembers how it felt.",
+      "title": "Photography with <em>a personal touch</em>",
+      "quote": "“We don’t just take pictures — we keep the hours you’ll want to walk back into.”"
     },
     "process": {
       "eyebrow": "How it works",
@@ -102,6 +112,31 @@
       "line1": "Tell us about",
       "line2": "your day.",
       "body": "Dates in Bali fill quickly in the dry season (May–September). A short message is enough to start — we’ll reply within a day."
+    },
+    "intro": {
+      "eyebrow": "Let’s get closer",
+      "title": "The art <em>of</em> keeping a day, <em>for</em> the years after",
+      "body": "We photograph and film weddings, pre-weddings, events and personal stories across Bali. Quietly, without posing lists, and edited by hand — so what you receive feels like the day did, not like a catalogue of it."
+    },
+    "cards": {
+      "eyebrow": "What we photograph",
+      "wedding": "Wedding & Elopement",
+      "prewedding": "Pre-wedding & Engagement",
+      "personal": "Personal & Brand"
+    },
+    "recent": {
+      "eyebrow": "Recent work",
+      "title": "Days worth <em>returning to</em>",
+      "cta": "View the portfolio"
+    },
+    "kind": {
+      "eyebrow": "Kind words"
+    },
+    "invite": {
+      "eyebrow": "Let’s talk",
+      "title": "Tell us about <em>your day</em>",
+      "body": "Dates in Bali fill quickly in the dry season (May–September). A short message is enough to start — we reply within a day.",
+      "cta": "Inquire now"
     }
   },
   "footer": {

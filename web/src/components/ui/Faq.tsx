@@ -23,7 +23,7 @@ export function Faq({ items }: { items: { q: string; a: string }[] }) {
               onClick={() => setOpen(isOpen ? null : i)}
               className="w-full flex items-start justify-between gap-6 py-4 lg:py-5 text-left"
             >
-              <span className="t-body font-medium">{it.q}</span>
+              <span className="t-caption text-left">{it.q}</span>
               <span
                 aria-hidden
                 className={clsx("t-mono text-mute transition-transform duration-500 ease-out-soft pt-1", isOpen && "rotate-45")}

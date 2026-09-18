@@ -2,22 +2,29 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { site, waLink } from "@/lib/site";
 
-/** One quiet line. The timeline below it is the real footer. */
+/** Centred, symmetrical, like the end of a printed programme. */
 export function SiteFooter() {
   const t = useTranslations();
+  const links = [["work", "/work"], ["services", "/services"], ["about", "/about"], ["contact", "/contact"]] as const;
   return (
-    <footer className="gutter pt-16 pb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 t-mono text-mute">
-      <div className="flex flex-col gap-2">
-        <span className="text-ink">{t("brand.name")}</span>
-        <span>{t("footer.tagline")}</span>
+    <footer className="border-t border-line">
+      <div className="wrap gutter py-14 lg:py-20 flex flex-col items-center text-center gap-8">
+        <div className="flex flex-col items-center gap-2">
+          <span className="t-wordmark text-[28px]">{t("brand.name")}</span>
+          <span className="t-mono text-faint">{t("footer.tagline")}</span>
+        </div>
+        <nav className="flex flex-wrap justify-center gap-x-8 gap-y-3">
+          {links.map(([k, href]) => (
+            <Link key={k} href={href} className="link t-mono text-mute hover:text-ink">{t(`nav.${k}`)}</Link>
+          ))}
+        </nav>
+        <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 t-small text-mute">
+          <a className="link" href={waLink()}>WhatsApp {site.whatsapp.display}</a>
+          <a className="link" href={`mailto:${site.email}`}>{site.email}</a>
+          <a className="link" href={`https://instagram.com/${site.instagram}`}>@{site.instagram}</a>
+        </div>
+        <span className="t-small text-faint">{t("footer.rights", { year: new Date().getFullYear() })}</span>
       </div>
-      <div className="flex flex-wrap gap-x-6 gap-y-2">
-        <a className="link" href={waLink()}>WhatsApp</a>
-        <a className="link" href={`mailto:${site.email}`}>Email</a>
-        <a className="link" href={`https://instagram.com/${site.instagram}`}>Instagram</a>
-        <Link className="link" href="/contact">{t("nav.contact")}</Link>
-      </div>
-      <span>{t("footer.rights", { year: new Date().getFullYear() })}</span>
     </footer>
   );
 }

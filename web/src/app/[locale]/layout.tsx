@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Manrope, Geist_Mono } from "next/font/google";
+import { Cormorant_Garamond, Inter } from "next/font/google";
 import { notFound } from "next/navigation";
 import Script from "next/script";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
@@ -8,21 +8,20 @@ import { routing } from "@/i18n/routing";
 import { SiteNav } from "@/components/site/SiteNav";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { REVEAL_SCRIPT } from "@/components/ui/Reveal";
-import { TimelineProvider } from "@/components/timeline/TimelineContext";
-import { Timeline } from "@/components/timeline/Timeline";
 import "../globals.css";
 
-const manrope = Manrope({
+const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
-  weight: ["200", "300", "400", "500"],
-  variable: "--font-manrope",
+  weight: ["400", "500"],
+  style: ["normal", "italic"],
+  variable: "--font-cormorant",
   display: "swap",
 });
 
-const geistMono = Geist_Mono({
+const inter = Inter({
   subsets: ["latin"],
   weight: ["400", "500"],
-  variable: "--font-geist-mono",
+  variable: "--font-inter",
   display: "swap",
 });
 
@@ -51,16 +50,13 @@ export default async function LocaleLayout({
 
   return (
     // suppressHydrationWarning: the pre-hydration script adds the `js` class on purpose
-    <html lang={locale} className={`${manrope.variable} ${geistMono.variable}`} suppressHydrationWarning>
-      <body className="min-h-dvh pb-[var(--timeline-h)]">
+    <html lang={locale} className={`${cormorant.variable} ${inter.variable}`} suppressHydrationWarning>
+      <body className="min-h-dvh flex flex-col">
         <Script id="reveal" strategy="beforeInteractive">{REVEAL_SCRIPT}</Script>
         <NextIntlClientProvider>
-          <TimelineProvider>
-            <SiteNav />
-            <main>{children}</main>
-            <SiteFooter />
-            <Timeline />
-          </TimelineProvider>
+          <SiteNav />
+          <main className="flex-1">{children}</main>
+          <SiteFooter />
         </NextIntlClientProvider>
       </body>
     </html>

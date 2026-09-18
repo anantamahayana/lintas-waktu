@@ -1,44 +1,39 @@
 import { ViewTransition } from "react";
 import { useTranslations } from "next-intl";
-import clsx from "clsx";
 import { Link } from "@/i18n/navigation";
 import { Photo } from "@/components/ui/Photo";
 import { Reveal } from "@/components/ui/Reveal";
-import { frameOf, whenOf, type Project } from "@/lib/projects";
+import type { Project } from "@/lib/projects";
 
-/**
- * Recent work as a slow vertical sequence: one photograph per project,
- * alternating widths, one mono caption. Each image morphs into its
- * project page (shared element via ViewTransition name).
- */
-const LAYOUT = ["lg:w-full", "lg:w-2/3 lg:ml-auto", "lg:w-2/3", "lg:w-full"];
-const HEIGHT = ["h-[70vh] lg:h-[90vh]", "h-[60vh] lg:h-[75vh]", "h-[60vh] lg:h-[75vh]", "h-[70vh] lg:h-[90vh]"];
-
+/** Three portraits, titled; each morphs into its project page. */
 export function RecentWork({ projects }: { projects: Project[] }) {
   const t = useTranslations();
   return (
-    <section className="gutter flex flex-col gap-16 lg:gap-32 py-16 lg:py-32">
-      {projects.map((p, i) => (
-        <Reveal key={p.slug} className={clsx("w-full", LAYOUT[i % LAYOUT.length])}>
-          <Link href={`/work/${p.slug}`} className="group block">
-            <ViewTransition name={`photo-${p.slug}`} share="morph" default="none">
-              <div className={HEIGHT[i % HEIGHT.length]}>
-                <Photo seed={p.cover} alt={p.title} sizes="(min-width:1024px) 90vw, 100vw" className="h-full w-full" />
+    <section className="wrap gutter py-20 lg:py-28 flex flex-col items-center gap-12 lg:gap-16">
+      <div className="flex flex-col items-center text-center gap-4">
+        <Reveal><span className="t-mono text-mute">{t("home.recent.eyebrow")}</span></Reveal>
+        <Reveal delay={80}><h2 className="t-display-sm">{t.rich("home.recent.title", { em: (x) => <em>{x}</em> })}</h2></Reveal>
+      </div>
+
+      <ul className="grid grid-cols-1 sm:grid-cols-3 gap-8 lg:gap-10 w-full">
+        {projects.slice(0, 3).map((p, i) => (
+          <Reveal as="li" key={p.slug} delay={i * 100}>
+            <Link href={`/work/${p.slug}`} className="group flex flex-col gap-4">
+              <ViewTransition name={`photo-${p.slug}`} share="morph" default="none">
+                <div className="aspect-[4/5]">
+                  <Photo seed={p.cover} alt={p.title} sizes="(min-width:640px) 30vw, 100vw" className="h-full w-full" />
+                </div>
+              </ViewTransition>
+              <div className="flex flex-col gap-1">
+                <span className="t-caption">{p.title}</span>
+                <span className="t-mono text-mute">{t(`categories.${p.category}`)} · {p.location} · {p.date}</span>
               </div>
-            </ViewTransition>
-            <div className="mt-4 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 t-mono">
-              <span className="text-faint">{frameOf(p)}</span>
-              <span>
-                {whenOf(p).replace("-", " · ")} — <span className="link group-hover:bg-[length:100%_1px]">{p.title}</span>, {p.location}
-              </span>
-              <span className="text-mute">{t(`categories.${p.category}`)}</span>
-            </div>
-          </Link>
-        </Reveal>
-      ))}
-      <Reveal className="self-end">
-        <Link href="/work" className="action">{t("cta.viewAll")}</Link>
-      </Reveal>
+            </Link>
+          </Reveal>
+        ))}
+      </ul>
+
+      <Reveal delay={200}><Link href="/work" className="action">{t("home.recent.cta")}</Link></Reveal>
     </section>
   );
 }
