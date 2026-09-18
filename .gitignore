@@ -1,0 +1,20 @@
+# dependencies / builds
+node_modules/
+.next/
+out/
+dist/
+# env & secrets
+.env
+.env.*
+!.env.example
+*.pem
+# python
+__pycache__/
+venv/
+*.db
+# os / editor
+.DS_Store
+Thumbs.db
+.vscode/
+# claude local
+.claude/settings.local.json

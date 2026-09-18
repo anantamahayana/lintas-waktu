@@ -1,0 +1,146 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------
+   Lintas Waktu design tokens — names mirror the Figma collection
+   `LW / Color` and docs/BRAND.md. Change a value here and the whole
+   site follows. Utilities: bg-paper, text-ink, border-line, …
+   ------------------------------------------------------------------ */
+@theme {
+  /* bg/* */
+  --color-canvas: #c9cab9;
+  --color-paper: #f6f3eb;
+  --color-paper-deep: #ede9dd;
+  --color-green: #2f4a3a;
+  --color-green-deep: #22362b;
+  --color-highlight: #dcd9c6;
+
+  /* text/* */
+  --color-ink: #1c1b18;
+  --color-mute: #6f6d64;
+  --color-faint: #a3a196;
+  --color-on-dark: #f6f3eb;
+  --color-on-dark-mute: #b9c4b8;
+
+  /* line/* */
+  --color-line: #dad6c8;
+  --color-line-dark: #4a6455;
+
+  /* accent/* */
+  --color-olive: #7c8a5a;
+  --color-gold: #c9a84c;
+
+  /* error — deliberately outside the brand palette */
+  --color-error: #a3402f;
+
+  /* type */
+  --font-display: var(--font-instrument-serif), "Instrument Serif", Georgia, serif;
+  --font-sans: var(--font-inter), Inter, system-ui, sans-serif;
+
+  --tracking-eyebrow: 0.12em;
+
+  /* motion */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-reveal: 700ms;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-canvas text-ink font-sans antialiased;
+    font-feature-settings: "ss01", "cv11";
+  }
+  img {
+    -webkit-user-drag: none;
+  }
+  ::selection {
+    background: var(--color-highlight);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 3px;
+    border-radius: 999px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* Type ramp — sizes from BRAND.md §3 (desktop / mobile) */
+  .t-hero      { @apply font-display leading-[0.98] tracking-[-0.02em] text-[40px] md:text-[64px] lg:text-[88px]; }
+  .t-h2        { @apply font-display leading-[1.08] tracking-[-0.01em] text-[34px] md:text-[44px] lg:text-[56px]; }
+  .t-h3        { @apply font-display leading-[1.2]  text-[24px] lg:text-[32px]; }
+  .t-wordmark  { @apply font-display text-[22px] lg:text-[24px] leading-none; }
+  .t-lead      { @apply text-[16px] lg:text-[18px] leading-[1.55]; }
+  .t-body      { @apply text-[15px] leading-[1.6]; }
+  .t-small     { @apply text-[13px] leading-[1.5]; }
+  .eyebrow     { @apply text-[11px] font-medium uppercase tracking-eyebrow text-mute; }
+
+  /* Highlighted italic phrase inside a headline */
+  .hl {
+    @apply font-display italic bg-highlight rounded-[4px] px-[0.12em] box-decoration-clone;
+    /* inline-block so the box sits below line 1 instead of painting over its descenders */
+    display: inline-block;
+    line-height: 1.06;
+    margin-top: 0.06em;
+  }
+
+  /* Buttons — variants compose the `btn` utility declared below */
+  .btn-ink   { @apply btn bg-ink text-paper hover:bg-green; }
+  .btn-ghost { @apply btn border border-line text-ink hover:border-ink hover:bg-paper-deep; }
+  .btn-gold  { @apply btn bg-gold text-ink hover:bg-[#d9b85e]; }
+
+  /* Underlined field */
+  .field {
+    @apply w-full bg-transparent border-0 border-b border-line py-3 text-[15px] text-ink placeholder:text-faint
+           focus:border-ink focus:border-b-2 focus:outline-none transition-colors;
+  }
+  .field-error { @apply border-error border-b-2; }
+
+  /* The "paper card" that holds every page */
+  .paper {
+    @apply bg-paper rounded-[6px] overflow-hidden;
+  }
+  .gutter { @apply px-5 lg:px-10; }
+}
+
+/* Tailwind v4: custom classes must be @utility to be composable with @apply */
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-medium leading-none
+         transition-[background-color,border-color,color,transform] duration-300 ease-out-soft
+         disabled:opacity-40 disabled:pointer-events-none active:scale-[0.98];
+}
+
+@layer utilities {
+  /* Reveal-on-scroll: applied by <Reveal/>; pure CSS so it costs nothing.
+     Scoped to html.js so content stays visible without JavaScript (SEO, no-JS). */
+  .js .reveal {
+    opacity: 0;
+    transform: translateY(18px);
+    transition: opacity var(--duration-reveal) var(--ease-out-soft),
+                transform var(--duration-reveal) var(--ease-out-soft);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+  .js .reveal.is-in {
+    opacity: 1;
+    transform: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .js .reveal { opacity: 1; transform: none; transition: none; }
+  }
+
+  /* Photo hover: image steps in slightly, nothing else moves */
+  .photo-hover img {
+    transition: transform 600ms var(--ease-out-soft);
+  }
+  .photo-hover:hover img {
+    transform: scale(1.04);
+  }
+}
