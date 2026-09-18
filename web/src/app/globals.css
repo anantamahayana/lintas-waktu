@@ -79,6 +79,17 @@
   }
   .field-error { @apply border-error; }
 
+  /* Glass: the sticky nav once scrolled — off-white at 72%, blurred and
+     slightly saturated so photographs glow through it. */
+  .glass {
+    background-color: color-mix(in oklab, var(--color-white) 72%, transparent);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    backdrop-filter: blur(18px) saturate(140%);
+  }
+  @supports not (backdrop-filter: blur(1px)) {
+    .glass { background-color: color-mix(in oklab, var(--color-white) 94%, transparent); }
+  }
+
   /* Layout */
   .gutter { @apply px-5 lg:px-10; }
   .wrap { @apply mx-auto w-full max-w-[var(--container)]; }

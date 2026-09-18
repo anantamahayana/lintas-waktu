@@ -17,7 +17,6 @@ export function SiteNav() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [hidden, setHidden] = useState(false);
   const close = () => setOpen(false);
 
   useEffect(() => {
@@ -25,20 +24,14 @@ export function SiteNav() {
     return () => { document.documentElement.style.overflow = ""; };
   }, [open]);
 
-  // Sticky behaviour: compact after 80px; hide on scroll down, show on scroll up.
+  // Sticky: transparent over the hero, then compact glass once scrolled.
   useEffect(() => {
-    let last = window.scrollY;
     let raf = 0;
     const onScroll = () => {
       cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        const y = window.scrollY;
-        setScrolled(y > 80);
-        setHidden(y > 400 && y > last + 4);
-        if (y < last - 4 || y <= 400) setHidden(false);
-        last = y;
-      });
+      raf = requestAnimationFrame(() => setScrolled(window.scrollY > 80));
     };
+    onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => { window.removeEventListener("scroll", onScroll); cancelAnimationFrame(raf); };
   }, []);
@@ -56,10 +49,11 @@ export function SiteNav() {
   return (
     <header
       className={clsx(
-        "sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b transition-[transform,border-color,box-shadow] duration-500 ease-out-soft",
+        "sticky top-0 z-50 border-b transition-[background-color,border-color,backdrop-filter] duration-700 ease-out-soft",
         "animate-[navIn_900ms_cubic-bezier(.22,1,.36,1)_backwards]",
-        scrolled ? "border-line shadow-[0_1px_0_0_rgba(0,0,0,0.02)]" : "border-transparent",
-        hidden && !open ? "-translate-y-full" : "translate-y-0",
+        scrolled || open
+          ? "glass border-line"
+          : "bg-white border-transparent",
       )}
     >
       <div
