@@ -72,12 +72,20 @@
   }
   .link:hover, .link:focus-visible { background-size: 100% 1px; }
 
-  /* Underlined field */
+  /* Form field: a clear box — hairline border, faint fill, one height */
   .field {
-    @apply w-full bg-transparent border-0 border-b border-line py-3 text-[15px] text-ink placeholder:text-faint
-           focus:border-ink focus:outline-none transition-colors rounded-none;
+    @apply w-full h-12 px-4 bg-white border border-line text-[15px] text-ink placeholder:text-faint rounded-none
+           transition-[border-color,box-shadow] duration-300 focus:outline-none focus:border-ink focus:shadow-[0_0_0_1px_var(--color-ink)];
+    background-color: color-mix(in oklab, var(--color-white) 60%, white);
   }
-  .field-error { @apply border-error; }
+  textarea.field { @apply h-auto py-3.5 min-h-[140px]; }
+  select.field {
+    @apply appearance-none pr-10 cursor-pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2377756f' stroke-width='1.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+  }
+  .field-error { @apply border-error focus:border-error focus:shadow-[0_0_0_1px_var(--color-error)]; }
 
   /* Glass: the sticky nav once scrolled — off-white at 72%, blurred and
      slightly saturated so photographs glow through it. */

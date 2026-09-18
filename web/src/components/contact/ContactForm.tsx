@@ -67,10 +67,10 @@ export function ContactForm({ initialKind = "" }: { initialKind?: string }) {
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate className="flex flex-col gap-7">
+    <form onSubmit={onSubmit} noValidate className="flex flex-col gap-6">
       <h2 className="t-mono text-mute">{t("title")}</h2>
 
-      <div className="grid sm:grid-cols-2 gap-x-8 gap-y-6">
+      <div className="grid sm:grid-cols-2 gap-x-6 gap-y-5">
         <Field label={t("name")} error={errors.name}>
           <input className={clsx("field", errors.name && "field-error")} value={v.name} onChange={set("name")} autoComplete="name" placeholder="Ayu Lestari" />
         </Field>
@@ -125,7 +125,7 @@ export function ContactForm({ initialKind = "" }: { initialKind?: string }) {
 
 function Field({ label, optional, error, children }: { label: string; optional?: string; error?: string; children: React.ReactNode }) {
   return (
-    <label className="flex flex-col gap-1">
+    <label className="flex flex-col gap-2">
       <span className="t-mono text-mute">
         {label}
         {optional && <span className="text-faint"> · {optional}</span>}

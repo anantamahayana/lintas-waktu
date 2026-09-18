@@ -50,7 +50,7 @@ export default async function ContactPage({
         <Reveal className="hidden lg:block lg:col-span-4 aspect-[4/5] lg:sticky lg:top-8">
           <Photo seed="contact-1" sizes="33vw" className="h-full w-full" />
         </Reveal>
-        <Reveal delay={100} className="relative lg:col-span-7 lg:col-start-6 border-t border-line pt-10">
+        <Reveal delay={100} className="relative lg:col-span-7 lg:col-start-6 border border-line p-6 sm:p-8 lg:p-10">
           <ContactForm initialKind={kind} />
         </Reveal>
       </section>
