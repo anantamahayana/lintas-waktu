@@ -144,3 +144,16 @@
   @keyframes lw-blur { 30% { filter: blur(2px); } }
   ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 350ms; }
 }
+
+/* Client-gallery title card (ported from photo-selection-platform) */
+@keyframes intro-letter { from { opacity: 0; transform: translateY(0.4em) rotate(4deg); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes intro-sub { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes intro-line { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes intro-logo { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: none; } }
+@keyframes intro-out { to { clip-path: inset(0 0 100% 0); } }
+.intro { clip-path: inset(0 0 0 0); }
+.intro-letter { display: inline-block; opacity: 0; animation: intro-letter 0.7s cubic-bezier(.2,.7,.2,1) forwards; }
+.intro-sub { opacity: 0; animation: intro-sub 0.6s ease forwards; }
+.intro-line { transform-origin: left; transform: scaleX(0); animation: intro-line 0.9s 0.8s cubic-bezier(.6,0,.2,1) forwards; }
+.intro-logo { animation: intro-logo 0.6s ease both; }
+.intro-out { animation: intro-out 0.7s cubic-bezier(.7,0,.2,1) forwards; }

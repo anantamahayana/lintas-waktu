@@ -6,7 +6,9 @@ import { gapi, galleryToken, GalleryError, type GalleryData, type GalleryMeta } 
 import { T, type Dict, type Lang } from "./i18n";
 
 type Filter = "all" | "selected" | "maybe";
-type Stage = "intro" | "pin" | "gallery" | "confirm" | "sent" | "expired";
+type Stage = "loading" | "pin" | "gallery" | "confirm" | "sent" | "expired";
+type IntroPhase = "in" | "out" | "gone";
+const INTRO_MS = 2600;
 
 const GOLD = "#c9a84c";
 
@@ -25,7 +27,8 @@ export function ClientGallery({ slug }: { slug: string }) {
   const t = T[lang];
   const [meta, setMeta] = useState<GalleryMeta | null>(null);
   const [data, setData] = useState<GalleryData | null>(null);
-  const [stage, setStage] = useState<Stage>("intro");
+  const [stage, setStage] = useState<Stage>("loading");
+  const [intro, setIntro] = useState<IntroPhase>("gone");
   const [error, setError] = useState<string | null>(null);
 
   // selection state
@@ -64,11 +67,18 @@ export function ClientGallery({ slug }: { slug: string }) {
       if (navigator.language.toLowerCase().startsWith("id")) setLang("id");
       setMeta(m);
       if (m.expired) { setStage("expired"); return; }
-      if (sessionStorage.getItem(`lw_intro_${slug}`)) {
-        if (m.locked && !galleryToken.get(slug)) setStage("pin"); else goGallery();
-      }
+      // the title card plays once per browser session (skipped for reduced motion)
+      const seen = sessionStorage.getItem(`lw_intro_${slug}`) || matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (!seen) setIntro("in");
+      if (m.locked && !galleryToken.get(slug)) setStage("pin"); else goGallery();
     }).catch((e) => setError(e.message));
   }, [slug, goGallery]);
+
+  // intro timing: lift away after INTRO_MS (or on tap), then unmount
+  useEffect(() => {
+    if (intro === "in") { const h = setTimeout(() => setIntro("out"), INTRO_MS); return () => clearTimeout(h); }
+    if (intro === "out") { const h = setTimeout(() => { setIntro("gone"); sessionStorage.setItem(`lw_intro_${slug}`, "1"); }, 700); return () => clearTimeout(h); }
+  }, [intro, slug]);
 
   // 2. autosave draft (debounced) — not in preview, not when completed
   const dirty = useRef(false);
@@ -78,8 +88,6 @@ export function ClientGallery({ slug }: { slug: string }) {
     const h = setTimeout(() => { gapi.draft(slug, { file_ids: ids, notes, maybe_ids: maybe }).catch(() => {}); }, 800);
     return () => clearTimeout(h);
   }, [ids, notes, maybe, data, slug, stage]);
-
-  const enter = () => { sessionStorage.setItem(`lw_intro_${slug}`, "1"); if (meta?.locked && !galleryToken.get(slug)) setStage("pin"); else goGallery(); };
 
   // derived
   const limit = data?.photo_limit ?? 0;
@@ -117,8 +125,7 @@ export function ClientGallery({ slug }: { slug: string }) {
   };
 
   // ------------------------------------------------------------ render
-  if (error) return <Screen><p className="t-mono text-error">{error}</p></Screen>;
-  if (!meta) return <Screen><span className="t-mono text-faint">…</span></Screen>;
+  if (!meta) return <Screen>{error ? <p className="t-mono text-error">{error}</p> : <span className="t-mono text-faint">…</span>}</Screen>;
   const b = meta.branding;
   const studio = b.studio_name || "Lintas Waktu";
   const langSwitch = (
@@ -135,18 +142,37 @@ export function ClientGallery({ slug }: { slug: string }) {
     </Screen>
   );
 
-  if (stage === "intro") return (
-    <button type="button" onClick={enter} className="fixed inset-0 bg-dark text-on-dark flex flex-col items-center justify-center gap-5 px-8 text-center cursor-pointer">
-      {b.logo_url ? <img src={gapi.img(b.logo_url)} alt={studio} className="h-24 max-w-[260px] object-contain mb-2" /> : <span className="t-display">{studio}</span>}
-      {b.tagline && <span className="t-mono text-on-dark-mute">{b.tagline}</span>}
-      <span className="h-px w-14" style={{ background: GOLD }} />
-      <span className="t-small text-on-dark-mute">{t.galleryFor}</span>
-      <span className="font-serif italic text-[34px] leading-none">{meta.client_name}</span>
-      <span className="absolute bottom-10 t-mono text-on-dark-mute animate-pulse">{t.tapToEnter}</span>
-    </button>
+  const introCard = intro !== "gone" && (
+    <div role="presentation" onClick={() => setIntro("out")} className={clsx("intro fixed inset-0 z-[70] bg-dark text-on-dark flex flex-col items-center justify-center gap-4 px-8 text-center cursor-pointer", intro === "out" && "intro-out")}>
+      {b.logo_url ? (
+        <img src={gapi.img(b.logo_url)} alt={studio} className="intro-logo h-24 max-w-[260px] object-contain mb-2" />
+      ) : (
+        <h1 className="t-display" aria-label={studio}>
+          {Array.from(studio).map((ch, i) => (
+            <span key={i} className="intro-letter" style={{ animationDelay: `${250 + i * 45}ms` }} aria-hidden>{ch === " " ? " " : ch}</span>
+          ))}
+        </h1>
+      )}
+      {b.tagline && <span className="intro-sub t-mono text-on-dark-mute" style={{ animationDelay: "900ms" }}>{b.tagline}</span>}
+      <span className="intro-line h-px w-16 mt-2" style={{ background: GOLD }} />
+      <span className="intro-sub t-small text-on-dark-mute mt-2" style={{ animationDelay: "1300ms" }}>{t.galleryFor}</span>
+      <span className="intro-sub font-serif italic text-[34px] leading-none" style={{ animationDelay: "1400ms" }}>{meta.client_name}</span>
+      <span className="intro-sub absolute bottom-10 t-mono text-on-dark-mute" style={{ animationDelay: "1700ms" }}>{t.tapToEnter}</span>
+    </div>
   );
 
-  if (stage === "pin") return <PinGate slug={slug} studio={studio} client={meta.client_name} t={t} onUnlocked={goGallery} langSwitch={langSwitch} />;
+  return (
+    <>
+      {introCard}
+      {renderStage()}
+    </>
+  );
+
+  // Plain function (not a component) so child state — PIN digits, lightbox note — survives re-renders.
+  function renderStage() {
+  if (error) return <Screen><p className="t-mono text-error">{error}</p></Screen>;
+  if (stage === "loading") return <Screen><span className="t-mono text-faint">…</span></Screen>;
+  if (stage === "pin") return <PinGate slug={slug} studio={studio} client={meta!.client_name} t={t} onUnlocked={goGallery} langSwitch={langSwitch} />;
 
   if (!data) return <Screen><span className="t-mono text-faint">…</span></Screen>;
 
@@ -312,6 +338,7 @@ export function ClientGallery({ slug }: { slug: string }) {
       )}
     </div>
   );
+  }
 }
 
 function Screen({ children }: { children: React.ReactNode }) {
