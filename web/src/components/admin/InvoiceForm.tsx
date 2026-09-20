@@ -9,7 +9,7 @@ import { InvoiceDoc, money } from "@/components/invoice/InvoiceDoc";
 
 type Values = {
   kind: "invoice" | "quote"; client_name: string; client_email: string; client_phone: string; client_address: string; event_label: string;
-  issued_at: string; due_at: string; currency: "IDR" | "USD"; items: InvoiceItem[]; discount: number; tax_percent: number; deposit_paid: number;
+  issued_at: string; due_at: string; currency: "IDR" | "USD"; lang: "en" | "id"; items: InvoiceItem[]; discount: number; tax_percent: number; deposit_paid: number;
   notes: string; session_id: string;
 };
 
@@ -19,7 +19,7 @@ const plusDays = (n: number) => { const d = new Date(); d.setDate(d.getDate() + 
 function fromInvoice(i: Invoice): Values {
   return {
     kind: i.kind, client_name: i.client_name, client_email: i.client_email ?? "", client_phone: i.client_phone ?? "", client_address: i.client_address ?? "",
-    event_label: i.event_label ?? "", issued_at: i.issued_at, due_at: i.due_at ?? "", currency: i.currency, items: i.items.length ? i.items : [{ description: "", qty: 1, unit_price: 0 }],
+    event_label: i.event_label ?? "", issued_at: i.issued_at, due_at: i.due_at ?? "", currency: i.currency, lang: i.lang ?? "en", items: i.items.length ? i.items : [{ description: "", qty: 1, unit_price: 0 }],
     discount: i.discount, tax_percent: i.tax_percent, deposit_paid: i.deposit_paid, notes: i.notes ?? "", session_id: i.session_id ?? "",
   };
 }
@@ -49,7 +49,7 @@ export function InvoiceForm({ invoice, business }: { invoice?: Invoice; business
   const router = useRouter();
   const initial: Values = invoice ? fromInvoice(invoice) : {
     kind: "invoice", client_name: "", client_email: "", client_phone: "", client_address: "", event_label: "", issued_at: today(),
-    due_at: plusDays(business.default_due_days || 7), currency: "IDR", items: [{ description: "", qty: 1, unit_price: 0 }], discount: 0,
+    due_at: plusDays(business.default_due_days || 7), currency: "IDR", lang: "en", items: [{ description: "", qty: 1, unit_price: 0 }], discount: 0,
     tax_percent: business.tax_percent || 0, deposit_paid: 0, notes: business.default_terms || "", session_id: "",
   };
   const [v, setV] = useState<Values>(initial);
@@ -128,7 +128,7 @@ export function InvoiceForm({ invoice, business }: { invoice?: Invoice; business
   const preview = {
     number: invoice?.number ?? `${business.prefix || "LW"}-${new Date().getFullYear()}-····`, status: invoice?.status ?? "draft", kind: v.kind, client_name: v.client_name || "Client name",
     client_email: v.client_email, client_phone: v.client_phone, client_address: v.client_address, event_label: v.event_label, issued_at: v.issued_at, due_at: v.due_at || null,
-    currency: cur, items: v.items.filter((it) => it.description.trim()), discount: totals.discount, tax_percent: Number(v.tax_percent) || 0, deposit_paid: totals.deposit_paid,
+    currency: cur, lang: v.lang, items: v.items.filter((it) => it.description.trim()), discount: totals.discount, tax_percent: Number(v.tax_percent) || 0, deposit_paid: totals.deposit_paid,
     notes: v.notes, paid_at: invoice?.paid_at ?? null, totals,
     verify_code: invoice && !dirty ? invoice.verify_code : undefined, verify_url: invoice && !dirty ? invoice.verify_url : undefined,
   } as const;
@@ -181,7 +181,10 @@ export function InvoiceForm({ invoice, business }: { invoice?: Invoice; business
           <Card title="Money">
             <div className="grid sm:grid-cols-2 gap-4">
               <Field label="Currency" hint={cur === "USD" ? "whole dollars" : "rupiah"}>
-                <Select value={v.currency} onChange={set("currency")}><option value="IDR">IDR — Rupiah</option><option value="USD">USD — US Dollar</option></Select>
+                <Select value={v.currency} onChange={(e) => setV((s) => ({ ...s, currency: e.target.value as "IDR" | "USD", lang: e.target.value === "USD" ? "en" : s.lang }))}><option value="IDR">IDR — Rupiah</option><option value="USD">USD — US Dollar</option></Select>
+              </Field>
+              <Field label="Document language" hint="what the client reads">
+                <Select value={v.lang} onChange={set("lang")}><option value="en">English</option><option value="id">Bahasa Indonesia</option></Select>
               </Field>
               <Field label="Deposit received" hint="already paid, deducted from the balance" error={errors.deposit_paid}><Input invalid={!!errors.deposit_paid} type="number" min={0} value={v.deposit_paid} onChange={set("deposit_paid")} /></Field>
               <Field label="Discount" hint="amount"><Input type="number" min={0} value={v.discount} onChange={set("discount")} /></Field>

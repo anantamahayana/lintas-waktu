@@ -33,7 +33,10 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
   };
   const copyLink = () => { navigator.clipboard.writeText(inv.public_url); toast("Link copied"); };
   const wa = () => {
-    const text = `Hi ${inv.client_name.split(" ")[0]}, here is your ${inv.kind === "quote" ? "quotation" : "invoice"} ${inv.number} from ${biz.name}:\n${inv.public_url}${inv.kind !== "quote" && t.balance > 0 ? `\n\nBalance due: ${money(t.balance, inv.currency)}${inv.due_at ? ` by ${fmtDate(inv.due_at)}` : ""}` : ""}\n\nThank you!`;
+    const first = inv.client_name.split(" ")[0];
+    const text = inv.lang === "id"
+      ? `Halo ${first}, berikut ${inv.kind === "quote" ? "penawaran" : "invoice"} ${inv.number} dari ${biz.name}:\n${inv.public_url}${inv.kind !== "quote" && t.balance > 0 ? `\n\nSisa tagihan: ${money(t.balance, inv.currency)}${inv.due_at ? ` sebelum ${fmtDate(inv.due_at)}` : ""}` : ""}\n\nTerima kasih!`
+      : `Hi ${first}, here is your ${inv.kind === "quote" ? "quotation" : "invoice"} ${inv.number} from ${biz.name}:\n${inv.public_url}${inv.kind !== "quote" && t.balance > 0 ? `\n\nBalance due: ${money(t.balance, inv.currency)}${inv.due_at ? ` by ${fmtDate(inv.due_at)}` : ""}` : ""}\n\nThank you!`;
     window.open(`https://wa.me/${(inv.client_phone ?? "").replace(/\D/g, "")}?text=${encodeURIComponent(text)}`, "_blank", "noreferrer");
   };
   const duplicate = async () => {

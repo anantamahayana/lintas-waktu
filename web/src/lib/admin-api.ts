@@ -173,7 +173,7 @@ export type InvoiceItem = { description: string; qty: number; unit_price: number
 export type InvoiceTotals = { subtotal: number; discount: number; taxable: number; tax: number; total: number; deposit_paid: number; balance: number };
 export type Invoice = {
   id: string; number: string; token: string; status: InvoiceStatus; kind: "invoice" | "quote"; client_name: string; client_email: string | null;
-  client_phone: string | null; client_address: string | null; event_label: string | null; issued_at: string; due_at: string | null; currency: "IDR" | "USD";
+  client_phone: string | null; client_address: string | null; event_label: string | null; issued_at: string; due_at: string | null; currency: "IDR" | "USD"; lang: "en" | "id";
   items: InvoiceItem[]; discount: number; tax_percent: number; deposit_paid: number; notes: string | null; session_id: string | null; session_client: string | null;
   paid_at: string | null; sent_at: string | null; created_at: string; updated_at: string; totals: InvoiceTotals; public_url: string;
   verify_code: string; verify_url: string; sent_hash: string | null; current_hash: string;

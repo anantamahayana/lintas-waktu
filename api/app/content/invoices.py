@@ -49,6 +49,7 @@ class Invoice(Base):
     issued_at: Mapped[date] = mapped_column(Date, default=date.today)
     due_at: Mapped[date | None] = mapped_column(Date, nullable=True)
     currency: Mapped[str] = mapped_column(String(3), default="IDR")
+    lang: Mapped[str] = mapped_column(String(2), default="en")  # language of the document the client sees: en | id
     items: Mapped[str] = mapped_column(Text, default="[]")  # JSON [{description, qty, unit_price}]
     discount: Mapped[int] = mapped_column(Integer, default=0)  # amount
     tax_percent: Mapped[int] = mapped_column(Integer, default=0)
@@ -92,6 +93,7 @@ class InvoiceIn(BaseModel):
     issued_at: date | None = None
     due_at: date | None = None
     currency: str = Field("IDR", pattern=r"^(IDR|USD)$")
+    lang: str = Field("en", pattern=r"^(en|id)$")
     items: list[Item] = []
     discount: int = Field(0, ge=0)
     tax_percent: int = Field(0, ge=0, le=100)
@@ -104,6 +106,7 @@ class InvoiceUpdate(InvoiceIn):
     client_name: str | None = Field(None, min_length=1, max_length=160)  # type: ignore[assignment]
     kind: str | None = Field(None, pattern=r"^(invoice|quote)$")  # type: ignore[assignment]
     currency: str | None = Field(None, pattern=r"^(IDR|USD)$")  # type: ignore[assignment]
+    lang: str | None = Field(None, pattern=r"^(en|id)$")  # type: ignore[assignment]
     items: list[Item] | None = None  # type: ignore[assignment]
     discount: int | None = Field(None, ge=0)  # type: ignore[assignment]
     tax_percent: int | None = Field(None, ge=0, le=100)  # type: ignore[assignment]
@@ -134,6 +137,7 @@ class InvoiceOut(BaseModel):
     issued_at: date
     due_at: date | None
     currency: str
+    lang: str
     items: list[Item]
     discount: int
     tax_percent: int
@@ -201,6 +205,7 @@ class PublicInvoice(BaseModel):
     issued_at: date
     due_at: date | None
     currency: str
+    lang: str
     items: list[Item]
     discount: int
     tax_percent: int
@@ -290,7 +295,8 @@ def verify_code(inv: Invoice) -> str:
 
 
 def verify_url(inv: Invoice) -> str:
-    return f"{get_settings().frontend_url.rstrip('/')}/verify/{inv.number}?c={verify_code(inv)}"
+    lang = "&lang=id" if inv.lang == "id" else ""
+    return f"{get_settings().frontend_url.rstrip('/')}/verify/{inv.number}?c={verify_code(inv)}{lang}"
 
 
 def log(db: DbSession, inv: Invoice, action: str, detail: dict | None = None) -> None:
