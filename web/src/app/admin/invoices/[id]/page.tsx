@@ -4,6 +4,7 @@ import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api, type Invoice, type InvoiceBusiness } from "@/lib/admin-api";
+import { Card } from "@/components/admin/ui";
 import { Btn, LoadError, PageHeader, Pill, SkeletonForm, confirm, fmtDate, toast } from "@/components/admin/ui";
 import { InvoiceForm } from "@/components/admin/InvoiceForm";
 import { money } from "@/components/invoice/InvoiceDoc";
@@ -59,8 +60,45 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
           </>
         }
       />
-      <div className="mb-6">{pill}</div>
+      <div className="mb-6 flex flex-wrap items-center gap-x-6 gap-y-2">
+        {pill}
+        {inv.status !== "draft" && (
+          <span className="t-small text-mute flex items-center gap-2">
+            Verification code <span className="font-mono text-ink tracking-[0.12em]">{inv.verify_code}</span>
+            <a href={inv.verify_url} target="_blank" rel="noreferrer" className="link">check ↗</a>
+            {inv.sent_hash && inv.sent_hash !== inv.current_hash && <span className="text-error">· edited after sending — the client’s copy is out of date; the link shows the new version, resend it</span>}
+          </span>
+        )}
+      </div>
       <InvoiceForm key={inv.updated_at} invoice={inv} business={biz} />
+      <div className="mt-6 max-w-[560px]"><History id={inv.id} stamp={inv.updated_at} /></div>
     </>
+  );
+}
+
+type Ev = { at: string; action: string; detail: { fields?: string[]; hash?: string; total?: number; from?: string; after_sent?: boolean } };
+const LABEL: Record<string, string> = { created: "Created", updated: "Edited", sent: "Marked as sent", paid: "Marked paid", void: "Voided", draft: "Back to draft", duplicated: "Duplicated" };
+
+/** Audit trail — who did what to this document, and when. */
+function History({ id, stamp }: { id: string; stamp: string }) {
+  const [rows, setRows] = useState<Ev[] | null>(null);
+  useEffect(() => { api.get<Ev[]>(`/api/admin/invoices/${id}/events`).then(setRows).catch(() => setRows([])); }, [id, stamp]);
+  if (!rows || rows.length === 0) return null;
+  return (
+    <Card title="History">
+      <ol className="flex flex-col gap-2 t-small">
+        {rows.map((e, i) => (
+          <li key={i} className="grid grid-cols-[150px_1fr] gap-3">
+            <span className="text-mute tabular-nums">{fmtDate(e.at, true)}</span>
+            <span>
+              {LABEL[e.action] ?? e.action}
+              {e.detail.fields && <span className="text-mute"> · {e.detail.fields.join(", ")}{e.detail.after_sent && <span className="text-error"> (after sending)</span>}</span>}
+              {e.detail.from && <span className="text-mute"> · from {e.detail.from}</span>}
+              {e.detail.hash && <span className="text-faint font-mono"> · {e.detail.hash.slice(0, 8)}</span>}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </Card>
   );
 }

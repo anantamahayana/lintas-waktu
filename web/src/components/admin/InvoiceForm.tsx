@@ -130,6 +130,7 @@ export function InvoiceForm({ invoice, business }: { invoice?: Invoice; business
     client_email: v.client_email, client_phone: v.client_phone, client_address: v.client_address, event_label: v.event_label, issued_at: v.issued_at, due_at: v.due_at || null,
     currency: cur, items: v.items.filter((it) => it.description.trim()), discount: totals.discount, tax_percent: Number(v.tax_percent) || 0, deposit_paid: totals.deposit_paid,
     notes: v.notes, paid_at: invoice?.paid_at ?? null, totals,
+    verify_code: invoice && !dirty ? invoice.verify_code : undefined, verify_url: invoice && !dirty ? invoice.verify_url : undefined,
   } as const;
 
   return (

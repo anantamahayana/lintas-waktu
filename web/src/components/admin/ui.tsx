@@ -270,7 +270,8 @@ export function LoadError({ error, retry }: { error: string; retry: () => void }
 
 export function fmtDate(iso: string | null | undefined, withTime = false) {
   if (!iso) return "—";
-  const d = new Date(iso);
+  // The API stores UTC without a zone marker; read it as UTC, not as local time
+  const d = new Date(/[zZ]|[+-]\d\d:\d\d$/.test(iso) || iso.length <= 10 ? iso : iso + "Z");
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {}) });
 }
 export function daysLeft(iso: string | null) {

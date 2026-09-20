@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient  # noqa: E402  (harus setelah env di a
 from app.database import SessionLocal, migrate  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models import FailedAttempt, PhotoSession  # noqa: E402
-from app.content.invoices import Invoice  # noqa: E402
+from app.content.invoices import Invoice, InvoiceEvent  # noqa: E402
 from app.routers import gallery  # noqa: E402
 from app.services import drive_service  # noqa: E402
 
@@ -31,6 +31,7 @@ def _db_bersih(monkeypatch):
         db.query(PhotoSession).delete()
         db.query(FailedAttempt).delete()
         db.query(Invoice).delete()
+        db.query(InvoiceEvent).delete()
         db.commit()
     yield
 

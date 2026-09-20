@@ -176,6 +176,7 @@ export type Invoice = {
   client_phone: string | null; client_address: string | null; event_label: string | null; issued_at: string; due_at: string | null; currency: "IDR" | "USD";
   items: InvoiceItem[]; discount: number; tax_percent: number; deposit_paid: number; notes: string | null; session_id: string | null; session_client: string | null;
   paid_at: string | null; sent_at: string | null; created_at: string; updated_at: string; totals: InvoiceTotals; public_url: string;
+  verify_code: string; verify_url: string; sent_hash: string | null; current_hash: string;
 };
 export type InvoiceBusiness = {
   name: string; tagline: string; address: string; email: string; phone: string; bank_details: string; prefix: string;

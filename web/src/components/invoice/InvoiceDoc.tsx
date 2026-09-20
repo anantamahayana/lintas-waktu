@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import { QR } from "./QR";
 
 /**
  * The invoice as a document: A4-ish sheet in the site's editorial voice.
@@ -12,6 +13,8 @@ export type Doc = {
   number: string; status: "draft" | "sent" | "paid" | "void"; kind: string; client_name: string; client_email?: string | null; client_phone?: string | null;
   client_address?: string | null; event_label?: string | null; issued_at: string; due_at?: string | null; currency: string; items: Item[];
   discount: number; tax_percent: number; deposit_paid: number; notes?: string | null; paid_at?: string | null; totals: Totals;
+  /** printed on the document; anyone can check it at verify_url */
+  verify_code?: string; verify_url?: string;
 };
 
 export function money(n: number, currency: string) {
@@ -111,6 +114,19 @@ export function InvoiceDoc({ doc, business, className }: { doc: Doc; business: B
           <div className="flex flex-col gap-1.5">
             <span className="t-mono text-faint">{doc.kind === "quote" ? "Terms" : "Notes"}</span>
             <span className="whitespace-pre-line">{doc.notes}</span>
+          </div>
+        )}
+        {/* Authenticity: the QR / code resolve to our server, which knows the official amount, status and bank account */}
+        {doc.verify_url && doc.verify_code && (
+          <div className="sm:col-span-2 pt-6 border-t border-line grid grid-cols-[auto_1fr] gap-4 items-center">
+            <QR value={doc.verify_url} size={72} className="shrink-0" />
+            <div className="flex flex-col gap-1 min-w-0">
+              <span className="t-mono text-faint">Verification</span>
+              <span className="text-ink">
+                Code <span className="font-mono tracking-[0.12em]">{doc.verify_code}</span> · scan, or check at <span className="break-all">{doc.verify_url.replace(/^https?:\/\//, "").split("?")[0]}</span>
+              </span>
+              <span>A genuine document matches this number and code there, together with our official payment details. We never change bank accounts by chat — pay only to the account shown on the verified page.</span>
+            </div>
           </div>
         )}
         <div className="sm:col-span-2 pt-6 border-t border-line flex flex-wrap gap-x-6 gap-y-1">
