@@ -106,16 +106,27 @@ export function AlbumPreview({ photos, clientName, studio, onClose, t }: { photo
   const canGo = useCallback((d: 1 | -1) => (d === 1 ? idx < total - 1 : idx > 0), [idx, total]);
 
   /** Start an eased turn from the current progress (button, key, swipe or drag release). */
+  const settleTimer = useRef<{ id: number | null }>({ id: null });
+  const finish = useCallback((dir: 1 | -1, completed: boolean) => {
+    if (settleTimer.current.id) { clearTimeout(settleTimer.current.id); settleTimer.current.id = null; }
+    if (completed) setIdx((i) => i + dir);
+    setTurn(null);
+  }, []);
   const settle = useCallback((dir: 1 | -1, from: number, complete: boolean) => {
+    const target = complete ? 1 : 0;
+    // nothing to animate (released exactly where it started): just let go
+    if (Math.abs(from - target) < 0.005) { finish(dir, complete); return; }
     setTurn({ dir, p: from, anim: true });
     // next frame so the transition sees a change
-    requestAnimationFrame(() => requestAnimationFrame(() => setTurn({ dir, p: complete ? 1 : 0, anim: true })));
-  }, []);
+    requestAnimationFrame(() => requestAnimationFrame(() => setTurn({ dir, p: target, anim: true })));
+    // safety net: if transitionend never arrives (tab hidden, interrupted), finish anyway
+    settleTimer.current.id = window.setTimeout(() => finish(dir, complete), 900);
+  }, [finish]);
   const go = useCallback((d: 1 | -1) => { if (turn || !canGo(d)) return; setHint(false); settle(d, 0, true); }, [turn, canGo, settle]);
-  const onLeafDone = () => {
+  const onLeafDone = (e: React.TransitionEvent) => {
+    if (e.target !== e.currentTarget || e.propertyName !== "transform") return; // ignore children's transitions
     if (!turn || !turn.anim) return;
-    if (turn.p === 1) setIdx((i) => i + turn.dir);
-    setTurn(null);
+    finish(turn.dir, turn.p === 1);
   };
 
   // pointer: press on a page half and pull it across; release past 35% to complete
@@ -140,7 +151,7 @@ export function AlbumPreview({ photos, clientName, studio, onClose, t }: { photo
   const onUp = () => {
     const d = drag.current; drag.current = null;
     if (!d) return;
-    if (!d.moved) return; // a tap: handled by the arrow buttons / corners
+    if (!d.moved) { if (turn && !turn.anim) setTurn(null); return; } // a tap: handled by the arrows / corners
     const p = turn?.p ?? 0;
     settle(d.dir, p, p > 0.35);
   };
