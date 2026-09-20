@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 import clsx from "clsx";
 import { Link, usePathname } from "@/i18n/navigation";
@@ -17,11 +18,15 @@ export function SiteNav() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const close = () => setOpen(false);
+  useEffect(() => { const t = setTimeout(() => setMounted(true), 0); return () => clearTimeout(t); }, []);
 
   useEffect(() => {
     document.documentElement.style.overflow = open ? "hidden" : "";
-    return () => { document.documentElement.style.overflow = ""; };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    if (open) window.addEventListener("keydown", onKey);
+    return () => { document.documentElement.style.overflow = ""; window.removeEventListener("keydown", onKey); };
   }, [open]);
 
   // Sticky: transparent over the hero, then compact glass once scrolled.
@@ -49,11 +54,9 @@ export function SiteNav() {
   return (
     <header
       className={clsx(
-        "sticky top-0 z-50 border-b transition-[background-color,border-color,backdrop-filter] duration-700 ease-out-soft",
+        "sticky top-0 z-[60] border-b transition-[background-color,border-color,backdrop-filter] duration-700 ease-out-soft",
         "animate-[navIn_900ms_cubic-bezier(.22,1,.36,1)_backwards]",
-        scrolled || open
-          ? "glass border-line"
-          : "bg-white border-transparent",
+        open ? "bg-white border-line" : scrolled ? "glass border-line" : "bg-white border-transparent",
       )}
     >
       <div
@@ -85,30 +88,15 @@ export function SiteNav() {
           {right.map(([k, href]) => <NavLink key={k} k={k} href={href} />)}
           <LangSwitch />
         </nav>
-        <div className="lg:hidden justify-self-end"><LangSwitch /></div>
+        {/* the open panel has its own language switch at the bottom */}
+        <div className={clsx("lg:hidden justify-self-end transition-opacity duration-300", open && "opacity-0 pointer-events-none")}><LangSwitch /></div>
       </div>
 
       <style>{`@keyframes navIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}`}</style>
 
-      {/* Mobile menu */}
-      <div
-        className={clsx(
-          "fixed inset-0 top-[72px] z-40 bg-white flex flex-col items-center justify-center gap-8 transition-opacity duration-500 lg:hidden",
-          open ? "opacity-100" : "opacity-0 pointer-events-none",
-        )}
-      >
-        {[...left, ...right].map(([k, href], i) => (
-          <Link
-            key={k}
-            href={href}
-            onClick={close}
-            className="font-serif text-[36px] leading-none transition-[opacity,transform] duration-700 ease-out-soft"
-            style={{ transitionDelay: `${i * 60}ms`, transform: open ? "none" : "translateY(10px)", opacity: open ? 1 : 0 }}
-          >
-            {t(`nav.${k}`)}
-          </Link>
-        ))}
-      </div>
+      {/* Mobile menu — portalled to <body>: the header's backdrop-filter would otherwise
+          turn `fixed` into "fixed inside the header" and clip the panel (that was the bug). */}
+      {mounted && createPortal(<MobileMenu open={open} close={close} />, document.body)}
     </header>
   );
 }
@@ -122,5 +110,58 @@ function LangSwitch() {
       <span className="text-faint">/</span>
       <Link href={pathname} locale="id" className={clsx("link", locale === "id" ? "text-ink" : "text-faint")}>ID</Link>
     </span>
+  );
+}
+
+/**
+ * Full-screen panel on phones: the four pages as a quiet serif list with
+ * hairlines, then language and the two ways to reach us. Enters with a soft
+ * fade and a short stagger; nothing slides in from the side.
+ */
+function MobileMenu({ open, close }: { open: boolean; close: () => void }) {
+  const t = useTranslations();
+  const pathname = usePathname();
+  const items = [...left, ...right];
+  return (
+    <div
+      aria-hidden={!open}
+      className={clsx(
+        "fixed inset-0 z-50 bg-white flex flex-col lg:hidden transition-opacity duration-500 ease-out-soft",
+        open ? "opacity-100" : "opacity-0 pointer-events-none",
+      )}
+    >
+      {/* spacer under the sticky header */}
+      <div className="h-[72px] shrink-0" />
+      <nav className="gutter flex-1 flex flex-col justify-center">
+        <ul className="border-t border-line">
+          {items.map(([k, href], i) => {
+            const active = pathname.startsWith(href);
+            return (
+              <li key={k} className="border-b border-line">
+                <Link
+                  href={href}
+                  onClick={close}
+                  className="flex items-baseline justify-between py-5 transition-[opacity,transform] duration-700 ease-out-soft"
+                  style={{ transitionDelay: open ? `${120 + i * 70}ms` : "0ms", transform: open ? "none" : "translateY(12px)", opacity: open ? 1 : 0 }}
+                >
+                  <span className={clsx("font-serif text-[34px] leading-none", active ? "italic" : "")}>{t(`nav.${k}`)}</span>
+                  <span className="t-mono text-faint">0{i + 1}</span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+      <div
+        className="gutter pb-[max(28px,env(safe-area-inset-bottom))] flex items-end justify-between transition-opacity duration-700 ease-out-soft"
+        style={{ transitionDelay: open ? "420ms" : "0ms", opacity: open ? 1 : 0 }}
+      >
+        <div className="flex flex-col gap-1">
+          <span className="t-wordmark">{t("brand.name")}</span>
+          <span className="t-mono text-faint">{t("brand.descriptor")}</span>
+        </div>
+        <LangSwitch />
+      </div>
+    </div>
   );
 }
