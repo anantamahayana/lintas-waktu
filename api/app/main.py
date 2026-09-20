@@ -71,7 +71,6 @@ app.include_router(content_public.router)
 app.include_router(content_invoices.router)
 app.include_router(content_invoices.public)
 app.include_router(content_bookings.router)
-app.include_router(content_bookings.public)
 
 
 @app.get("/api/health")

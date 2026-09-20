@@ -15,17 +15,6 @@ def test_conflicts_are_reported_not_blocked(client, admin):
     assert b["conflicts"] == ["Ayu & Marco"]
 
 
-def test_public_availability_lists_dates_only(client, admin):
-    _book(client, admin, start_date="2027-06-14", end_date="2027-06-15")
-    _book(client, admin, title="Editing week", kind="block", status="blocked", start_date="2027-06-20")
-    _book(client, admin, title="Maybe", status="tentative", start_date="2027-06-25")
-    _book(client, admin, title="Private", status="booked", start_date="2027-06-28", public=False)
-    r = client.get("/api/public/availability", params={"months": 12}).json()
-    assert "2027-06-14" in r["taken"] and "2027-06-15" in r["taken"] and "2027-06-20" in r["taken"]
-    assert "2027-06-25" not in r["taken"] and "2027-06-28" not in r["taken"]
-    assert set(r.keys()) == {"from_date", "to_date", "taken"}
-
-
 def test_bad_ranges_rejected(client, admin):
     r = client.post("/api/admin/bookings", headers=admin, json={"title": "x", "start_date": "2027-06-14", "end_date": "2027-06-10"})
     assert r.status_code == 422

@@ -79,7 +79,6 @@ export default function CalendarPage() {
 
       <div className="flex flex-wrap gap-x-5 gap-y-2 mb-5 t-small text-mute">
         {(Object.keys(STATUS) as BookingStatus[]).map((s) => <span key={s} className="inline-flex items-center gap-2"><span className={clsx("h-2.5 w-2.5 rounded-full", STATUS[s].dot)} />{STATUS[s].label}</span>)}
-        <span className="ml-auto">Booked, blocked and done days show as taken on the website.</span>
       </div>
 
       {err ? <LoadError error={err} retry={() => { setErr(null); load(); }} /> : (
@@ -242,9 +241,6 @@ function BookingSheet({ initial, onClose, onSaved }: { initial: Booking | { star
           </>
         )}
         <Field label="Notes" hint="optional"><Textarea value={v.notes} onChange={set("notes")} rows={3} /></Field>
-        {!isBlock && (
-          <label className="flex items-center gap-3 t-small"><input type="checkbox" checked={v.public} onChange={(e) => setV((s) => ({ ...s, public: e.target.checked }))} /> Show these days as taken on the website (when booked)</label>
-        )}
         <div className="mt-auto pt-4 flex flex-wrap gap-2">
           <Btn kind="ink" type="button" onClick={save} disabled={busy || (!!existing && !dirty)}>{busy ? "Saving…" : existing ? (dirty ? "Save changes" : "Saved") : "Add to calendar"}</Btn>
           <Btn type="button" onClick={close}>Close</Btn>

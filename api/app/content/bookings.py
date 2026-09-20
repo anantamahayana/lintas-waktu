@@ -6,14 +6,13 @@ A booking is a date range (whole days) with a status:
   blocked    personal: travel, holiday, editing week — never shown as a client job
   done       the day happened
   cancelled  kept for the record, frees the dates
-Public availability exposes only the *dates* that are taken (booked / blocked / done),
-never who or what — the site uses it to show a small availability calendar.
+Nothing here is public: the calendar is the photographer's own.
 """
 import enum
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import Boolean, Date, DateTime, Enum, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -22,7 +21,6 @@ from sqlalchemy.orm import Session as DbSession
 from ..auth import require_admin
 from ..database import Base, get_db
 from ..models import utcnow
-from . import site_cache
 
 
 class BookingStatus(str, enum.Enum):
@@ -52,8 +50,7 @@ class Booking(Base):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     invoice_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     session_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
-    # Show this day as taken on the website (default yes for booked/done; blocked days always count)
-    public: Mapped[bool] = mapped_column(Boolean, default=True)
+    public: Mapped[bool] = mapped_column(Boolean, default=True)  # reserved; the calendar is private for now
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
@@ -118,12 +115,6 @@ class BookingOut(BaseModel):
     conflicts: list[str] = []  # titles of other bookings/blocks sharing a day
 
 
-class Availability(BaseModel):
-    from_date: date
-    to_date: date
-    taken: list[date]  # days not available for new work
-
-
 # ---------------------------------------------------------------- helpers
 def _overlaps(db: DbSession, b: Booking, start: date, end: date) -> list[Booking]:
     q = db.query(Booking).filter(Booking.start_date <= end, Booking.end_date >= start, Booking.status != BookingStatus.cancelled)
@@ -174,13 +165,12 @@ def list_bookings(from_date: date | None = Query(None, alias="from"), to_date: d
 
 
 @router.post("/bookings", response_model=BookingOut, status_code=201)
-def create_booking(body: BookingIn, background: BackgroundTasks, db: DbSession = Depends(get_db)):
+def create_booking(body: BookingIn, db: DbSession = Depends(get_db)):
     b = Booking()
     _apply(b, body.model_dump())
     db.add(b)
     db.commit()
     db.refresh(b)
-    background.add_task(site_cache.invalidate, "booking created")
     return out(db, b)
 
 
@@ -193,7 +183,7 @@ def get_booking(booking_id: str, db: DbSession = Depends(get_db)):
 
 
 @router.patch("/bookings/{booking_id}", response_model=BookingOut)
-def update_booking(booking_id: str, body: BookingUpdate, background: BackgroundTasks, db: DbSession = Depends(get_db)):
+def update_booking(booking_id: str, body: BookingUpdate, db: DbSession = Depends(get_db)):
     b = db.get(Booking, booking_id)
     if not b:
         raise HTTPException(404, "Booking not found")
@@ -208,34 +198,13 @@ def update_booking(booking_id: str, body: BookingUpdate, background: BackgroundT
     _apply(b, data)
     db.commit()
     db.refresh(b)
-    background.add_task(site_cache.invalidate, "booking updated")
     return out(db, b)
 
 
 @router.delete("/bookings/{booking_id}", status_code=204)
-def delete_booking(booking_id: str, background: BackgroundTasks, db: DbSession = Depends(get_db)):
+def delete_booking(booking_id: str, db: DbSession = Depends(get_db)):
     b = db.get(Booking, booking_id)
     if not b:
         raise HTTPException(404, "Booking not found")
     db.delete(b)
     db.commit()
-    background.add_task(site_cache.invalidate, "booking deleted")
-
-
-# ---------------------------------------------------------------- public: which days are taken
-public = APIRouter(prefix="/api/public", tags=["bookings"])
-
-
-@public.get("/availability", response_model=Availability)
-def availability(months: int = Query(4, ge=1, le=12), db: DbSession = Depends(get_db)):
-    """Dates already taken from today for the next `months`. Just dates — no names, no kinds."""
-    start = date.today()
-    end = (start.replace(day=1) + timedelta(days=32 * months)).replace(day=1) - timedelta(days=1)
-    rows = db.query(Booking).filter(Booking.end_date >= start, Booking.start_date <= end, Booking.status.in_(TAKEN), Booking.public.is_(True)).all()
-    taken: set[date] = set()
-    for b in rows:
-        d = max(b.start_date, start)
-        while d <= min(b.end_date, end):
-            taken.add(d)
-            d += timedelta(days=1)
-    return Availability(from_date=start, to_date=end, taken=sorted(taken))
