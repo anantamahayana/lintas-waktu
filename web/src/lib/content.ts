@@ -1,13 +1,12 @@
 /**
  * Server-side content access for the public site.
  *
- * Reads published projects and site settings from the FastAPI backend and
- * falls back to the local placeholders (lib/projects.ts, lib/site.ts) when
- * the API is unreachable or has nothing published yet — so the site always
- * renders, and real content simply takes over as it is added in /admin.
+ * Every project shown on the site is a row in the API (managed in /admin).
+ * Site settings also come from the API, with lib/site.ts as the fallback so
+ * the chrome still renders while the backend is unreachable.
  */
 import "server-only";
-import { projects as placeholderProjects, type Category, type Project } from "./projects";
+import { type Category, type Project } from "./projects";
 import { site as defaults } from "./site";
 
 const API = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -35,7 +34,8 @@ async function get<T>(path: string): Promise<T | null> {
   }
 }
 
-const abs = (p: string | null | undefined) => (p ? `${API}${p}` : undefined);
+/** API-relative image paths become absolute; external (placeholder) URLs pass through. */
+const abs = (p: string | null | undefined) => (p ? (/^https?:\/\//.test(p) ? p : `${API}${p}`) : undefined);
 
 /** Project shape used by the pages: placeholder-compatible, plus real image URLs when present. */
 export type SiteProject = Project & { coverSrc?: string; gallerySrcs?: string[] };
@@ -61,17 +61,12 @@ function fromApi(p: ApiProject): SiteProject {
 
 export async function getProjects(locale: string): Promise<SiteProject[]> {
   const rows = await get<ApiProject[]>(`/api/public/projects?locale=${locale}`);
-  if (rows && rows.length > 0) return rows.map(fromApi);
-  return placeholderProjects;
+  return (rows ?? []).map(fromApi);
 }
 
 export async function getProject(slug: string, locale: string): Promise<SiteProject | undefined> {
   const row = await get<ApiProject>(`/api/public/projects/${slug}?locale=${locale}`);
-  if (row) return fromApi(row);
-  // fall back only if the API itself has no published projects (else a real 404)
-  const any = await get<ApiProject[]>(`/api/public/projects?locale=${locale}`);
-  if (any && any.length > 0) return undefined;
-  return placeholderProjects.find((p) => p.slug === slug);
+  return row ? fromApi(row) : undefined;
 }
 
 /** Three related projects: same category first, then the rest, after the current one. */

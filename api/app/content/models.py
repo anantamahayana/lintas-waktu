@@ -29,8 +29,11 @@ class Project(Base):
     location: Mapped[str] = mapped_column(String(120), default="")
     date_label: Mapped[str] = mapped_column(String(40), default="")  # "June 2026"
     month: Mapped[str | None] = mapped_column(String(7), nullable=True)  # "2026-06", for ordering
-    drive_folder_id: Mapped[str] = mapped_column(String(255))
+    # Empty string = no Drive folder yet: the project then shows its placeholder_urls.
+    drive_folder_id: Mapped[str] = mapped_column(String(255), default="")
     cover_file_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # JSON list of external image URLs (sample content) used until a Drive folder is set.
+    placeholder_urls: Mapped[str | None] = mapped_column(Text, nullable=True)
     # editorial copy, bilingual
     pull_en: Mapped[str] = mapped_column(Text, default="")
     pull_id: Mapped[str] = mapped_column(Text, default="")

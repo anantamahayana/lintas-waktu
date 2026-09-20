@@ -60,7 +60,8 @@ export const api = {
     URL.revokeObjectURL(url);
   },
   /** Absolute URL for an API-relative image path (adds gallery token when given) */
-  img: (path: string, t?: string | null) => `${API_URL}${path}${t ? (path.includes("?") ? "&" : "?") + "t=" + t : ""}`,
+  img: (path: string, t?: string | null) =>
+    /^https?:\/\//.test(path) ? path : `${API_URL}${path}${t ? (path.includes("?") ? "&" : "?") + "t=" + t : ""}`,
 };
 
 // ---------------------------------------------------------------- types (mirror api/app/schemas)
@@ -83,7 +84,7 @@ export type Fact = { label: string; value: string };
 export type ProjectPhoto = { file_id: string; filename: string; width: number; height: number; thumb_url: string; full_url: string };
 export type Project = {
   id: string; slug: string; title: string; category: Category; location: string; date_label: string; month: string | null;
-  drive_folder_id: string; cover_file_id: string | null; pull_en: string; pull_id: string; body_en: string; body_id: string;
+  drive_folder_id: string; cover_file_id: string | null; placeholder_urls: string[]; pull_en: string; pull_id: string; body_en: string; body_id: string;
   facts: Fact[]; film_title: string | null; film_duration: string | null; film_url: string | null; featured: boolean;
   published: boolean; sort_order: number; cover_url: string | null; photo_count: number; created_at: string; updated_at: string;
   photos?: ProjectPhoto[];

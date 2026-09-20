@@ -11,7 +11,7 @@ from ..database import get_db
 from ..services import drive_service
 from . import settings_store
 from .models import Inquiry, Project, ProjectCategory
-from .router_admin import cover_url, photo_out
+from .router_admin import cover_url, photos_out
 from .schemas import Film, InquiryCreate, PublicProjectOut, SiteSettings
 
 router = APIRouter(prefix="/api/public", tags=["public"])
@@ -22,12 +22,7 @@ _inquiry_hits: dict[str, list[float]] = defaultdict(list)
 
 def _public(p: Project, locale: str, with_photos: bool) -> PublicProjectOut:
     lang = "id" if locale == "id" else "en"
-    photos = []
-    if with_photos:
-        try:
-            photos = [photo_out(p.drive_folder_id, ph) for ph in drive_service.list_photos(p.drive_folder_id)]
-        except drive_service.DriveError:
-            photos = []
+    photos = photos_out(p) if with_photos else []
     film = Film(title=p.film_title, duration=p.film_duration, url=p.film_url) if (p.film_title or p.film_url) else None
     return PublicProjectOut(
         slug=p.slug,

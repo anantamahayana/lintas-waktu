@@ -25,8 +25,9 @@ class ProjectBase(BaseModel):
     location: str = Field("", max_length=120)
     date_label: str = Field("", max_length=40)
     month: str | None = Field(None, pattern=r"^\d{4}-\d{2}$")
-    drive_folder_id: str = Field(min_length=1, max_length=255)
+    drive_folder_id: str = Field("", max_length=255)
     cover_file_id: str | None = None
+    placeholder_urls: list[str] = []
     pull_en: str = ""
     pull_id: str = ""
     body_en: str = ""
@@ -55,6 +56,7 @@ class ProjectUpdate(BaseModel):
     month: str | None = None
     drive_folder_id: str | None = None
     cover_file_id: str | None = None
+    placeholder_urls: list[str] | None = None
     pull_en: str | None = None
     pull_id: str | None = None
     body_en: str | None = None

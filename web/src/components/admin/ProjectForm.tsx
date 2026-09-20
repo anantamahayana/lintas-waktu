@@ -9,7 +9,7 @@ import { Btn, Card, Field, Input, Select, Textarea, toast } from "@/components/a
 type Values = Omit<Project, "id" | "cover_url" | "photo_count" | "created_at" | "updated_at" | "photos" | "sort_order">;
 
 const empty: Values = {
-  slug: "", title: "", category: "wedding", location: "", date_label: "", month: null, drive_folder_id: "", cover_file_id: null,
+  slug: "", title: "", category: "wedding", location: "", date_label: "", month: null, drive_folder_id: "", cover_file_id: null, placeholder_urls: [],
   pull_en: "", pull_id: "", body_en: "", body_id: "", facts: [], film_title: null, film_duration: null, film_url: null, featured: false, published: false,
 };
 
@@ -75,8 +75,13 @@ export function ProjectForm({ project }: { project?: Project }) {
             <Field label="Month" hint="YYYY-MM, for ordering"><Input value={v.month ?? ""} onChange={set("month")} placeholder="2026-06" pattern="\d{4}-\d{2}" /></Field>
           </div>
           <Field label="Google Drive folder" hint="link or ID — web-size JPEGs">
-            <Input required value={v.drive_folder_id} onChange={set("drive_folder_id")} placeholder="https://drive.google.com/drive/folders/…" />
+            <Input required={v.placeholder_urls.length === 0} value={v.drive_folder_id} onChange={set("drive_folder_id")} placeholder="https://drive.google.com/drive/folders/…" />
           </Field>
+          {v.placeholder_urls.length > 0 && !v.drive_folder_id && (
+            <p className="t-small text-mute">
+              Sample project: the site shows {v.placeholder_urls.length} placeholder photographs (Unsplash) until a Drive folder is set here.
+            </p>
+          )}
         </Card>
 
         <Card title="Story">
@@ -132,7 +137,7 @@ export function ProjectForm({ project }: { project?: Project }) {
           {project && <Btn type="button" kind="danger" className="self-start" onClick={remove}>Delete project</Btn>}
         </Card>
 
-        <Card title={`Cover · ${photos.length} photos in folder`}>
+        <Card title={`Cover · ${photos.length} ${v.drive_folder_id ? "photos in folder" : "placeholder photos"}`}>
           {photos.length === 0 ? (
             <p className="t-small text-faint">{project ? "No photos found — check the folder and press Sync." : "Save the project to read the folder, then choose a cover."}</p>
           ) : (

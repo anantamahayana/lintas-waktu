@@ -3,20 +3,19 @@ import { ViewTransition } from "react";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { pageMeta } from "@/lib/seo";
-import { dummyPhoto } from "@/lib/dummy-photos";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { Photo } from "@/components/ui/Photo";
 import { Reveal } from "@/components/ui/Reveal";
 import { Gallery } from "@/components/work/Gallery";
-import { projects as placeholders } from "@/lib/projects";
 import { getProject, getProjects, related } from "@/lib/content";
 
 type Params = Promise<{ locale: string; slug: string }>;
 
-export function generateStaticParams() {
-  // Placeholder slugs are pre-rendered; real projects render on demand
-  return routing.locales.flatMap((locale) => placeholders.map((p) => ({ locale, slug: p.slug })));
+export async function generateStaticParams() {
+  // Published projects are pre-rendered at build time; anything added later renders on demand
+  const projects = await getProjects(routing.defaultLocale);
+  return routing.locales.flatMap((locale) => projects.map((p) => ({ locale, slug: p.slug })));
 }
 
 export const dynamicParams = true;
@@ -25,7 +24,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const { locale, slug } = await params;
   const p = await getProject(slug, locale);
   if (!p) return {};
-  return pageMeta(locale, `/work/${slug}`, { title: p.title, description: p.pull, image: p.coverSrc ?? dummyPhoto(p.cover, 1200) });
+  return pageMeta(locale, `/work/${slug}`, { title: p.title, description: p.pull, image: p.coverSrc });
 }
 
 export default async function ProjectPage({ params }: { params: Params }) {
@@ -35,7 +34,7 @@ export default async function ProjectPage({ params }: { params: Params }) {
   if (!p) notFound();
   const t = await getTranslations();
   const all = await getProjects(locale);
-  const relatedProjects = related(all.some((x) => x.slug === slug) ? all : [p, ...all], slug);
+  const relatedProjects = related(all, slug);
 
   return (
     <article>

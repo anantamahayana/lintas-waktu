@@ -8,6 +8,7 @@ import type { SiteProject } from "@/lib/content";
 /** Three portraits, titled; each morphs into its project page. */
 export function RecentWork({ projects }: { projects: SiteProject[] }) {
   const t = useTranslations();
+  if (projects.length === 0) return null; // nothing published yet — the section simply is not there
   return (
     <section className="wrap gutter py-20 lg:py-28 flex flex-col items-center gap-12 lg:gap-16">
       <div className="flex flex-col items-center text-center gap-4">
