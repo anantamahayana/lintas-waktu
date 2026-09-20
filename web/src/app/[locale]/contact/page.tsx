@@ -5,7 +5,7 @@ import { Photo } from "@/components/ui/Photo";
 import { Reveal } from "@/components/ui/Reveal";
 import { ContactForm } from "@/components/contact/ContactForm";
 import { waLink } from "@/lib/site";
-import { getSite } from "@/lib/content";
+import { getSite, getSiteImages } from "@/lib/content";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -22,6 +22,7 @@ export default async function ContactPage({
   const { locale } = await params;
   const { kind } = await searchParams;
   setRequestLocale(locale);
+  const img = await getSiteImages();
   const t = await getTranslations("contact");
   const site = await getSite();
 
@@ -50,7 +51,7 @@ export default async function ContactPage({
 
       <section className="wrap gutter pb-20 lg:pb-28 grid lg:grid-cols-12 gap-12 lg:gap-16 items-start">
         <Reveal className="hidden lg:block lg:col-span-4 aspect-[4/5] lg:sticky lg:top-8">
-          <Photo seed="contact-1" sizes="33vw" className="h-full w-full" />
+          <Photo src={img["contact-1"]} seed="contact-1" sizes="33vw" className="h-full w-full" />
         </Reveal>
         <Reveal delay={100} className="relative lg:col-span-7 lg:col-start-6 border border-line p-6 sm:p-8 lg:p-10">
           <ContactForm initialKind={kind} whatsapp={site.whatsapp.number} />

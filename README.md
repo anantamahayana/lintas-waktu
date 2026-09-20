@@ -25,5 +25,7 @@ cd web && npm run dev
 - Sample portfolio (12 projects with Unsplash placeholder photos, editable in /admin/projects):
   `cd api && .venv/Scripts/python -m app.content.seed` — set a Drive folder on a project to replace its placeholders.
   The public site shows only what the API has published; nothing is hard-coded.
+- Page photographs (hero, About, Services, Contact…) are chosen in /admin/site-images from one Drive folder;
+  until a slot is set the site shows a placeholder for it (`web/src/lib/dummy-photos.ts`).
 - Without Google credentials the API runs in **mock mode** (24 placeholder photos) so every flow can be tried.
 - Google Drive setup (API key or service account): see the upstream README in photo-selection-platform.

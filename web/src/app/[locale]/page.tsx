@@ -7,7 +7,7 @@ import { Behind } from "@/components/home/Behind";
 import { RecentWork } from "@/components/home/RecentWork";
 import { KindWords } from "@/components/home/KindWords";
 import { Invite } from "@/components/home/Invite";
-import { getProjects, getSite } from "@/lib/content";
+import { getProjects, getSite, getSiteImages } from "@/lib/content";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -17,16 +17,16 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const [projects, site] = await Promise.all([getProjects(locale), getSite()]);
+  const [projects, site, img] = await Promise.all([getProjects(locale), getSite(), getSiteImages()]);
   const featured = projects.filter((p) => p.featured);
   return (
     <>
-      <Hero cover={featured[0]?.coverSrc} />
-      <Intro />
-      <Behind />
+      <Hero cover={img.hero ?? featured[0]?.coverSrc} />
+      <Intro images={img} />
+      <Behind src={img["behind-main"]} />
       <RecentWork projects={featured.length ? featured : projects.slice(0, 3)} />
       <KindWords />
-      <Invite site={site} />
+      <Invite site={site} src={img.cta} />
     </>
   );
 }

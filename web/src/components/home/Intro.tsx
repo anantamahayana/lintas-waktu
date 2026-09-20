@@ -10,7 +10,7 @@ const cards = [
 ] as const;
 
 /** Centred statement, then three portrait cards with captions. */
-export function Intro() {
+export function Intro({ images = {} }: { images?: Record<string, string | undefined> }) {
   const t = useTranslations("home.intro");
   const c = useTranslations("home.cards");
   return (
@@ -27,7 +27,7 @@ export function Intro() {
         {cards.map((card, i) => (
           <Reveal as="li" key={card.k} delay={i * 100} className={card.offset}>
             <Link href={card.href} className="group flex flex-col items-center gap-4">
-              <Photo seed={card.seed} sizes="(min-width:640px) 30vw, 100vw" className="w-full aspect-[3/4]" />
+              <Photo src={images[card.seed]} seed={card.seed} sizes="(min-width:640px) 30vw, 100vw" className="w-full aspect-[3/4]" />
               <span className="t-caption">{c(card.k)}</span>
             </Link>
           </Reveal>

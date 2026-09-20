@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session as DbSession
 
 from ..database import get_db
 from ..services import drive_service
-from . import settings_store
+from . import settings_store, site_images
 from .models import Inquiry, Project, ProjectCategory
 from .router_admin import cover_url, film_out, photos_out
 from .schemas import Film, InquiryCreate, PublicProjectOut, SiteSettings
@@ -72,7 +72,7 @@ async def get_image(folder_id: str, file_id: str, size: str = "thumb", db: DbSes
     """Image proxy for portfolio photographs. Only folders that belong to a
     published project are served, so this cannot be used to read arbitrary Drive folders."""
     allowed = db.query(Project.id).filter(Project.drive_folder_id == folder_id, Project.published.is_(True)).first()
-    if not allowed:
+    if not allowed and folder_id != site_images.folder_id(db):
         raise HTTPException(404, "Not found")
     size = "full" if size == "full" else "thumb"
     try:
@@ -80,6 +80,12 @@ async def get_image(folder_id: str, file_id: str, size: str = "thumb", db: DbSes
     except drive_service.DriveError as e:
         raise HTTPException(404, str(e))
     return Response(data, media_type=media_type, headers={"Cache-Control": "public, max-age=2592000, immutable"})
+
+
+@router.get("/site-images")
+def get_site_images(db: DbSession = Depends(get_db)):
+    """slot → image URL for the pages' own photographs (hero, About, Services, …)."""
+    return site_images.public_urls(db)
 
 
 @router.get("/settings", response_model=SiteSettings)

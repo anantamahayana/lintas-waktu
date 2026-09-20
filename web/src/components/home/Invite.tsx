@@ -6,13 +6,13 @@ import { waLink } from "@/lib/site";
 import type { SiteInfo } from "@/lib/content";
 
 /** Closing invitation: a wide photograph, then the ask, centred. */
-export function Invite({ site }: { site: SiteInfo }) {
+export function Invite({ site, src }: { site: SiteInfo; src?: string }) {
   const t = useTranslations("home.invite");
   const c = useTranslations("cta");
   return (
     <section className="flex flex-col">
       <Reveal className="wrap gutter">
-        <Photo seed="cta" sizes="100vw" className="w-full aspect-[21/9]" />
+        <Photo src={src} seed="cta" sizes="100vw" className="w-full aspect-[21/9]" />
       </Reveal>
       <div className="wrap gutter py-16 lg:py-24 flex flex-col items-center text-center gap-6">
         <Reveal><span className="t-mono text-mute">{t("eyebrow")}</span></Reveal>

@@ -3,6 +3,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { pageMeta } from "@/lib/seo";
 import clsx from "clsx";
 import { Link } from "@/i18n/navigation";
+import { getSiteImages } from "@/lib/content";
 import { Photo } from "@/components/ui/Photo";
 import { Reveal } from "@/components/ui/Reveal";
 import { Faq } from "@/components/ui/Faq";
@@ -18,6 +19,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 export default async function ServicesPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
+  const img = await getSiteImages();
   const t = await getTranslations("services");
   const faq = t.raw("faq.items") as { q: string; a: string }[];
 
@@ -25,7 +27,7 @@ export default async function ServicesPage({ params }: { params: Promise<{ local
     <div>
       {/* Banner */}
       <section className="relative h-[46vh] min-h-[320px] w-full overflow-hidden">
-        <Photo seed="service-banner" priority sizes="100vw" className="absolute inset-0 h-full w-full" />
+        <Photo src={img["service-banner"]} seed="service-banner" priority sizes="100vw" className="absolute inset-0 h-full w-full" />
         <div className="absolute inset-0 bg-dark/35" />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-on-dark gap-4 gutter">
           <span className="t-mono text-on-dark/80">{t("eyebrow")}</span>
@@ -52,7 +54,7 @@ export default async function ServicesPage({ params }: { params: Promise<{ local
             className={clsx("py-12 lg:py-20 grid lg:grid-cols-2 gap-10 lg:gap-20 items-center scroll-mt-24", i > 0 && "border-t border-line")}
           >
             <Reveal className={clsx("aspect-[4/5] lg:aspect-[5/6]", i % 2 === 1 && "lg:order-2")}>
-              <Photo seed={`service-${k}`} sizes="(min-width:1024px) 50vw, 100vw" className="h-full w-full" />
+              <Photo src={img[`service-${k}`]} seed={`service-${k}`} sizes="(min-width:1024px) 50vw, 100vw" className="h-full w-full" />
             </Reveal>
             <Reveal delay={100} className={clsx("flex flex-col gap-5 lg:px-8", i % 2 === 1 && "lg:order-1")}>
               <span className="t-mono text-mute">0{i + 1} — {t(`items.${k}.title`)}</span>

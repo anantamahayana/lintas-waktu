@@ -104,3 +104,11 @@ export async function getSite(): Promise<SiteInfo> {
 }
 
 export const apiBase = API;
+
+/** The pages' own photographs (hero, About, Services, …) chosen in /admin/site-images: slot → URL.
+ *  Slots without a photo fall back to the placeholder keyed by the same seed (see <Photo/>). */
+export type SiteImages = Record<string, string | undefined>;
+export async function getSiteImages(): Promise<SiteImages> {
+  const m = (await get<Record<string, string>>("/api/public/site-images")) ?? {};
+  return Object.fromEntries(Object.entries(m).map(([k, v]) => [k, abs(v)]));
+}

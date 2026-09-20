@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { pageMeta } from "@/lib/seo";
 import { Link } from "@/i18n/navigation";
+import { getSiteImages } from "@/lib/content";
 import { Photo } from "@/components/ui/Photo";
 import { Reveal } from "@/components/ui/Reveal";
 
@@ -13,6 +14,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 export default async function AboutPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
+  const img = await getSiteImages();
   const t = await getTranslations("about");
   const c = await getTranslations("cta");
   const values = t.raw("values.items") as { title: string; body: string }[];
@@ -23,7 +25,7 @@ export default async function AboutPage({ params }: { params: Promise<{ locale: 
       {/* Portrait + statement */}
       <section className="wrap gutter pt-12 lg:pt-20 pb-16 lg:pb-24 grid lg:grid-cols-12 gap-10 lg:gap-16 items-center">
         <Reveal className="lg:col-span-5 aspect-[4/5]">
-          <Photo seed="about-portrait" priority sizes="(min-width:1024px) 40vw, 100vw" className="h-full w-full" />
+          <Photo src={img["about-portrait"]} seed="about-portrait" priority sizes="(min-width:1024px) 40vw, 100vw" className="h-full w-full" />
         </Reveal>
         <Reveal delay={100} className="lg:col-span-6 lg:col-start-7 flex flex-col gap-6">
           <span className="t-mono text-mute">{t("eyebrow")}</span>
@@ -55,7 +57,7 @@ export default async function AboutPage({ params }: { params: Promise<{ locale: 
       <section className="wrap gutter py-16 lg:py-24 grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         {["about-1", "about-2", "about-3", "about-4"].map((s, i) => (
           <Reveal key={s} delay={i * 70} className="aspect-[3/4]">
-            <Photo seed={s} sizes="(min-width:1024px) 25vw, 50vw" className="h-full w-full" />
+            <Photo src={img[s]} seed={s} sizes="(min-width:1024px) 25vw, 50vw" className="h-full w-full" />
           </Reveal>
         ))}
       </section>
