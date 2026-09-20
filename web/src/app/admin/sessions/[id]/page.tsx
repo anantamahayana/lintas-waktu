@@ -4,7 +4,7 @@ import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { ApiError, api, fillWaTemplate, type CacheStatus, type SessionDetail, type SiteSettings } from "@/lib/admin-api";
+import { API_URL, ApiError, api, fillWaTemplate, type CacheStatus, type SessionDetail, type SiteSettings } from "@/lib/admin-api";
 import { Btn, Card, Field, Input, PageHeader, Pill, Textarea, confirm, daysLeft, fmtDate, focusFirstInvalid, toast, useUnsavedChanges, type ConfirmOptions, type FieldErrors, LoadError, SkeletonForm } from "@/components/admin/ui";
 
 // Chrome/Edge on desktop can write straight into a chosen folder (no zip, no extracting)
@@ -165,7 +165,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
                   {canPickFolder && <Btn kind="ink" onClick={() => saveXmpToFolder(id).then((n) => n && toast(`${n} XMP files written — open the folder in Lightroom/Capture One`)).catch((e) => toast(e instanceof Error ? e.message : "Failed", true))}>Save XMP into RAW folder</Btn>}
                   <Btn onClick={() => api.download(`/api/admin/sessions/${id}/export/xmp`, `${s.client_name}-xmp.zip`).catch((e) => toast(e.message, true))}>XMP .zip</Btn>
                   <Btn onClick={() => api.download(`/api/admin/sessions/${id}/export/csv`, `${s.client_name}.csv`).catch((e) => toast(e.message, true))}>CSV</Btn>
-                  <Btn onClick={async () => { const r = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/api/admin/sessions/${id}/export/filenames`, { headers: { authorization: `Bearer ${localStorage.getItem("lw_admin_token")}` } }); navigator.clipboard.writeText(await r.text()); toast("Filenames copied"); }}>Copy filenames</Btn>
+                  <Btn onClick={async () => { const r = await fetch(`${API_URL}/api/admin/sessions/${id}/export/filenames`, { headers: { authorization: `Bearer ${localStorage.getItem("lw_admin_token")}` } }); navigator.clipboard.writeText(await r.text()); toast("Filenames copied"); }}>Copy filenames</Btn>
                 </div>
               )}
             </div>

@@ -14,7 +14,21 @@ function apiHosts() {
 
 const isLoopback = apiHosts().some((h) => ["localhost", "127.0.0.1"].includes(h.hostname));
 
+const API_INTERNAL = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
 const nextConfig: NextConfig = {
+  // Dev through a tunnel (ngrok) — let those hosts load HMR/_next assets
+  allowedDevOrigins: ["*.ngrok-free.app", "*.ngrok-free.dev", "*.ngrok.app"],
+  // Browser → API through Next (same origin). Lets one public URL (ngrok, a single
+  // domain in production) serve site + API, and avoids CORS. Only when
+  // NEXT_PUBLIC_API_URL is empty; with a URL set the browser talks to the API directly.
+  async rewrites() {
+    if (process.env.NEXT_PUBLIC_API_URL) return [];
+    return {
+      // after Next's own /api routes (inquiry, revalidate), before the 404
+      afterFiles: ["gallery", "admin", "public"].map((p) => ({ source: `/api/${p}/:path*`, destination: `${API_INTERNAL}/api/${p}/:path*` })),
+    };
+  },
   images: {
     // Local dev: the API is on 127.0.0.1 and next/image refuses private IPs by default
     ...(process.env.NODE_ENV !== "production" && isLoopback ? { dangerouslyAllowLocalIP: true } : {}),

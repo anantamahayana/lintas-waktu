@@ -29,3 +29,15 @@ cd web && npm run dev
   until a slot is set the site shows a placeholder for it (`web/src/lib/dummy-photos.ts`).
 - Without Google credentials the API runs in **mock mode** (24 placeholder photos) so every flow can be tried.
 - Google Drive setup (API key or service account): see the upstream README in photo-selection-platform.
+
+## Trying it from a phone (ngrok)
+
+One tunnel is enough: the browser talks to the API through Next (`/api/*` rewrites, see `web/next.config.ts`;
+keep `NEXT_PUBLIC_API_URL` empty in `web/.env.local`).
+
+```bash
+ngrok http 3000
+```
+
+Then set `FRONTEND_URL` in `api/.env` to the ngrok address (so gallery / invoice links use it) and restart the API.
+The free plan shows a "You are about to visit…" page once per browser — press *Visit Site*.
