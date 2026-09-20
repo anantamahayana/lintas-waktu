@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { api, type SiteSettings } from "@/lib/admin-api";
-import { Btn, Card, Field, Input, PageHeader, Textarea, confirm, toast, useUnsavedChanges } from "@/components/admin/ui";
+import { Btn, Card, Field, Input, PageHeader, Textarea, confirm, toast, useUnsavedChanges, LoadError, SkeletonForm } from "@/components/admin/ui";
 
 type Branding = { studio_name: string; tagline: string; contact: string; logo_url: string | null };
 
@@ -14,11 +14,14 @@ export default function SettingsPage() {
   const dirty = !!s && !!saved && JSON.stringify(s) !== JSON.stringify(saved);
   useUnsavedChanges(dirty);
 
-  useEffect(() => {
-    api.get<SiteSettings>("/api/admin/site-settings").then((x) => { setS(x); setSaved(x); }).catch((e) => toast(e.message, true));
+  const [err, setErr] = useState<string | null>(null);
+  const load = () => {
+    api.get<SiteSettings>("/api/admin/site-settings").then((x) => { setS(x); setSaved(x); setErr(null); }).catch((e) => setErr(e instanceof Error ? e.message : "Failed"));
     api.get<Branding>("/api/admin/branding").then(setB).catch(() => {});
-  }, []);
-  if (!s) return <p className="t-small text-mute">Loading…</p>;
+  };
+  useEffect(() => { load(); }, []);
+  if (err) return <LoadError error={err} retry={() => { setErr(null); load(); }} />;
+  if (!s) return <SkeletonForm fields={10} />;
 
   const set = (k: keyof SiteSettings) => (e: { target: { value: string } }) => setS((x) => (x ? { ...x, [k]: typeof x[k] === "number" ? Number(e.target.value) : e.target.value } : x));
 

@@ -10,7 +10,7 @@ import { type Category, type Project } from "./projects";
 import { site as defaults } from "./site";
 
 const API = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-const REVALIDATE = 60; // seconds
+const REVALIDATE = 60; // seconds — and the API flushes the "content" tag on every admin edit (app/api/revalidate)
 
 type ApiFact = { label: string; value: string };
 type ApiPhoto = { file_id: string; filename: string; width: number; height: number; thumb_url: string; full_url: string };
@@ -26,7 +26,7 @@ type ApiSettings = {
 
 async function get<T>(path: string): Promise<T | null> {
   try {
-    const res = await fetch(`${API}${path}`, { next: { revalidate: REVALIDATE } });
+    const res = await fetch(`${API}${path}`, { next: { revalidate: REVALIDATE, tags: ["content"] } });
     if (!res.ok) return null;
     return (await res.json()) as T;
   } catch {

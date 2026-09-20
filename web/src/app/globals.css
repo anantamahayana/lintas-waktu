@@ -167,3 +167,5 @@
 @keyframes admin-pop { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
 .admin-fade { animation: admin-fade 180ms ease-out; }
 .admin-pop, .admin-toast { animation: admin-pop 220ms var(--ease-out-soft); }
+@keyframes admin-skel { 50% { opacity: 0.5; } }
+.admin-skel { animation: admin-skel 1.6s ease-in-out infinite; }

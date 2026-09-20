@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session as DbSession
 from ..auth import require_admin
 from ..database import get_db
 from ..services import drive_service
-from . import settings_store
+from . import settings_store, site_cache
 from .models import Inquiry, InquiryStatus, Project
 from .schemas import (
     InquiryOut,
@@ -152,6 +152,7 @@ def create_project(body: ProjectCreate, background: BackgroundTasks, db: DbSessi
     db.refresh(p)
     if p.drive_folder_id:
         background.add_task(drive_service.warm_cache, p.drive_folder_id)
+    background.add_task(site_cache.invalidate, f"project created: {p.slug}")
     return project_out(p, with_photos=True)
 
 
@@ -182,6 +183,7 @@ def update_project(project_id: str, body: ProjectUpdate, background: BackgroundT
         background.add_task(drive_service.warm_cache, p.drive_folder_id)
     db.commit()
     db.refresh(p)
+    background.add_task(site_cache.invalidate, f"project updated: {p.slug}")
     return project_out(p, with_photos=True)
 
 
@@ -195,24 +197,27 @@ def sync_project(project_id: str, background: BackgroundTasks, db: DbSession = D
     except drive_service.DriveError as e:
         raise HTTPException(400, str(e))
     background.add_task(drive_service.warm_cache, p.drive_folder_id)
+    background.add_task(site_cache.invalidate, f"project synced: {p.slug}")
     return project_out(p, with_photos=True)
 
 
 @router.delete("/projects/{project_id}", status_code=204)
-def delete_project(project_id: str, db: DbSession = Depends(get_db)):
+def delete_project(project_id: str, background: BackgroundTasks, db: DbSession = Depends(get_db)):
     p = _get(db, project_id)
     db.delete(p)
     db.commit()
+    background.add_task(site_cache.invalidate, f"project deleted: {p.slug}")
 
 
 @router.post("/projects/reorder", status_code=204)
-def reorder_projects(ids: list[str], db: DbSession = Depends(get_db)):
+def reorder_projects(ids: list[str], background: BackgroundTasks, db: DbSession = Depends(get_db)):
     """Body: ordered list of project ids → sort_order 0..n."""
     for i, pid in enumerate(ids):
         p = db.get(Project, pid)
         if p:
             p.sort_order = i
     db.commit()
+    background.add_task(site_cache.invalidate, "projects reordered")
 
 
 # ---------------------------------------------------------------- inquiries
@@ -260,5 +265,7 @@ def get_site_settings(db: DbSession = Depends(get_db)):
 
 
 @router.put("/site-settings", response_model=SiteSettings)
-def put_site_settings(body: SiteSettingsUpdate, db: DbSession = Depends(get_db)):
-    return settings_store.update(db, body)
+def put_site_settings(body: SiteSettingsUpdate, background: BackgroundTasks, db: DbSession = Depends(get_db)):
+    out = settings_store.update(db, body)
+    background.add_task(site_cache.invalidate, "site settings updated")
+    return out

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { api, type CacheStatus, type SessionDetail } from "@/lib/admin-api";
-import { Btn, Card, Field, Input, PageHeader, Pill, Textarea, confirm, daysLeft, fmtDate, toast, useUnsavedChanges, type ConfirmOptions } from "@/components/admin/ui";
+import { Btn, Card, Field, Input, PageHeader, Pill, Textarea, confirm, daysLeft, fmtDate, toast, useUnsavedChanges, type ConfirmOptions, LoadError, SkeletonForm } from "@/components/admin/ui";
 
 export default function SessionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -15,7 +15,8 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
   const [editing, setEditing] = useState(false);
   const [pin, setPin] = useState("");
 
-  const load = useCallback(() => api.get<SessionDetail>(`/api/admin/sessions/${id}`).then(setS).catch((e) => toast(e.message, true)), [id]);
+  const [err, setErr] = useState<string | null>(null);
+  const load = useCallback(() => api.get<SessionDetail>(`/api/admin/sessions/${id}`).then((x) => { setS(x); setErr(null); }).catch((e) => setErr(e instanceof Error ? e.message : "Failed")), [id]);
   useEffect(() => { load(); }, [load]);
 
   // cache progress while the gallery is being prepared
@@ -39,7 +40,8 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
     return () => clearInterval(t);
   }, [s, load]);
 
-  if (!s) return <p className="t-small text-mute">Loading…</p>;
+  if (err && !s) return <LoadError error={err} retry={() => { setErr(null); load(); }} />;
+  if (!s) return <SkeletonForm fields={8} />;
 
   const act = async (label: string, fn: () => Promise<unknown>, ask?: ConfirmOptions) => {
     if (ask && !(await confirm(ask))) return;

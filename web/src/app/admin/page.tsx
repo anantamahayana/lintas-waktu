@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { api, type SessionOut } from "@/lib/admin-api";
-import { Btn, Input, PageHeader, Pill, Stat, daysLeft, fmtDate } from "@/components/admin/ui";
+import { Btn, Input, PageHeader, Pill, Stat, daysLeft, fmtDate, Empty, LoadError, SkeletonRows } from "@/components/admin/ui";
 
 type Filter = "all" | "choosing" | "unopened" | "completed" | "deadline";
 
@@ -12,7 +12,9 @@ export default function SessionsPage() {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
 
-  useEffect(() => { api.get<SessionOut[]>("/api/admin/sessions").then(setRows).catch(() => setRows([])); }, []);
+  const [err, setErr] = useState<string | null>(null);
+  const load = () => { api.get<SessionOut[]>("/api/admin/sessions").then((x) => { setRows(x); setErr(null); }).catch((e) => setErr(e instanceof Error ? e.message : "Failed")); };
+  useEffect(() => { load(); }, []);
 
   const buckets = useMemo(() => {
     const all = rows ?? [];
@@ -59,13 +61,14 @@ export default function SessionsPage() {
         ))}
       </div>
 
-      {rows === null ? (
-        <p className="t-small text-mute">Loading…</p>
+      {err ? (
+        <LoadError error={err} retry={() => { setErr(null); load(); }} />
+      ) : rows === null ? (
+        <SkeletonRows n={6} />
       ) : shown.length === 0 ? (
-        <div className="border border-line p-10 text-center flex flex-col items-center gap-3">
-          <p className="font-serif text-[22px]">No sessions {filter !== "all" ? "in this view" : "yet"}.</p>
-          <Link href="/admin/sessions/new" className="link t-mono">Create the first one</Link>
-        </div>
+        filter !== "all"
+          ? <Empty title={`No ${filter} sessions.`} body="Try another filter, or create a new session." action={<Btn onClick={() => setFilter("all")}>Show all</Btn>} />
+          : <Empty title="No client galleries yet." body="A session turns a Google Drive folder into a private, PIN-protected gallery where a client picks their favourites." action={<Link href="/admin/sessions/new" className="ink-btn !py-2.5 !px-4">Create the first session</Link>} />
       ) : (
         <table className="w-full border-t border-line">
           <thead>

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 import { api, type Inquiry, type InquiryStatus } from "@/lib/admin-api";
-import { Btn, Card, Field, PageHeader, Pill, Stat, Textarea, confirm, fmtDate, toast } from "@/components/admin/ui";
+import { Btn, Card, Field, PageHeader, Pill, Stat, Textarea, confirm, fmtDate, toast, Empty, LoadError, SkeletonRows } from "@/components/admin/ui";
 
 const STATUSES: InquiryStatus[] = ["new", "replied", "booked", "closed"];
 const TONE: Record<InquiryStatus, "new" | "warn" | "ok" | "mute"> = { new: "new", replied: "warn", booked: "ok", closed: "mute" };
@@ -14,7 +14,8 @@ export default function InquiriesPage() {
   const [rows, setRows] = useState<Inquiry[] | null>(null);
   const [filter, setFilter] = useState<InquiryStatus | "all">("all");
   const [sel, setSel] = useState<string | null>(null);
-  const load = () => api.get<Inquiry[]>("/api/admin/inquiries").then(setRows).catch((e) => toast(e.message, true));
+  const [err, setErr] = useState<string | null>(null);
+  const load = () => { return api.get<Inquiry[]>("/api/admin/inquiries").then((x) => { setRows(x); setErr(null); }).catch((e) => setErr(e instanceof Error ? e.message : "Failed")); };
   useEffect(() => { load(); }, []);
 
   const shown = useMemo(() => (rows ?? []).filter((i) => filter === "all" || i.status === filter), [rows, filter]);
@@ -51,8 +52,8 @@ export default function InquiriesPage() {
         {STATUSES.map((s) => <Stat key={s} n={counts[s]} label={s[0].toUpperCase() + s.slice(1)} active={filter === s} onClick={() => setFilter(filter === s ? "all" : s)} />)}
       </div>
 
-      {rows === null ? <p className="t-small text-mute">Loading…</p> : rows.length === 0 ? (
-        <div className="border border-line p-10 text-center"><p className="font-serif text-[22px]">No inquiries yet.</p><p className="t-small text-mute mt-2">Messages from the contact form will appear here.</p></div>
+      {err ? <LoadError error={err} retry={() => { setErr(null); load(); }} /> : rows === null ? <SkeletonRows n={5} /> : rows.length === 0 ? (
+        <Empty title="No inquiries yet." body="Messages sent through the website’s contact form land here, with the couple’s date, location and budget. You can reply on WhatsApp in one tap." action={<a href="/contact" target="_blank" rel="noreferrer" className="link t-mono">Open the contact page ↗</a>} />
       ) : (
         <div className="grid lg:grid-cols-[400px_1fr] gap-6 items-start">
           <ul className="flex flex-col border-t border-line">
@@ -67,7 +68,7 @@ export default function InquiriesPage() {
                 </button>
               </li>
             ))}
-            {shown.length === 0 && <li className="p-6 t-small text-faint">Nothing in this view.</li>}
+            {shown.length === 0 && <li className="p-8 text-center t-small text-mute">No {filter} messages. <button type="button" className="link" onClick={() => setFilter("all")}>Show all</button></li>}
           </ul>
 
           {cur && (

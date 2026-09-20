@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
 import { api, type Category, type Project } from "@/lib/admin-api";
-import { Btn, PageHeader, Pill, toast } from "@/components/admin/ui";
+import { Btn, PageHeader, Pill, toast, Empty, LoadError, SkeletonCards } from "@/components/admin/ui";
 
 const CATS: (Category | "all" | "draft")[] = ["all", "wedding", "prewedding", "event", "personal", "draft"];
 const LABEL: Record<string, string> = { all: "All", wedding: "Wedding", prewedding: "Pre-wedding", event: "Event", personal: "Personal", draft: "Drafts" };
@@ -13,7 +13,8 @@ export default function ProjectsPage() {
   const [rows, setRows] = useState<Project[] | null>(null);
   const [cat, setCat] = useState<(typeof CATS)[number]>("all");
   const [reorder, setReorder] = useState(false);
-  const load = () => api.get<Project[]>("/api/admin/projects").then(setRows).catch((e) => toast(e.message, true));
+  const [err, setErr] = useState<string | null>(null);
+  const load = () => { return api.get<Project[]>("/api/admin/projects").then((x) => { setRows(x); setErr(null); }).catch((e) => setErr(e instanceof Error ? e.message : "Failed")); };
   useEffect(() => { load(); }, []);
 
   const shown = useMemo(() => {
@@ -58,11 +59,10 @@ export default function ProjectsPage() {
         ))}
       </div>
 
-      {rows === null ? <p className="t-small text-mute">Loading…</p> : shown.length === 0 ? (
-        <div className="border border-line p-10 text-center flex flex-col items-center gap-3">
-          <p className="font-serif text-[22px]">No projects here yet.</p>
-          <Link href="/admin/projects/new" className="link t-mono">Add the first one</Link>
-        </div>
+      {err ? <LoadError error={err} retry={() => { setErr(null); load(); }} /> : rows === null ? <SkeletonCards /> : shown.length === 0 ? (
+        rows.length === 0
+          ? <Empty title="No portfolio projects yet." body="Each project is a Google Drive folder of web-size JPEGs plus a short story in English and Indonesian. Published projects appear on the website within seconds." action={<Link href="/admin/projects/new" className="ink-btn !py-2.5 !px-4">Add the first project</Link>} />
+          : <Empty title="Nothing matches this filter." body="Change the category or publish state above." />
       ) : (
         <ul className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {shown.map((p, i) => (

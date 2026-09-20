@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     google_service_account_file: str = "service_account.json"
     google_api_key: str = ""
     frontend_url: str = "http://localhost:3000"
+    revalidate_secret: str = ""  # shared with the site (REVALIDATE_SECRET); empty = rely on its 60 s cache
     app_env: str = "development"
     cache_dir: str = str(BACKEND_DIR / "cache")
     cache_retention_days: int = 30  # completed sessions older than this lose their image cache

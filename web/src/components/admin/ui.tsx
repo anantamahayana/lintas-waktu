@@ -187,6 +187,75 @@ export async function confirmLeave() {
   return ok;
 }
 
+/* ------------------------------------------------------------------ loading / empty / error
+   Skeleton shapes mirror the layout they stand in for, so the page does not
+   jump when data lands. Empty states always say what to do next. */
+export function Skeleton({ className }: { className?: string }) {
+  return <div aria-hidden className={clsx("admin-skel bg-line", className)} />;
+}
+export function SkeletonRows({ n = 5 }: { n?: number }) {
+  return (
+    <div aria-busy="true" aria-label="Loading" className="border-t border-line">
+      {Array.from({ length: n }, (_, i) => (
+        <div key={i} className="flex items-center gap-6 py-4 border-b border-line">
+          <Skeleton className="h-4 w-[26%]" />
+          <Skeleton className="h-3 w-[14%]" />
+          <Skeleton className="h-3 w-[10%]" />
+          <Skeleton className="h-3 w-[18%] ml-auto" />
+        </div>
+      ))}
+    </div>
+  );
+}
+export function SkeletonCards({ n = 8 }: { n?: number }) {
+  return (
+    <ul aria-busy="true" aria-label="Loading" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {Array.from({ length: n }, (_, i) => (
+        <li key={i} className="border border-line bg-white p-3 flex flex-col gap-3">
+          <Skeleton className="aspect-[4/5]" />
+          <Skeleton className="h-4 w-2/3" />
+          <Skeleton className="h-3 w-1/2" />
+        </li>
+      ))}
+    </ul>
+  );
+}
+export function SkeletonForm({ fields = 6 }: { fields?: number }) {
+  return (
+    <div aria-busy="true" aria-label="Loading" className="grid lg:grid-cols-2 gap-6 items-start">
+      {Array.from({ length: 2 }, (_, c) => (
+        <div key={c} className="border border-line bg-white p-5 lg:p-6 flex flex-col gap-5">
+          <Skeleton className="h-3 w-24" />
+          {Array.from({ length: Math.ceil(fields / 2) }, (_, i) => (
+            <div key={i} className="flex flex-col gap-2"><Skeleton className="h-3 w-28" /><Skeleton className="h-11 w-full" /></div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function Empty({ title, body, action }: { title: string; body?: ReactNode; action?: ReactNode }) {
+  return (
+    <div className="border border-dashed border-line p-10 lg:p-14 text-center flex flex-col items-center gap-3">
+      <p className="font-serif text-[24px] leading-tight">{title}</p>
+      {body && <p className="t-small text-mute max-w-[44ch]">{body}</p>}
+      {action && <div className="pt-2">{action}</div>}
+    </div>
+  );
+}
+
+/** Shown when the API could not be reached: the message, and a way back. */
+export function LoadError({ error, retry }: { error: string; retry: () => void }) {
+  return (
+    <div role="alert" className="border border-line p-10 text-center flex flex-col items-center gap-3">
+      <p className="font-serif text-[24px] leading-tight">Could not load this page.</p>
+      <p className="t-small text-mute max-w-[48ch]">{error}. Check that the API is running, then try again.</p>
+      <div className="pt-2"><Btn onClick={retry}>Try again</Btn></div>
+    </div>
+  );
+}
+
 export function fmtDate(iso: string | null | undefined, withTime = false) {
   if (!iso) return "—";
   const d = new Date(iso);

@@ -1,16 +1,19 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api, type Project } from "@/lib/admin-api";
-import { PageHeader, toast } from "@/components/admin/ui";
+import { PageHeader, toast, LoadError, SkeletonForm } from "@/components/admin/ui";
 import { ProjectForm } from "@/components/admin/ProjectForm";
 
 export default function EditProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [p, setP] = useState<Project | null>(null);
-  useEffect(() => { api.get<Project>(`/api/admin/projects/${id}`).then(setP).catch((e) => toast(e.message, true)); }, [id]);
-  if (!p) return <p className="t-small text-mute">Loading…</p>;
+  const [err, setErr] = useState<string | null>(null);
+  const load = useCallback(() => { api.get<Project>(`/api/admin/projects/${id}`).then((x) => { setP(x); setErr(null); }).catch((e) => setErr(e instanceof Error ? e.message : "Failed")); }, [id]);
+  useEffect(() => { load(); }, [load]);
+  if (err) return <LoadError error={err} retry={() => { setErr(null); load(); }} />;
+  if (!p) return <SkeletonForm fields={10} />;
   return (
     <>
       <PageHeader eyebrow={<Link href="/admin/projects" className="link">Projects</Link>} title={p.title} />
