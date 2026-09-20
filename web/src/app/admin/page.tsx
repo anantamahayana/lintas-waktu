@@ -76,6 +76,7 @@ export default function SessionsPage() {
               <th className="py-3 pr-4 font-normal w-[72px]"></th>
               <th className="py-3 pr-4 font-normal">Client</th>
               <th className="py-3 pr-4 font-normal">Status</th>
+              <th className="py-3 pr-4 font-normal hidden md:table-cell">PIN</th>
               <th className="py-3 pr-4 font-normal hidden md:table-cell">Selection</th>
               <th className="py-3 pr-4 font-normal hidden lg:table-cell">Deadline</th>
               <th className="py-3 font-normal hidden lg:table-cell">Last activity</th>
@@ -96,6 +97,7 @@ export default function SessionsPage() {
                   </Link>
                 </td>
                 <td className="py-3 pr-4">{statusOf(s)}</td>
+                <td className="py-3 pr-4 t-small hidden md:table-cell">{s.has_pin ? <span className="font-mono tracking-[0.2em]">{s.pin ?? "••••"}</span> : <span className="text-faint">—</span>}</td>
                 <td className="py-3 pr-4 t-small hidden md:table-cell">
                   {s.status === "completed" ? `${s.selected_count} / ${s.photo_limit}${s.extra_count ? ` +${s.extra_count}` : ""}` : `${s.draft_count} / ${s.photo_limit}`}
                 </td>

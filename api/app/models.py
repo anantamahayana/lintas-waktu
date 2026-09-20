@@ -34,6 +34,9 @@ class PhotoSession(Base):
     status: Mapped[SessionStatus] = mapped_column(Enum(SessionStatus), default=SessionStatus.pending)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     pin_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # The PIN itself, so the photographer can read it back in the admin and send it to the
+    # client. It only guards a proofing gallery, and the admin is password-protected.
+    pin: Mapped[str | None] = mapped_column(String(8), nullable=True)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

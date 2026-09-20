@@ -68,7 +68,7 @@ export const api = {
 export type SessionStatus = "pending" | "completed";
 export type SessionOut = {
   id: string; slug: string; client_name: string; drive_folder_id: string; photo_limit: number; max_limit: number | null;
-  status: SessionStatus; notes: string | null; has_pin: boolean; expires_at: string | null; created_at: string;
+  status: SessionStatus; notes: string | null; has_pin: boolean; pin: string | null; expires_at: string | null; created_at: string;
   submitted_at: string | null; first_opened_at: string | null; last_seen_at: string | null; draft_count: number;
   preview_urls: string[]; selected_count: number; extra_count: number; gallery_url: string;
 };

@@ -77,7 +77,7 @@ export default function NewSessionPage() {
             <Field label="Max with extras" hint="optional"><Input type="number" min={1} max={2000} value={v.max_limit} onChange={set("max_limit")} placeholder="45" /></Field>
             <Field label="PIN" hint="4 digits, optional">
               <div className="flex gap-2">
-                <Input inputMode="numeric" pattern="\d{4}" maxLength={4} value={v.pin} onChange={set("pin")} placeholder="4821" />
+                <Input inputMode="numeric" pattern="\d{4}" maxLength={4} value={v.pin} onChange={set("pin")} placeholder="leave blank for no PIN" />
                 <Btn type="button" onClick={randomPin}>Random</Btn>
               </div>
             </Field>

@@ -88,6 +88,7 @@ class SessionOut(BaseModel):
     status: SessionStatus
     notes: str | None
     has_pin: bool
+    pin: str | None = None  # admin only
     expires_at: datetime | None
     created_at: datetime
     submitted_at: datetime | None

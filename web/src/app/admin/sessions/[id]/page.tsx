@@ -13,7 +13,6 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
   const [s, setS] = useState<SessionDetail | null>(null);
   const [cache, setCache] = useState<CacheStatus | null>(null);
   const [editing, setEditing] = useState(false);
-  const [pin, setPin] = useState("");
 
   const [err, setErr] = useState<string | null>(null);
   const load = useCallback(() => api.get<SessionDetail>(`/api/admin/sessions/${id}`).then((x) => { setS(x); setErr(null); }).catch((e) => setErr(e instanceof Error ? e.message : "Failed")), [id]);
@@ -53,7 +52,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
     `Hi ${s.client_name}, your photographs are ready to choose from.`,
     "",
     s.gallery_url,
-    s.has_pin ? `PIN: ${pin || "[fill in PIN]"}` : null,
+    s.has_pin ? `PIN: ${s.pin ?? "[PIN unknown — set a new one]"}` : null,
     "",
     `Please pick your ${s.photo_limit} favourites${s.max_limit && s.max_limit > s.photo_limit ? ` (up to ${s.max_limit} with extras)` : ""}, then press Send.`,
     s.expires_at ? `The gallery stays open until ${fmtDate(s.expires_at)}.` : null,
@@ -92,7 +91,11 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
                 <dl className="flex flex-col t-small">
                   {[
                     ["Link", <a key="l" href={s.gallery_url} target="_blank" rel="noreferrer" className="link break-all">{s.gallery_url.replace(/^https?:\/\//, "")}</a>],
-                    ["PIN", s.has_pin ? <span key="p" className="flex items-center gap-2">set <Input value={pin} onChange={(e) => setPin(e.target.value)} placeholder="for WhatsApp msg" className="!h-8 !w-[150px]" /></span> : "none"],
+                    ["PIN", s.has_pin
+                      ? (s.pin
+                        ? <span key="p" className="flex items-center gap-3"><span className="font-mono text-[15px] tracking-[0.3em]">{s.pin}</span><button type="button" className="link t-mono" onClick={() => { navigator.clipboard.writeText(s.pin!); toast("PIN copied"); }}>copy</button></span>
+                        : <span key="p" className="text-mute">set before this version — press Edit to set a new one</span>)
+                      : <span key="p" className="text-mute">none · anyone with the link can open it</span>],
                     ["Package", `${s.photo_limit} photos${s.max_limit ? ` · up to ${s.max_limit}` : ""}`],
                     ["Deadline", s.expires_at ? `${fmtDate(s.expires_at)} · ${daysLeft(s.expires_at)} days left` : "—"],
                     ["Drive folder", <a key="d" href={`https://drive.google.com/drive/folders/${s.drive_folder_id}`} target="_blank" rel="noreferrer" className="link">open ↗</a>],
@@ -208,7 +211,12 @@ function EditForm({ s, onDone }: { s: SessionDetail; onDone: () => void }) {
       <div className="grid grid-cols-2 gap-3">
         <Field label="Package"><Input type="number" min={1} value={v.photo_limit} onChange={set("photo_limit")} /></Field>
         <Field label="Max"><Input type="number" min={1} value={v.max_limit} onChange={set("max_limit")} /></Field>
-        <Field label="New PIN" hint="blank = keep"><Input maxLength={4} value={v.pin} onChange={set("pin")} placeholder="••••" /></Field>
+        <Field label={s.has_pin ? "PIN" : "Add a PIN"} hint={s.has_pin ? "blank = keep" : "4 digits, optional"}>
+          <div className="flex gap-2">
+            <Input inputMode="numeric" pattern="\d{4}" maxLength={4} value={v.pin} onChange={set("pin")} placeholder={s.pin ?? "••••"} />
+            <Btn type="button" onClick={() => setV((x) => ({ ...x, pin: String(Math.floor(1000 + Math.random() * 9000)) }))}>Random</Btn>
+          </div>
+        </Field>
         <Field label="Expires"><Input type="date" value={v.expires_at} onChange={set("expires_at")} /></Field>
       </div>
       <Field label="Note"><Textarea value={v.notes} onChange={set("notes")} /></Field>

@@ -55,6 +55,7 @@ def _out(s: PhotoSession) -> dict:
     return {
         **{c: getattr(s, c) for c in cols},
         "has_pin": bool(s.pin_hash),
+        "pin": s.pin if s.pin_hash else None,
         "draft_count": len(json.loads(s.draft_ids or "[]")),
         "preview_urls": _previews(s),
         "draft_photos": _draft_photos(s),
@@ -127,6 +128,7 @@ def create_session(body: SessionCreate, background: BackgroundTasks, db: DbSessi
         max_limit=body.max_limit if body.max_limit and body.max_limit > body.photo_limit else None,
         notes=body.notes,
         pin_hash=hash_pin(body.pin) if body.pin else None,
+        pin=body.pin or None,
         expires_at=body.expires_at,
     )
     db.add(s)
@@ -178,10 +180,12 @@ def update_session(session_id: str, body: SessionUpdate, background: BackgroundT
     if body.pin is not None:
         if body.pin == "":
             s.pin_hash = None
+            s.pin = None
         elif not (body.pin.isdigit() and len(body.pin) == 4):
             raise HTTPException(400, "PIN harus 4 digit angka.")
         else:
             s.pin_hash = hash_pin(body.pin)
+            s.pin = body.pin
     if body.clear_expiry:
         s.expires_at = None
     elif body.expires_at is not None:
