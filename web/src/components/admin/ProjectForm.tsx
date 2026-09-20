@@ -3,8 +3,8 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { api, type Fact, type Project, type ProjectPhoto } from "@/lib/admin-api";
-import { Btn, Card, Field, Input, Select, Textarea, confirm, toast, useUnsavedChanges } from "@/components/admin/ui";
+import { ApiError, api, type Fact, type Project, type ProjectPhoto } from "@/lib/admin-api";
+import { Btn, Card, Field, Input, Select, Textarea, confirm, focusFirstInvalid, toast, useUnsavedChanges, type FieldErrors } from "@/components/admin/ui";
 
 type Values = Omit<Project, "id" | "cover_url" | "photo_count" | "created_at" | "updated_at" | "photos" | "sort_order">;
 
@@ -25,13 +25,30 @@ export function ProjectForm({ project }: { project?: Project }) {
   const [saved, setSaved] = useState<Values>(project ? { ...empty, ...project } : empty);
   const dirty = JSON.stringify(v) !== JSON.stringify(saved);
   useUnsavedChanges(dirty);
-  const set = <K extends keyof Values>(k: K) => (e: { target: { value: string } }) => setV((s) => ({ ...s, [k]: e.target.value }));
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const set = <K extends keyof Values>(k: K) => (e: { target: { value: string } }) => {
+    setV((s) => ({ ...s, [k]: e.target.value }));
+    if (errors[k]) setErrors((x) => ({ ...x, [k]: undefined }));
+  };
+
+  function validate(): FieldErrors {
+    const e: FieldErrors = {};
+    if (!v.title.trim()) e.title = "Give the project a title.";
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(v.slug)) e.slug = "Lowercase letters, numbers and hyphens only, e.g. ayu-marco.";
+    if (v.month && !/^\d{4}-\d{2}$/.test(v.month)) e.month = "Use YYYY-MM, e.g. 2026-06.";
+    if (!v.drive_folder_id.trim() && v.placeholder_urls.length === 0) e.drive_folder_id = "Paste the Google Drive folder link or ID.";
+    if (v.film_url && !/^https?:\/\//.test(v.film_url)) e.film_url = "Paste the full link, starting with https://.";
+    return e;
+  }
 
   const facts = v.facts ?? [];
   const setFact = (i: number, f: Partial<Fact>) => setV((s) => ({ ...s, facts: s.facts.map((x, j) => (j === i ? { ...x, ...f } : x)) }));
 
   async function save(e: FormEvent) {
     e.preventDefault();
+    const errs = validate();
+    setErrors(errs);
+    if (Object.values(errs).some(Boolean)) { focusFirstInvalid(); return; }
     // Going live (or off the site) is the one change visitors notice — say so.
     if (project && v.published !== saved.published) {
       const ok = await confirm(v.published
@@ -55,6 +72,8 @@ export function ProjectForm({ project }: { project?: Project }) {
       setSaved(next);
       if (!project) router.replace(`/admin/projects/${result.id}`);
     } catch (err) {
+      if (err instanceof ApiError && Object.keys(err.fields).length) { setErrors(err.fields); focusFirstInvalid(); }
+      else if (err instanceof ApiError && err.status === 409) { setErrors({ slug: err.message }); focusFirstInvalid(); }
       toast(err instanceof Error ? err.message : "Could not save", true);
     } finally {
       setBusy(false);
@@ -76,12 +95,12 @@ export function ProjectForm({ project }: { project?: Project }) {
   }
 
   return (
-    <form onSubmit={save} className="grid lg:grid-cols-[minmax(0,1fr)_360px] gap-6 items-start">
+    <form onSubmit={save} noValidate className="grid lg:grid-cols-[minmax(0,1fr)_360px] gap-6 items-start">
       <div className="flex flex-col gap-4">
         <Card title="Basics">
           <div className="grid sm:grid-cols-2 gap-4">
-            <Field label="Title"><Input required value={v.title} onChange={(e) => setV((s) => ({ ...s, title: e.target.value, slug: project ? s.slug : slugify(e.target.value) }))} placeholder="Ayu & Marco" /></Field>
-            <Field label="Slug" hint="/work/…"><Input required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" value={v.slug} onChange={set("slug")} /></Field>
+            <Field label="Title" error={errors.title}><Input invalid={!!errors.title} value={v.title} onChange={(e) => setV((s) => ({ ...s, title: e.target.value, slug: project ? s.slug : slugify(e.target.value) }))} placeholder="Ayu & Marco" /></Field>
+            <Field label="Slug" hint="/work/…" error={errors.slug}><Input invalid={!!errors.slug} value={v.slug} onChange={set("slug")} /></Field>
             <Field label="Category">
               <Select value={v.category} onChange={set("category")}>
                 <option value="wedding">Wedding</option><option value="prewedding">Pre-wedding</option><option value="event">Event</option><option value="personal">Personal</option>
@@ -89,10 +108,10 @@ export function ProjectForm({ project }: { project?: Project }) {
             </Field>
             <Field label="Location"><Input value={v.location} onChange={set("location")} placeholder="Uluwatu" /></Field>
             <Field label="Date label" hint="shown on the site"><Input value={v.date_label} onChange={set("date_label")} placeholder="June 2026" /></Field>
-            <Field label="Month" hint="YYYY-MM, for ordering"><Input value={v.month ?? ""} onChange={set("month")} placeholder="2026-06" pattern="\d{4}-\d{2}" /></Field>
+            <Field label="Month" hint="YYYY-MM, for ordering" error={errors.month}><Input invalid={!!errors.month} value={v.month ?? ""} onChange={set("month")} placeholder="2026-06" /></Field>
           </div>
-          <Field label="Google Drive folder" hint="link or ID — web-size JPEGs">
-            <Input required={v.placeholder_urls.length === 0} value={v.drive_folder_id} onChange={set("drive_folder_id")} placeholder="https://drive.google.com/drive/folders/…" />
+          <Field label="Google Drive folder" hint="link or ID — web-size JPEGs" error={errors.drive_folder_id}>
+            <Input invalid={!!errors.drive_folder_id} value={v.drive_folder_id} onChange={set("drive_folder_id")} placeholder="https://drive.google.com/drive/folders/…" />
           </Field>
           {v.placeholder_urls.length > 0 && !v.drive_folder_id && (
             <p className="t-small text-mute">
@@ -137,7 +156,7 @@ export function ProjectForm({ project }: { project?: Project }) {
           <div className="grid sm:grid-cols-3 gap-4">
             <Field label="Title"><Input value={v.film_title ?? ""} onChange={set("film_title")} placeholder="Highlight film" /></Field>
             <Field label="Duration"><Input value={v.film_duration ?? ""} onChange={set("film_duration")} placeholder="5:12" /></Field>
-            <Field label="URL" hint="YouTube/Vimeo"><Input value={v.film_url ?? ""} onChange={set("film_url")} placeholder="https://…" /></Field>
+            <Field label="URL" hint="YouTube/Vimeo" error={errors.film_url}><Input invalid={!!errors.film_url} value={v.film_url ?? ""} onChange={set("film_url")} placeholder="https://…" /></Field>
           </div>
         </Card>
       </div>

@@ -4,8 +4,8 @@ import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { api, type CacheStatus, type SessionDetail } from "@/lib/admin-api";
-import { Btn, Card, Field, Input, PageHeader, Pill, Textarea, confirm, daysLeft, fmtDate, toast, useUnsavedChanges, type ConfirmOptions, LoadError, SkeletonForm } from "@/components/admin/ui";
+import { ApiError, api, type CacheStatus, type SessionDetail } from "@/lib/admin-api";
+import { Btn, Card, Field, Input, PageHeader, Pill, Textarea, confirm, daysLeft, fmtDate, focusFirstInvalid, toast, useUnsavedChanges, type ConfirmOptions, type FieldErrors, LoadError, SkeletonForm } from "@/components/admin/ui";
 
 export default function SessionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -189,8 +189,25 @@ function EditForm({ s, onDone }: { s: SessionDetail; onDone: () => void }) {
   const [initial] = useState(v);
   const dirty = JSON.stringify(v) !== JSON.stringify(initial);
   useUnsavedChanges(dirty);
-  const set = (k: keyof typeof v) => (e: { target: { value: string } }) => setV((x) => ({ ...x, [k]: e.target.value }));
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const set = (k: keyof typeof v) => (e: { target: { value: string } }) => {
+    setV((x) => ({ ...x, [k]: e.target.value }));
+    if (errors[k]) setErrors((x) => ({ ...x, [k]: undefined }));
+  };
+  function validate(): FieldErrors {
+    const e: FieldErrors = {};
+    if (!v.client_name.trim()) e.client_name = "Enter the client’s name.";
+    if (!v.drive_folder_id.trim()) e.drive_folder_id = "Paste the Google Drive folder link or ID.";
+    const limit = Number(v.photo_limit);
+    if (!Number.isInteger(limit) || limit < 1) e.photo_limit = "At least 1 photo.";
+    if (v.max_limit !== "" && Number(v.max_limit) < limit) e.max_limit = `At least the package size (${limit}), or blank.`;
+    if (v.pin && !/^\d{4}$/.test(v.pin)) e.pin = "Exactly 4 digits.";
+    return e;
+  }
   async function save() {
+    const errs = validate();
+    setErrors(errs);
+    if (Object.values(errs).some(Boolean)) { focusFirstInvalid(); return; }
     if (v.pin !== "" && !(await confirm({ title: "Change the PIN?", body: "The old PIN stops working at once — remember to send the new one to the client.", action: "Change PIN" }))) return;
     if (v.drive_folder_id !== s.drive_folder_id && !(await confirm({ title: "Switch the Drive folder?", body: "Picks that point at photos not in the new folder are dropped from the gallery.", action: "Switch folder" }))) return;
     setBusy(true);
@@ -202,18 +219,21 @@ function EditForm({ s, onDone }: { s: SessionDetail; onDone: () => void }) {
         ...(v.expires_at ? { expires_at: new Date(v.expires_at + "T23:59:59").toISOString() } : { clear_expiry: true }),
       });
       toast("Saved"); onDone();
-    } catch (e) { toast(e instanceof Error ? e.message : "Failed", true); } finally { setBusy(false); }
+    } catch (e) {
+      if (e instanceof ApiError && Object.keys(e.fields).length) { setErrors(e.fields); focusFirstInvalid(); }
+      toast(e instanceof Error ? e.message : "Failed", true);
+    } finally { setBusy(false); }
   }
   return (
     <div className="flex flex-col gap-4">
-      <Field label="Client name"><Input value={v.client_name} onChange={set("client_name")} /></Field>
-      <Field label="Drive folder"><Input value={v.drive_folder_id} onChange={set("drive_folder_id")} /></Field>
+      <Field label="Client name" error={errors.client_name}><Input invalid={!!errors.client_name} value={v.client_name} onChange={set("client_name")} /></Field>
+      <Field label="Drive folder" error={errors.drive_folder_id}><Input invalid={!!errors.drive_folder_id} value={v.drive_folder_id} onChange={set("drive_folder_id")} /></Field>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Package"><Input type="number" min={1} value={v.photo_limit} onChange={set("photo_limit")} /></Field>
-        <Field label="Max"><Input type="number" min={1} value={v.max_limit} onChange={set("max_limit")} /></Field>
-        <Field label={s.has_pin ? "PIN" : "Add a PIN"} hint={s.has_pin ? "blank = keep" : "4 digits, optional"}>
+        <Field label="Package" error={errors.photo_limit}><Input invalid={!!errors.photo_limit} type="number" min={1} value={v.photo_limit} onChange={set("photo_limit")} /></Field>
+        <Field label="Max" error={errors.max_limit}><Input invalid={!!errors.max_limit} type="number" min={1} value={v.max_limit} onChange={set("max_limit")} /></Field>
+        <Field label={s.has_pin ? "PIN" : "Add a PIN"} hint={s.has_pin ? "blank = keep" : "4 digits, optional"} error={errors.pin}>
           <div className="flex gap-2">
-            <Input inputMode="numeric" pattern="\d{4}" maxLength={4} value={v.pin} onChange={set("pin")} placeholder={s.pin ?? "••••"} />
+            <Input invalid={!!errors.pin} inputMode="numeric" maxLength={4} value={v.pin} onChange={set("pin")} placeholder={s.pin ?? "••••"} />
             <Btn type="button" onClick={() => setV((x) => ({ ...x, pin: String(Math.floor(1000 + Math.random() * 9000)) }))}>Random</Btn>
           </div>
         </Field>

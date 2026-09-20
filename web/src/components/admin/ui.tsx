@@ -56,14 +56,26 @@ export function Field({ label, hint, error, children, className }: { label: stri
   );
 }
 
-export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className={clsx("field !h-11", props.className)} />;
+type Invalid = { invalid?: boolean };
+export function Input({ invalid, ...props }: React.InputHTMLAttributes<HTMLInputElement> & Invalid) {
+  return <input {...props} aria-invalid={invalid || undefined} className={clsx("field !h-11", invalid && "field-error", props.className)} />;
 }
-export function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea {...props} className={clsx("field !min-h-[96px]", props.className)} />;
+export function Textarea({ invalid, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement> & Invalid) {
+  return <textarea {...props} aria-invalid={invalid || undefined} className={clsx("field !min-h-[96px]", invalid && "field-error", props.className)} />;
 }
-export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select {...props} className={clsx("field !h-11", props.className)} />;
+export function Select({ invalid, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & Invalid) {
+  return <select {...props} aria-invalid={invalid || undefined} className={clsx("field !h-11", invalid && "field-error", props.className)} />;
+}
+
+/** Shared shape for form validation: field → message. Empty object = valid. */
+export type FieldErrors = Record<string, string | undefined>;
+/** Scroll the first invalid control into view and focus it. */
+export function focusFirstInvalid() {
+  requestAnimationFrame(() => {
+    const el = document.querySelector<HTMLElement>("[aria-invalid=true]");
+    el?.scrollIntoView({ block: "center", behavior: "smooth" });
+    el?.focus({ preventScroll: true });
+  });
 }
 
 export function Pill({ tone = "mute", children }: { tone?: "mute" | "ok" | "warn" | "new"; children: ReactNode }) {

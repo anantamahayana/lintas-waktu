@@ -14,10 +14,53 @@ export const token = {
   clear: () => localStorage.removeItem(KEY),
 };
 
+/**
+ * Error from the API, already made readable: `message` is one sentence for a
+ * toast, `fields` maps a form field to its own message (from FastAPI's 422
+ * validation detail) so forms can show it under the right input.
+ */
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(public status: number, message: string, public fields: Record<string, string> = {}) {
     super(message);
   }
+}
+
+// The backend speaks Indonesian in a few places (it is shared with the proofing
+// platform); the admin is English, so translate the messages we know.
+const EN: Record<string, string> = {
+  "Batas maksimal harus ≥ batas paket": "Max with extras must be at least the package size",
+  "PIN harus 4 digit angka.": "The PIN must be exactly 4 digits",
+  "Folder tidak berisi foto JPEG/PNG.": "The folder has no JPEG/PNG photos",
+  "Klien belum mengirim pilihan.": "The client has not sent a selection yet",
+  "Logo harus PNG, JPG, SVG, atau WebP.": "The logo must be a PNG, JPG, SVG or WebP",
+  "Logo maksimal 2 MB.": "The logo must be under 2 MB",
+  "Sesi tidak ditemukan": "Session not found",
+  "Slug already in use": "Another project already uses this slug — change it to publish at a different address",
+  "Terlalu banyak percobaan login. Coba lagi dalam 15 menit.": "Too many login attempts — try again in 15 minutes",
+  "Google Drive API belum di-enable di project Google Cloud Anda.": "The Google Drive API is not enabled for this Google Cloud project",
+};
+const humanize = (m: string) => EN[m] ?? m.replace(/^Google Drive menolak permintaan: /, "Google Drive refused the request: ").replace(/^Value error, /, "");
+
+const FIELD_LABEL: Record<string, string> = {
+  client_name: "Client name", drive_folder_id: "Google Drive folder", photo_limit: "Photos in package", max_limit: "Max with extras",
+  pin: "PIN", expires_at: "Expires on", slug: "Slug", title: "Title", month: "Month", date_label: "Date label",
+};
+
+/** Turn a FastAPI error body into (message, fields). */
+export function parseApiError(status: number, body: unknown, fallback: string): ApiError {
+  const detail = (body as { detail?: unknown })?.detail;
+  if (typeof detail === "string") return new ApiError(status, humanize(detail));
+  if (Array.isArray(detail)) {
+    const fields: Record<string, string> = {};
+    for (const e of detail as { loc?: unknown[]; msg?: string }[]) {
+      const key = String((e.loc ?? []).filter((x) => x !== "body").join(".") || "form");
+      if (!fields[key]) fields[key] = humanize(String(e.msg ?? "Invalid value"));
+    }
+    const names = Object.keys(fields).map((k) => FIELD_LABEL[k] ?? k);
+    const msg = names.length === 1 ? `${names[0]}: ${fields[Object.keys(fields)[0]]}` : `Please check: ${names.join(", ")}`;
+    return new ApiError(status, msg, fields);
+  }
+  return new ApiError(status, fallback);
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -25,18 +68,21 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const t = token.get();
   if (t) headers.authorization = `Bearer ${t}`;
   if (init.body && !(init.body instanceof FormData)) headers["content-type"] = "application/json";
-  const res = await fetch(`${API_URL}${path}`, { ...init, headers });
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, { ...init, headers });
+  } catch {
+    throw new ApiError(0, "Can’t reach the server. Check your connection (and that the API is running).");
+  }
   if (res.status === 401 && typeof window !== "undefined" && !path.endsWith("/login")) {
     token.clear();
     window.location.href = "/admin/login";
   }
   if (!res.ok) {
-    let msg = res.statusText;
-    try {
-      const j = await res.json();
-      msg = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail ?? j);
-    } catch {}
-    throw new ApiError(res.status, msg);
+    const fallback = res.status >= 500 ? "The server hit a problem. Try again in a moment." : res.statusText || "Request failed";
+    let body: unknown = null;
+    try { body = await res.json(); } catch {}
+    throw parseApiError(res.status, body, fallback);
   }
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;

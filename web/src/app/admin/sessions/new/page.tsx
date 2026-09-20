@@ -2,8 +2,8 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { api, type SessionOut, type SiteSettings } from "@/lib/admin-api";
-import { Btn, Card, Field, Input, PageHeader, Textarea, toast, useUnsavedChanges } from "@/components/admin/ui";
+import { ApiError, api, type SessionOut, type SiteSettings } from "@/lib/admin-api";
+import { Btn, Card, Field, Input, PageHeader, Textarea, focusFirstInvalid, toast, useUnsavedChanges, type FieldErrors } from "@/components/admin/ui";
 
 export default function NewSessionPage() {
   const router = useRouter();
@@ -12,7 +12,24 @@ export default function NewSessionPage() {
   const [busy, setBusy] = useState(false);
   const [created, setCreated] = useState(false);
   useUnsavedChanges(!created && (v.client_name !== "" || v.drive_folder_id !== ""));
-  const set = (k: keyof typeof v) => (e: { target: { value: string } }) => setV((s) => ({ ...s, [k]: e.target.value }));
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const set = (k: keyof typeof v) => (e: { target: { value: string } }) => {
+    setV((s) => ({ ...s, [k]: e.target.value }));
+    if (errors[k]) setErrors((x) => ({ ...x, [k]: undefined }));
+  };
+
+  function validate(): FieldErrors {
+    const e: FieldErrors = {};
+    if (!v.client_name.trim()) e.client_name = "Enter the client’s name — it appears on the gallery.";
+    if (!v.drive_folder_id.trim()) e.drive_folder_id = "Paste the Google Drive folder link or ID.";
+    else if (folder && !folder.ok) e.drive_folder_id = folder.msg;
+    const limit = Number(v.photo_limit);
+    if (!Number.isInteger(limit) || limit < 1) e.photo_limit = "At least 1 photo.";
+    if (v.max_limit !== "" && Number(v.max_limit) < limit) e.max_limit = `Must be at least the package size (${limit}), or leave it blank.`;
+    if (v.pin && !/^\d{4}$/.test(v.pin)) e.pin = "Exactly 4 digits, or leave blank for no PIN.";
+    if (v.expires_at && new Date(v.expires_at) < new Date(new Date().toDateString())) e.expires_at = "That date is already in the past.";
+    return e;
+  }
 
   // defaults from site settings
   useEffect(() => {
@@ -37,6 +54,9 @@ export default function NewSessionPage() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    const errs = validate();
+    setErrors(errs);
+    if (Object.values(errs).some(Boolean)) { focusFirstInvalid(); return; }
     setBusy(true);
     try {
       const body = {
@@ -53,6 +73,7 @@ export default function NewSessionPage() {
       toast("Session created");
       router.push(`/admin/sessions/${s.id}`);
     } catch (err) {
+      if (err instanceof ApiError && Object.keys(err.fields).length) { setErrors(err.fields); focusFirstInvalid(); }
       toast(err instanceof Error ? err.message : "Could not create session", true);
     } finally {
       setBusy(false);
@@ -62,26 +83,26 @@ export default function NewSessionPage() {
   return (
     <>
       <PageHeader eyebrow="Proofing" title="New session" />
-      <form onSubmit={onSubmit} className="grid lg:grid-cols-[minmax(0,560px)_1fr] gap-8 items-start">
+      <form onSubmit={onSubmit} noValidate className="grid lg:grid-cols-[minmax(0,560px)_1fr] gap-8 items-start">
         <div className="flex flex-col gap-6">
-          <Field label="Client name"><Input required value={v.client_name} onChange={set("client_name")} placeholder="Ayu & Marco" /></Field>
-          <Field label="Google Drive folder" hint="link or ID">
+          <Field label="Client name" error={errors.client_name}><Input invalid={!!errors.client_name} value={v.client_name} onChange={set("client_name")} placeholder="Ayu & Marco" /></Field>
+          <Field label="Google Drive folder" hint="link or ID" error={errors.drive_folder_id}>
             <div className="flex gap-2">
-              <Input required value={v.drive_folder_id} onChange={set("drive_folder_id")} onBlur={checkFolder} placeholder="https://drive.google.com/drive/folders/…" />
+              <Input invalid={!!errors.drive_folder_id} value={v.drive_folder_id} onChange={set("drive_folder_id")} onBlur={checkFolder} placeholder="https://drive.google.com/drive/folders/…" />
               <Btn type="button" onClick={checkFolder}>Check</Btn>
             </div>
-            {folder && <span className={`t-small ${folder.ok ? "text-mute" : "text-error"}`}>{folder.msg}</span>}
+            {folder && !errors.drive_folder_id && <span className={`t-small ${folder.ok ? "text-mute" : "text-error"}`}>{folder.msg}</span>}
           </Field>
           <div className="grid sm:grid-cols-2 gap-5">
-            <Field label="Photos in package"><Input type="number" min={1} max={1000} required value={v.photo_limit} onChange={set("photo_limit")} /></Field>
-            <Field label="Max with extras" hint="optional"><Input type="number" min={1} max={2000} value={v.max_limit} onChange={set("max_limit")} placeholder="45" /></Field>
-            <Field label="PIN" hint="4 digits, optional">
+            <Field label="Photos in package" error={errors.photo_limit}><Input invalid={!!errors.photo_limit} type="number" min={1} max={1000} value={v.photo_limit} onChange={set("photo_limit")} /></Field>
+            <Field label="Max with extras" hint="optional" error={errors.max_limit}><Input invalid={!!errors.max_limit} type="number" min={1} max={2000} value={v.max_limit} onChange={set("max_limit")} placeholder="45" /></Field>
+            <Field label="PIN" hint="4 digits, optional" error={errors.pin}>
               <div className="flex gap-2">
-                <Input inputMode="numeric" pattern="\d{4}" maxLength={4} value={v.pin} onChange={set("pin")} placeholder="leave blank for no PIN" />
+                <Input invalid={!!errors.pin} inputMode="numeric" maxLength={4} value={v.pin} onChange={set("pin")} placeholder="leave blank for no PIN" />
                 <Btn type="button" onClick={randomPin}>Random</Btn>
               </div>
             </Field>
-            <Field label="Expires on"><Input type="date" value={v.expires_at} onChange={set("expires_at")} /></Field>
+            <Field label="Expires on" error={errors.expires_at}><Input invalid={!!errors.expires_at} type="date" value={v.expires_at} onChange={set("expires_at")} /></Field>
           </div>
           <Field label="Note to self" hint="optional"><Textarea value={v.notes} onChange={set("notes")} placeholder="Wedding · Uluwatu · deliver album by December" /></Field>
           <div className="flex gap-2 pt-2">
