@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type React from "react";
 import clsx from "clsx";
 import { gapi, type GPhoto } from "@/lib/gallery-api";
 
@@ -86,82 +87,193 @@ function buildSpreads(photos: GPhoto[], seed: number): Spread[] {
 export function AlbumPreview({ photos, clientName, studio, onClose, t }: { photos: GPhoto[]; clientName: string; studio: string; onClose: () => void; t: AlbumStrings }) {
   const [seed, setSeed] = useState(7);
   const [idx, setIdx] = useState(0);
-  const [turning, setTurning] = useState<"next" | "prev" | null>(null);
   const [visible, setVisible] = useState(false);
+  const [hint, setHint] = useState(true);
   const spreads = useMemo(() => buildSpreads(photos, seed), [photos, seed]);
   const total = spreads.length;
-  const touch = useRef<number | null>(null);
+
+  /* ---- page turn: a leaf whose angle follows the pointer, then eases home ----
+     turn.dir  : which way the leaf goes
+     turn.p    : 0 → 1 progress (angle = p × 180°)
+     turn.anim : true while easing (CSS transition), false while the finger holds it */
+  const [turn, setTurn] = useState<{ dir: 1 | -1; p: number; anim: boolean } | null>(null);
+  const bookRef = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ x: number; dir: 1 | -1; moved: boolean } | null>(null);
 
   useEffect(() => { const h = requestAnimationFrame(() => setVisible(true)); return () => cancelAnimationFrame(h); }, []);
-  const go = useCallback((d: 1 | -1) => {
-    if (turning) return;
-    const next = idx + d;
-    if (next < 0 || next >= total) return;
-    setTurning(d === 1 ? "next" : "prev");
-    setTimeout(() => { setIdx(next); setTurning(null); }, 620);
-  }, [idx, total, turning]);
+  useEffect(() => { const h = setTimeout(() => setHint(false), 4200); return () => clearTimeout(h); }, []);
+
+  const canGo = useCallback((d: 1 | -1) => (d === 1 ? idx < total - 1 : idx > 0), [idx, total]);
+
+  /** Start an eased turn from the current progress (button, key, swipe or drag release). */
+  const settle = useCallback((dir: 1 | -1, from: number, complete: boolean) => {
+    setTurn({ dir, p: from, anim: true });
+    // next frame so the transition sees a change
+    requestAnimationFrame(() => requestAnimationFrame(() => setTurn({ dir, p: complete ? 1 : 0, anim: true })));
+  }, []);
+  const go = useCallback((d: 1 | -1) => { if (turn || !canGo(d)) return; setHint(false); settle(d, 0, true); }, [turn, canGo, settle]);
+  const onLeafDone = () => {
+    if (!turn || !turn.anim) return;
+    if (turn.p === 1) setIdx((i) => i + turn.dir);
+    setTurn(null);
+  };
+
+  // pointer: press on a page half and pull it across; release past 35% to complete
+  const onDown = (e: React.PointerEvent) => {
+    if (turn) return;
+    const box = bookRef.current?.getBoundingClientRect();
+    if (!box) return;
+    const dir: 1 | -1 = e.clientX > box.left + box.width / 2 ? 1 : -1;
+    if (!canGo(dir)) return;
+    drag.current = { x: e.clientX, dir, moved: false };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+  const onMove = (e: React.PointerEvent) => {
+    const d = drag.current, box = bookRef.current?.getBoundingClientRect();
+    if (!d || !box) return;
+    const dx = (e.clientX - d.x) * -d.dir; // positive = pulling in the turning direction
+    if (!d.moved && Math.abs(dx) < 6) return;
+    d.moved = true;
+    setHint(false);
+    setTurn({ dir: d.dir, p: Math.max(0, Math.min(1, dx / (box.width * 0.9))), anim: false });
+  };
+  const onUp = () => {
+    const d = drag.current; drag.current = null;
+    if (!d) return;
+    if (!d.moved) return; // a tap: handled by the arrow buttons / corners
+    const p = turn?.p ?? 0;
+    settle(d.dir, p, p > 0.35);
+  };
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); if (e.key === "ArrowRight") go(1); if (e.key === "ArrowLeft") go(-1); };
     window.addEventListener("keydown", onKey);
     document.documentElement.style.overflow = "hidden";
     return () => { window.removeEventListener("keydown", onKey); document.documentElement.style.overflow = ""; };
   }, [go, onClose]);
-  // preload the next spread's thumbnails
+  // preload neighbouring spreads
   useEffect(() => {
-    const s = spreads[idx + 1];
-    s?.left.cells.concat(s.right.cells).forEach((c) => { const im = new Image(); im.src = gapi.img(c.w >= 50 ? c.p.full_url : c.p.thumb_url); });
+    [spreads[idx + 1], spreads[idx - 1]].forEach((sp) => sp?.left.cells.concat(sp.right.cells).forEach((c) => { const im = new Image(); im.src = gapi.img(c.w >= 50 ? c.p.full_url : c.p.thumb_url); }));
   }, [idx, spreads]);
 
   const cur = spreads[idx];
+  const nxt = spreads[idx + 1], prv = spreads[idx - 1];
+  const pages = (total - 2) * 2;
   const pageNo = idx === 0 ? 0 : (idx - 1) * 2 + 1;
+  const label = cur.kind === "cover" ? t.cover : cur.kind === "end" ? t.end : t.page(pageNo, Math.min(pageNo + 1, pages), pages);
+  const sheetProps = { clientName, studio, t };
+
+  // what lies under the moving leaf: the destination spread's page on that side
+  const underRight = turn?.dir === 1 ? nxt?.right : cur.right;
+  const underLeft = turn?.dir === -1 ? prv?.left : cur.left;
+  const underKindR = turn?.dir === 1 ? nxt?.kind : cur.kind;
+  const underKindL = turn?.dir === -1 ? prv?.kind : cur.kind;
+  const angle = turn ? turn.p * 180 * (turn.dir === 1 ? -1 : 1) : 0;
+  const shade = turn ? Math.sin(turn.p * Math.PI) : 0; // strongest mid-turn
+  const ease = "transform 720ms cubic-bezier(.4,.05,.2,1)";
 
   return (
-    <div
-      className={clsx("fixed inset-0 z-[70] bg-[#1c1b19] text-on-dark flex flex-col transition-opacity duration-500", visible ? "opacity-100" : "opacity-0")}
-      onTouchStart={(e) => (touch.current = e.touches[0].clientX)}
-      onTouchEnd={(e) => { if (touch.current === null) return; const dx = e.changedTouches[0].clientX - touch.current; touch.current = null; if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1); }}
-    >
-      <div className="flex items-center justify-between px-5 h-14 t-mono text-on-dark-mute shrink-0">
-        <button type="button" onClick={onClose} className="text-on-dark">✕ {t.close}</button>
-        <span className="hidden sm:block">{t.title} · {t.sub(photos.length)}</span>
-        <button type="button" onClick={() => { setSeed((s) => s + 1); setIdx(0); }} className="text-on-dark-mute hover:text-on-dark">{t.shuffle}</button>
+    <div className={clsx("fixed inset-0 z-[70] bg-[#161513] text-on-dark flex flex-col select-none transition-opacity duration-500", visible ? "opacity-100" : "opacity-0")}>
+      <div className="flex items-center justify-between px-5 sm:px-8 h-16 shrink-0">
+        <button type="button" onClick={onClose} className="t-mono text-on-dark flex items-center gap-2 h-10 px-3 -ml-3 rounded-full hover:bg-white/10 transition-colors">✕ {t.close}</button>
+        <span className="t-mono text-on-dark-mute hidden sm:block">{t.title} · {t.sub(photos.length)}</span>
+        <button type="button" onClick={() => { if (!turn) { setSeed((x) => x + 1); setIdx(0); } }} className="t-mono text-on-dark-mute hover:text-on-dark h-10 px-3 -mr-3 rounded-full hover:bg-white/10 transition-colors">↻ {t.shuffle}</button>
       </div>
 
-      {/* The book */}
-      <div className="relative flex-1 min-h-0 flex items-center justify-center px-3 sm:px-10" style={{ perspective: "2200px" }}>
-        <div className={clsx("relative aspect-[2/1.35] w-full max-w-[1100px] max-h-full transition-transform duration-700 ease-out-soft", visible ? "scale-100" : "scale-[0.96]")} style={{ transformStyle: "preserve-3d" }}>
-          <Sheet page={cur.left} side="left" kind={cur.kind} clientName={clientName} studio={studio} t={t} />
-          <Sheet page={cur.right} side="right" kind={cur.kind} clientName={clientName} studio={studio} t={t} />
-          {/* turning leaf: the outgoing right page folds over to the left (or back) */}
-          {turning && (
-            <div
-              className={clsx("absolute top-0 bottom-0 w-1/2 album-leaf", turning === "next" ? "left-1/2 origin-left album-turn-next" : "left-0 origin-right album-turn-prev")}
-              style={{ transformStyle: "preserve-3d" }}
-            >
-              <div className="absolute inset-0 [backface-visibility:hidden]">
-                <Sheet page={turning === "next" ? cur.right : cur.left} side={turning === "next" ? "right" : "left"} kind={cur.kind} clientName={clientName} studio={studio} t={t} flat />
+      {/* The book, with big arrows either side */}
+      <div className="relative flex-1 min-h-0 flex items-center justify-center gap-3 sm:gap-6 px-3 sm:px-8">
+        <Arrow dir={-1} onClick={() => go(-1)} disabled={!canGo(-1) || !!turn} />
+        <div className="relative flex-1 min-w-0 h-full flex items-center justify-center" style={{ perspective: "2600px" }}>
+          <div
+            ref={bookRef}
+            onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
+            className={clsx("relative aspect-[2/1.35] w-full transition-transform duration-700 ease-out-soft cursor-grab active:cursor-grabbing", visible ? "scale-100" : "scale-[0.96]")}
+            // fit both ways: never wider than the column, never taller than the space between header and footer
+            style={{ maxWidth: "min(1100px, calc((100dvh - 200px) * 1.48))", transformStyle: "preserve-3d", touchAction: "none", transform: turn ? `rotateX(${1.5 * shade}deg)` : undefined }}
+          >
+            {/* the two resting pages (under the leaf while turning) */}
+            <Sheet page={underLeft ?? cur.left} side="left" kind={underKindL ?? cur.kind} {...sheetProps} />
+            <Sheet page={underRight ?? cur.right} side="right" kind={underKindR ?? cur.kind} {...sheetProps} />
+            {/* shadow the leaf casts on the page it is landing on */}
+            {turn && (
+              <div className={clsx("pointer-events-none absolute inset-y-0 w-1/2", turn.dir === 1 ? "left-0" : "left-1/2")} style={{ background: turn.dir === 1 ? "linear-gradient(to left, rgba(0,0,0,.45), transparent 70%)" : "linear-gradient(to right, rgba(0,0,0,.45), transparent 70%)", opacity: shade * 0.9 }} />
+            )}
+            {/* the leaf */}
+            {turn && (
+              <div
+                onTransitionEnd={onLeafDone}
+                className={clsx("absolute top-0 bottom-0 w-1/2", turn.dir === 1 ? "left-1/2 origin-left" : "left-0 origin-right")}
+                style={{ transformStyle: "preserve-3d", transform: `rotateY(${angle}deg)`, transition: turn.anim ? ease : "none" }}
+              >
+                <div className="absolute inset-0 [backface-visibility:hidden]">
+                  <Sheet page={turn.dir === 1 ? cur.right : cur.left} side={turn.dir === 1 ? "right" : "left"} kind={cur.kind} {...sheetProps} flat />
+                  <div className="pointer-events-none absolute inset-0" style={{ background: turn.dir === 1 ? "linear-gradient(to right, rgba(0,0,0,.05), rgba(0,0,0,.55))" : "linear-gradient(to left, rgba(0,0,0,.05), rgba(0,0,0,.55))", opacity: shade }} />
+                </div>
+                <div className="absolute inset-0 [backface-visibility:hidden]" style={{ transform: "rotateY(180deg)" }}>
+                  <Sheet page={turn.dir === 1 ? (nxt?.left ?? cur.left) : (prv?.right ?? cur.right)} side={turn.dir === 1 ? "left" : "right"} kind={turn.dir === 1 ? (nxt?.kind ?? cur.kind) : (prv?.kind ?? cur.kind)} {...sheetProps} flat />
+                  <div className="pointer-events-none absolute inset-0" style={{ background: turn.dir === 1 ? "linear-gradient(to left, rgba(0,0,0,.05), rgba(0,0,0,.5))" : "linear-gradient(to right, rgba(0,0,0,.05), rgba(0,0,0,.5))", opacity: shade }} />
+                </div>
               </div>
-              <div className="absolute inset-0 [backface-visibility:hidden]" style={{ transform: "rotateY(180deg)" }}>
-                <Sheet page={turning === "next" ? spreads[idx + 1].left : spreads[idx - 1].right} side={turning === "next" ? "left" : "right"} kind={turning === "next" ? spreads[idx + 1].kind : spreads[idx - 1].kind} clientName={clientName} studio={studio} t={t} flat />
+            )}
+            {/* spine */}
+            {cur.kind !== "cover" && <div className="pointer-events-none absolute inset-y-0 left-1/2 w-14 -translate-x-1/2 bg-gradient-to-r from-black/0 via-black/30 to-black/0" />}
+            {/* corner curl affordances */}
+            {!turn && canGo(1) && <Corner side="right" onClick={() => go(1)} />}
+            {!turn && canGo(-1) && cur.kind !== "cover" && <Corner side="left" onClick={() => go(-1)} />}
+            {/* first-time hint */}
+            <div className={clsx("pointer-events-none absolute inset-0 flex items-center justify-center transition-opacity duration-700", hint ? "opacity-100" : "opacity-0")}>
+              <div className="bg-black/55 backdrop-blur-[3px] text-on-dark rounded-full px-5 py-3 flex items-center gap-3 shadow-2xl">
+                <span className="album-swipe text-[20px]">☞</span>
+                <span className="text-[14px]">{t.hint}</span>
               </div>
             </div>
-          )}
-          {/* spine shadow */}
-          <div className="pointer-events-none absolute inset-y-0 left-1/2 w-16 -translate-x-1/2 bg-gradient-to-r from-black/0 via-black/25 to-black/0" />
+          </div>
         </div>
-        <button type="button" aria-label="prev" onClick={() => go(-1)} disabled={idx === 0} className="absolute inset-y-0 left-0 w-1/5 disabled:cursor-default" />
-        <button type="button" aria-label="next" onClick={() => go(1)} disabled={idx === total - 1} className="absolute inset-y-0 right-0 w-1/5 disabled:cursor-default" />
+        <Arrow dir={1} onClick={() => go(1)} disabled={!canGo(1) || !!turn} />
       </div>
 
-      <div className="shrink-0 px-5 pb-[max(20px,env(safe-area-inset-bottom))] pt-3 flex flex-col items-center gap-2 t-mono text-on-dark-mute">
-        <div className="flex items-center gap-6">
-          <button type="button" onClick={() => go(-1)} disabled={idx === 0} className="disabled:opacity-30 text-on-dark">←</button>
-          <span>{cur.kind === "cover" ? t.cover : cur.kind === "end" ? t.end : t.page(pageNo, Math.min(pageNo + 1, (total - 2) * 2), (total - 2) * 2)}</span>
-          <button type="button" onClick={() => go(1)} disabled={idx === total - 1} className="disabled:opacity-30 text-on-dark">→</button>
+      {/* footer: where am I */}
+      <div className="shrink-0 px-6 pb-[max(22px,env(safe-area-inset-bottom))] pt-3 flex flex-col items-center gap-3">
+        <span className="font-serif text-[20px] text-on-dark">{label}</span>
+        <div className="flex items-center gap-1.5">
+          {spreads.map((_, i) => (
+            <button key={i} type="button" aria-label={`${i + 1}`} onClick={() => { if (!turn && i !== idx) settle(i > idx ? 1 : -1, 0, true); }} className={clsx("h-1.5 rounded-full transition-all duration-500", i === idx ? "w-6 bg-on-dark" : "w-1.5 bg-white/25 hover:bg-white/50")} />
+          ))}
         </div>
-        <span className="text-center max-w-[52ch] opacity-70">{t.hint}</span>
       </div>
     </div>
+  );
+}
+
+function Arrow({ dir, onClick, disabled }: { dir: 1 | -1; onClick: () => void; disabled: boolean }) {
+  return (
+    <button
+      type="button"
+      aria-label={dir === 1 ? "next" : "previous"}
+      onClick={onClick}
+      disabled={disabled}
+      className="hidden sm:flex shrink-0 h-14 w-14 rounded-full border border-white/25 items-center justify-center text-on-dark text-[22px] transition-all duration-300 hover:bg-white hover:text-ink hover:scale-105 disabled:opacity-20 disabled:hover:bg-transparent disabled:hover:text-on-dark disabled:hover:scale-100"
+    >
+      {dir === 1 ? "→" : "←"}
+    </button>
+  );
+}
+
+/** A lifted page corner: the classic "there is more" cue; tapping it turns the page. */
+function Corner({ side, onClick }: { side: "left" | "right"; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-hidden
+      tabIndex={-1}
+      onClick={onClick}
+      className={clsx("absolute bottom-0 h-16 w-16 sm:h-20 sm:w-20 group", side === "right" ? "right-0" : "left-0")}
+    >
+      <span
+        className={clsx("absolute bottom-0 block h-8 w-8 sm:h-10 sm:w-10 transition-all duration-500 ease-out-soft group-hover:h-14 group-hover:w-14 sm:group-hover:h-16 sm:group-hover:w-16", side === "right" ? "right-0" : "left-0")}
+        style={{ background: side === "right" ? "linear-gradient(225deg, #161513 50%, #e9e6df 50%, #f7f5f0 65%, #d9d6cf 100%)" : "linear-gradient(135deg, #161513 50%, #e9e6df 50%, #f7f5f0 65%, #d9d6cf 100%)", boxShadow: side === "right" ? "-4px -4px 10px rgba(0,0,0,.25)" : "4px -4px 10px rgba(0,0,0,.25)" }}
+      />
+    </button>
   );
 }
 

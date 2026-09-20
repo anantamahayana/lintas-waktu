@@ -55,7 +55,7 @@ export const T: Record<Lang, Dict> = {
     albumBtn: "Preview album",
     album: {
       title: "Album preview", sub: (n: number) => `${n} photograph${n === 1 ? "" : "s"}`, cover: "Cover", end: "The end", endBody: "An impression of how your album could feel. The real one is laid out by hand, with your notes in mind.",
-      close: "Close", shuffle: "Shuffle layout", page: (a: number, b: number, n: number) => `Pages ${a}–${b} of ${n}`, hint: "Swipe or use the arrows to turn the pages. Change your picks and the album follows.",
+      close: "Close", shuffle: "Shuffle layout", page: (a: number, b: number, n: number) => `Pages ${a}–${b} of ${n}`, hint: "Drag a page to turn it",
     },
     thanks: (name: string) => `Thank you, ${name}.`,
     sentBody: (n: number, e: number) => `${ph(n)} ${n === 1 ? "is" : "are"} on the way to the edit${e ? ` — ${n - e} in your package and ${e} extra${e === 1 ? "" : "s"}` : ""}. We’ll be in touch within a day about delivery.`,
@@ -97,7 +97,7 @@ export const T: Record<Lang, Dict> = {
     albumBtn: "Pratinjau album",
     album: {
       title: "Pratinjau album", sub: (n: number) => `${n} foto`, cover: "Sampul", end: "Selesai", endBody: "Gambaran bagaimana album Anda bisa terasa. Album aslinya kami tata dengan tangan, dengan catatan Anda dalam pertimbangan.",
-      close: "Tutup", shuffle: "Acak tata letak", page: (a: number, b: number, n: number) => `Halaman ${a}–${b} dari ${n}`, hint: "Geser atau pakai panah untuk membalik halaman. Ubah pilihan Anda, albumnya ikut berubah.",
+      close: "Tutup", shuffle: "Acak tata letak", page: (a: number, b: number, n: number) => `Halaman ${a}–${b} dari ${n}`, hint: "Tarik halaman untuk membaliknya",
     },
     thanks: (name: string) => `Terima kasih, ${name}.`,
     sentBody: (n: number, e: number) => `${n} foto sedang menuju proses edit${e ? ` — ${n - e} dalam paket dan ${e} tambahan` : ""}. Kami hubungi dalam sehari soal pengiriman.`,

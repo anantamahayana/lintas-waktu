@@ -177,12 +177,9 @@
   .invoice-doc { border: 0 !important; max-width: none !important; padding: 0 !important; }
 }
 
-/* Album preview: page turn (3D fold at the spine) and photos settling onto the page */
-@keyframes album-turn-next { from { transform: rotateY(0deg); } to { transform: rotateY(-180deg); } }
-@keyframes album-turn-prev { from { transform: rotateY(0deg); } to { transform: rotateY(180deg); } }
-.album-leaf { will-change: transform; }
-.album-turn-next { animation: album-turn-next 620ms cubic-bezier(.55, .05, .3, 1) forwards; }
-.album-turn-prev { animation: album-turn-prev 620ms cubic-bezier(.55, .05, .3, 1) forwards; }
+/* Album preview: photos settling onto the page, and the "swipe" hint hand */
 @keyframes album-cell { from { opacity: 0; transform: translateY(6px) scale(.985); } to { opacity: 1; transform: none; } }
 .album-cell { animation: album-cell 600ms var(--ease-out-soft) both; }
-@media (prefers-reduced-motion: reduce) { .album-turn-next, .album-turn-prev { animation-duration: 1ms; } .album-cell { animation: none; } }
+@keyframes album-swipe { 0%, 100% { transform: translateX(6px); } 50% { transform: translateX(-8px); } }
+.album-swipe { display: inline-block; animation: album-swipe 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .album-cell, .album-swipe { animation: none; } }
