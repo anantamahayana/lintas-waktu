@@ -162,7 +162,11 @@ class SiteSettings(BaseModel):
     usd_rate: int = 16000
     default_package_size: int = 30
     default_validity_days: int = 21
-    whatsapp_template: str = "Hi {name}! Your gallery is ready: {link} · PIN {pin} · until {deadline}."
+    whatsapp_template: str = (
+        "Hi {name}, your photographs are ready to choose from.\n\n{link}\nPIN: {pin}\n\n"
+        "Please pick your {package} favourites (up to {extras} with extras), then press Send.\n"
+        "The gallery stays open until {deadline}.\n\nThank you — {studio}"
+    )
 
 
 class SiteSettingsUpdate(BaseModel):

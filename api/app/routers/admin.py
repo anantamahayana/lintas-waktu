@@ -1,7 +1,5 @@
 import json
 import re
-import time
-from collections import defaultdict
 from urllib.parse import quote
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Request, Response, UploadFile, status
@@ -10,7 +8,7 @@ from sqlalchemy.orm import Session as DbSession
 from ..auth import create_access_token, require_admin, verify_admin_password
 from ..config import get_settings
 from ..database import get_db
-from ..models import PhotoSession
+from ..models import PhotoSession, SessionStatus, utcnow
 from ..schemas import (
     Branding,
     BrandingUpdate,
@@ -18,13 +16,14 @@ from ..schemas import (
     FolderCheck,
     FolderCheckOut,
     LoginRequest,
+    PasswordChange,
     SessionCreate,
     SessionDetailOut,
     SessionOut,
     SessionUpdate,
     TokenResponse,
 )
-from ..services import branding, drive_service, xmp_service
+from ..services import branding, drive_service, ratelimit, xmp_service
 from .gallery import clear_pin_fails, hash_pin, image_token
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -50,8 +49,15 @@ def _draft_photos(s: PhotoSession) -> list[dict]:
     return [{"drive_file_id": i, "filename": names.get(i, i), "note": notes.get(i)} for i in json.loads(s.draft_ids or "[]")]
 
 
+def _is_new(s: PhotoSession) -> bool:
+    """Sent by the client but not opened by the photographer since that submission."""
+    if s.status != SessionStatus.completed or not s.submitted_at:
+        return False
+    return s.reviewed_at is None or s.reviewed_at < s.submitted_at
+
+
 def _out(s: PhotoSession) -> dict:
-    cols = ("id", "slug", "client_name", "drive_folder_id", "photo_limit", "max_limit", "status", "notes", "expires_at", "created_at", "submitted_at", "first_opened_at", "last_seen_at")
+    cols = ("id", "slug", "client_name", "drive_folder_id", "photo_limit", "max_limit", "status", "notes", "expires_at", "created_at", "submitted_at", "first_opened_at", "last_seen_at", "client_wa")
     return {
         **{c: getattr(s, c) for c in cols},
         "has_pin": bool(s.pin_hash),
@@ -63,6 +69,7 @@ def _out(s: PhotoSession) -> dict:
         "extra_count": sum(1 for p in s.selected_photos if p.is_extra),
         "gallery_url": f"{get_settings().frontend_url.rstrip('/')}/g/{s.slug}",
         "selected_photos": s.selected_photos,
+        "is_new": _is_new(s),
         "gallery_token": image_token(s) if s.pin_hash else None,  # lets the admin page load thumbnails
     }
 
@@ -81,27 +88,22 @@ def _extract_folder_id(value: str) -> str:
 
 
 # Admin login brute-force guard: 5 wrong per address and 20 wrong in total per 15 minutes.
-_login_fails: dict[str, list[float]] = defaultdict(list)
+# Counts live in the database so a restart does not reset them.
 LOGIN_WINDOW_S = 15 * 60
 
 
-def _recent(key: str) -> list[float]:
-    now = time.monotonic()
-    _login_fails[key] = [t for t in _login_fails[key] if now - t < LOGIN_WINDOW_S]
-    return _login_fails[key]
-
-
 @router.post("/login", response_model=TokenResponse)
-def login(body: LoginRequest, request: Request):
+def login(body: LoginRequest, request: Request, db: DbSession = Depends(get_db)):
     ip = request.client.host if request.client else "?"
-    if len(_recent(ip)) >= 5 or len(_recent("*")) >= 20:
+    if ratelimit.count(db, f"login:{ip}", LOGIN_WINDOW_S) >= 5 or ratelimit.count(db, "login:*", LOGIN_WINDOW_S) >= 20:
         raise HTTPException(429, "Terlalu banyak percobaan login. Coba lagi dalam 15 menit.")
-    if not verify_admin_password(body.password):
-        now = time.monotonic()
-        _login_fails[ip].append(now)
-        _login_fails["*"].append(now)
+    ok = branding.check_admin_password(db, body.password)  # a password set from the panel wins over .env
+    if ok is None:
+        ok = verify_admin_password(body.password)
+    if not ok:
+        ratelimit.record(db, f"login:{ip}", "login:*")
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Password salah")
-    _login_fails.pop(ip, None)
+    ratelimit.clear(db, f"login:{ip}")
     return TokenResponse(access_token=create_access_token())
 
 
@@ -129,6 +131,7 @@ def create_session(body: SessionCreate, background: BackgroundTasks, db: DbSessi
         notes=body.notes,
         pin_hash=hash_pin(body.pin) if body.pin else None,
         pin=body.pin or None,
+        client_wa=branding.normalize_wa(body.client_wa) or None,
         expires_at=body.expires_at,
     )
     db.add(s)
@@ -152,7 +155,12 @@ def check_folder(body: FolderCheck):
 
 @router.get("/sessions/{session_id}", response_model=SessionDetailOut, dependencies=[Depends(require_admin)])
 def get_session(session_id: str, db: DbSession = Depends(get_db)):
-    return _out(_get_or_404(db, session_id))
+    s = _get_or_404(db, session_id)
+    out = _out(s)  # read the "new" marker first, then mark as seen
+    if out["is_new"]:
+        s.reviewed_at = utcnow()
+        db.commit()
+    return out
 
 
 @router.patch("/sessions/{session_id}", response_model=SessionDetailOut, dependencies=[Depends(require_admin)])
@@ -186,6 +194,8 @@ def update_session(session_id: str, body: SessionUpdate, background: BackgroundT
         else:
             s.pin_hash = hash_pin(body.pin)
             s.pin = body.pin
+    if body.client_wa is not None:
+        s.client_wa = branding.normalize_wa(body.client_wa) or None
     if body.clear_expiry:
         s.expires_at = None
     elif body.expires_at is not None:
@@ -248,7 +258,7 @@ def relock_session(session_id: str, db: DbSession = Depends(get_db)):
     s.access_epoch = (s.access_epoch or 0) + 1
     db.commit()
     db.refresh(s)
-    clear_pin_fails(s.slug)
+    clear_pin_fails(db, s.slug)
     return _out(s)
 
 
@@ -285,6 +295,13 @@ def export_xmp(session_id: str, db: DbSession = Depends(get_db)):
     return Response(data, media_type="application/zip", headers={"Content-Disposition": f'attachment; filename="{fname}"'})
 
 
+@router.get("/sessions/{session_id}/export/xmp-files", dependencies=[Depends(require_admin)])
+def export_xmp_files(session_id: str, db: DbSession = Depends(get_db)):
+    """[{name, content}] so the browser can write the sidecars straight into the RAW folder."""
+    s = _completed_or_400(db, session_id)
+    return {"files": xmp_service.xmp_files(s.client_name, s.selected_photos)}
+
+
 @router.get("/sessions/{session_id}/export/filenames", dependencies=[Depends(require_admin)])
 def export_filenames(session_id: str, db: DbSession = Depends(get_db)):
     s = _completed_or_400(db, session_id)
@@ -309,6 +326,18 @@ def get_branding(db: DbSession = Depends(get_db)):
 def put_branding(body: BrandingUpdate, db: DbSession = Depends(get_db)):
     branding.set_values(db, body.model_dump())
     return branding.get(db)
+
+
+@router.post("/password", status_code=204, dependencies=[Depends(require_admin)])
+def change_password(body: PasswordChange, db: DbSession = Depends(get_db)):
+    """Set the admin password from the panel; it then overrides ADMIN_PASSWORD in .env."""
+    ok = branding.check_admin_password(db, body.current)
+    if ok is None:
+        ok = verify_admin_password(body.current)
+    if not ok:
+        raise HTTPException(400, "Password lama salah.")
+    branding.set_admin_password(db, body.new)
+    return Response(status_code=204)
 
 
 @router.post("/branding/logo", response_model=Branding, dependencies=[Depends(require_admin)])

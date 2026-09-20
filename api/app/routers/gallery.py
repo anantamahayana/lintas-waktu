@@ -2,7 +2,6 @@ import hashlib
 import hmac
 import json
 import time
-from collections import defaultdict
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Query, Request, Response
 from fastapi.concurrency import run_in_threadpool
@@ -14,7 +13,7 @@ from ..config import get_settings
 from ..database import get_db
 from ..models import PhotoSession, SelectedPhoto, SessionStatus, utcnow
 from ..schemas import Branding, DraftRequest, GalleryMeta, GalleryOut, Photo, SubmitOut, SubmitRequest, UnlockOut, UnlockRequest
-from ..services import branding, drive_service
+from ..services import backup, branding, drive_service, ratelimit
 
 router = APIRouter(prefix="/api", tags=["gallery"])
 
@@ -28,24 +27,20 @@ NOTE_MAX = 300
 PIN_MAX_FAILS = 5
 PIN_MAX_FAILS_GALLERY = 10
 PIN_WINDOW_S = 15 * 60
-_pin_fails: dict[str, list[float]] = defaultdict(list)
+# Counts live in the database (services/ratelimit.py) so a restart does not reset them.
 
 
 def _fail_key(slug: str, request: Request) -> str:
     ip = request.client.host if request.client else "?"
-    return f"{slug}:{ip}"
+    return f"pin:{slug}:{ip}"
 
 
-def clear_pin_fails(slug: str) -> None:
-    for k in [k for k in _pin_fails if k == slug or k.startswith(f"{slug}:")]:
-        _pin_fails.pop(k, None)
+def _gallery_key(slug: str) -> str:
+    return f"pin:{slug}"
 
 
-def _recent_fails(key: str) -> list[float]:
-    now = time.monotonic()
-    fails = [t for t in _pin_fails[key] if now - t < PIN_WINDOW_S]
-    _pin_fails[key] = fails
-    return fails
+def clear_pin_fails(db: DbSession, slug: str) -> None:
+    ratelimit.clear_prefix(db, f"pin:{slug}")
 
 
 def _clean_notes(notes: dict[str, str], ids: list[str]) -> dict[str, str]:
@@ -151,16 +146,14 @@ def unlock(slug: str, body: UnlockRequest, request: Request, db: DbSession = Dep
     s = _session(db, slug)
     if _expired(s):
         raise HTTPException(410, "Link galeri ini sudah kedaluwarsa.")
-    key = _fail_key(slug, request)
-    if len(_recent_fails(key)) >= PIN_MAX_FAILS or len(_recent_fails(slug)) >= PIN_MAX_FAILS_GALLERY:
+    key, gkey = _fail_key(slug, request), _gallery_key(slug)
+    if ratelimit.count(db, key, PIN_WINDOW_S) >= PIN_MAX_FAILS or ratelimit.count(db, gkey, PIN_WINDOW_S) >= PIN_MAX_FAILS_GALLERY:
         raise HTTPException(429, "Terlalu banyak percobaan PIN. Tunggu 15 menit, atau tanyakan PIN yang benar ke fotografer Anda.")
     if not s.pin_hash or not hmac.compare_digest(hash_pin(body.pin.strip()), s.pin_hash):
-        now = time.monotonic()
-        _pin_fails[key].append(now)
-        _pin_fails[slug].append(now)
-        left = min(PIN_MAX_FAILS - len(_pin_fails[key]), PIN_MAX_FAILS_GALLERY - len(_pin_fails[slug]))
+        ratelimit.record(db, key, gkey)
+        left = min(PIN_MAX_FAILS - ratelimit.count(db, key, PIN_WINDOW_S), PIN_MAX_FAILS_GALLERY - ratelimit.count(db, gkey, PIN_WINDOW_S))
         raise HTTPException(401, f"PIN salah. Sisa {left} kali percobaan." if left > 0 else "PIN salah. Coba lagi dalam 15 menit.")
-    _pin_fails.pop(key, None)
+    ratelimit.clear(db, key)
     return UnlockOut(token=gallery_token(s))
 
 
@@ -255,7 +248,7 @@ def save_draft(slug: str, body: DraftRequest, db: DbSession = Depends(get_db), x
 
 
 @router.post("/gallery/{slug}/submit", response_model=SubmitOut)
-def submit(slug: str, body: SubmitRequest, db: DbSession = Depends(get_db), x_gallery_token: str | None = Header(None), authorization: str | None = Header(None)):
+def submit(slug: str, body: SubmitRequest, background: BackgroundTasks, db: DbSession = Depends(get_db), x_gallery_token: str | None = Header(None), authorization: str | None = Header(None)):
     if is_admin_token(authorization):
         raise HTTPException(403, "Mode pratinjau fotografer: pilihan tidak dikirim. Buka link di browser lain (atau mode Incognito) untuk mencoba sebagai klien.")
     s = _session(db, slug)
@@ -285,6 +278,7 @@ def submit(slug: str, body: SubmitRequest, db: DbSession = Depends(get_db), x_ga
     s.submitted_at = utcnow()
     s.draft_ids = s.draft_notes = s.draft_maybe = None
     db.commit()
+    background.add_task(backup.backup_after_submit, s.client_name)  # keep a copy of today's result right away
 
     extra = max(0, len(ids) - s.photo_limit)
     msg = f"Terima kasih! {len(ids)} foto pilihan Anda sudah tersimpan."

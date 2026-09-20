@@ -112,10 +112,48 @@ export default function SettingsPage() {
               <Field label="Default package size" error={errors.default_package_size}><Input invalid={!!errors.default_package_size} type="number" min={1} value={s.default_package_size} onChange={set("default_package_size")} /></Field>
               <Field label="Default validity (days)" error={errors.default_validity_days}><Input invalid={!!errors.default_validity_days} type="number" min={1} value={s.default_validity_days} onChange={set("default_validity_days")} /></Field>
             </div>
-            <Field label="WhatsApp message template" hint="{name} {link} {pin} {deadline}"><Textarea value={s.whatsapp_template} onChange={set("whatsapp_template")} rows={3} /></Field>
+            <Field label="WhatsApp message template" hint="{name} {link} {pin} {package} {extras} {deadline} {studio} — lines whose value is empty are dropped"><Textarea value={s.whatsapp_template} onChange={set("whatsapp_template")} rows={6} /></Field>
           </Card>
+          <PasswordCard />
         </div>
       </form>
     </>
+  );
+}
+
+/** Admin password set here overrides ADMIN_PASSWORD in api/.env (stored hashed). */
+function PasswordCard() {
+  const [v, setV] = useState({ current: "", next: "", again: "" });
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [busy, setBusy] = useState(false);
+  const set = (k: keyof typeof v) => (e: { target: { value: string } }) => { setV((x) => ({ ...x, [k]: e.target.value })); if (errors[k]) setErrors((x) => ({ ...x, [k]: undefined })); };
+  async function change() {
+    const e: FieldErrors = {};
+    if (!v.current) e.current = "Enter your current password.";
+    if (v.next.length < 8) e.next = "At least 8 characters.";
+    if (v.again !== v.next) e.again = "Doesn’t match the new password.";
+    setErrors(e);
+    if (Object.values(e).some(Boolean)) { focusFirstInvalid(); return; }
+    if (!(await confirm({ title: "Change the admin password?", body: "You stay signed in here; any other device will need the new password next time.", action: "Change password" }))) return;
+    setBusy(true);
+    try {
+      await api.post("/api/admin/password", { current: v.current, new: v.next });
+      setV({ current: "", next: "", again: "" });
+      toast("Password changed");
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 400) { setErrors({ current: "That isn’t the current password." }); focusFirstInvalid(); }
+      else toast(err instanceof Error ? err.message : "Failed", true);
+    } finally { setBusy(false); }
+  }
+  return (
+    <Card title="Admin password">
+      <p className="t-small text-mute">Set from here, the password replaces the one in the server’s .env file.</p>
+      <Field label="Current password" error={errors.current}><Input invalid={!!errors.current} type="password" autoComplete="current-password" value={v.current} onChange={set("current")} /></Field>
+      <div className="grid sm:grid-cols-2 gap-4">
+        <Field label="New password" hint="8+ characters" error={errors.next}><Input invalid={!!errors.next} type="password" autoComplete="new-password" value={v.next} onChange={set("next")} /></Field>
+        <Field label="Repeat new password" error={errors.again}><Input invalid={!!errors.again} type="password" autoComplete="new-password" value={v.again} onChange={set("again")} /></Field>
+      </div>
+      <div><Btn type="button" onClick={change} disabled={busy}>{busy ? "Changing…" : "Change password"}</Btn></div>
+    </Card>
   );
 }

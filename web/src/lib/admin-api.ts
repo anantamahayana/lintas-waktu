@@ -35,6 +35,7 @@ const EN: Record<string, string> = {
   "Logo harus PNG, JPG, SVG, atau WebP.": "The logo must be a PNG, JPG, SVG or WebP",
   "Logo maksimal 2 MB.": "The logo must be under 2 MB",
   "Sesi tidak ditemukan": "Session not found",
+  "Password lama salah.": "That isn’t the current password",
   "Slug already in use": "Another project already uses this slug — change it to publish at a different address",
   "Terlalu banyak percobaan login. Coba lagi dalam 15 menit.": "Too many login attempts — try again in 15 minutes",
   "Google Drive API belum di-enable di project Google Cloud Anda.": "The Google Drive API is not enabled for this Google Cloud project",
@@ -114,7 +115,7 @@ export const api = {
 export type SessionStatus = "pending" | "completed";
 export type SessionOut = {
   id: string; slug: string; client_name: string; drive_folder_id: string; photo_limit: number; max_limit: number | null;
-  status: SessionStatus; notes: string | null; has_pin: boolean; pin: string | null; expires_at: string | null; created_at: string;
+  status: SessionStatus; notes: string | null; has_pin: boolean; pin: string | null; client_wa: string | null; is_new: boolean; expires_at: string | null; created_at: string;
   submitted_at: string | null; first_opened_at: string | null; last_seen_at: string | null; draft_count: number;
   preview_urls: string[]; selected_count: number; extra_count: number; gallery_url: string;
 };
@@ -146,3 +147,22 @@ export type SiteSettings = {
   email: string; instagram: string; service_area: string; usd_rate: number; default_package_size: number;
   default_validity_days: number; whatsapp_template: string;
 };
+
+/**
+ * Fill the WhatsApp template from Site settings. Placeholders: {name} {link} {pin}
+ * {package} {extras} {deadline} {studio}. Lines that end up empty (e.g. a PIN line
+ * when there is no PIN) are dropped so the message never shows a blank value.
+ */
+export function fillWaTemplate(template: string, v: { name: string; link: string; pin?: string | null; package: number; extras?: number | null; deadline?: string | null; studio: string }) {
+  const map: Record<string, string> = {
+    name: v.name, link: v.link, pin: v.pin ?? "", package: String(v.package),
+    extras: v.extras && v.extras > v.package ? String(v.extras) : "", deadline: v.deadline ?? "", studio: v.studio,
+  };
+  const optional = ["pin", "extras", "deadline"];
+  return template
+    .split("\n")
+    // drop a line whose optional placeholder has no value (no PIN → no "PIN:" line)
+    .filter((line) => !optional.some((k) => line.includes(`{${k}}`) && !map[k]))
+    .map((line) => line.replace(/\{(\w+)\}/g, (_, k) => map[k] ?? `{${k}}`))
+    .join("\n");
+}

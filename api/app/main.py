@@ -12,7 +12,7 @@ from .models import PhotoSession, SessionStatus, utcnow
 from .routers import admin, gallery
 from .content import router_admin as content_admin, router_public as content_public
 from .content import models as content_models  # noqa: F401  (registers tables)
-from .services import drive_service
+from .services import backup, drive_service
 
 settings = get_settings()
 log = logging.getLogger("uvicorn.error")
@@ -32,27 +32,6 @@ def cleanup_cache() -> None:
         log.info("cache cleanup: removed %d folder cache(s)", removed)
 
 
-def backup_db(keep: int = 14) -> None:
-    """Daily copy of the SQLite database into backend/backups/ (keeps the last `keep` days)."""
-    url = settings.database_url
-    if not url.startswith("sqlite:///"):
-        return
-    db = Path(url.removeprefix("sqlite:///"))
-    if not db.exists():
-        return
-    import shutil
-    from datetime import date
-
-    folder = db.parent / "backups"
-    folder.mkdir(exist_ok=True)
-    target = folder / f"{db.stem}-{date.today():%Y-%m-%d}.db"
-    if not target.exists():
-        shutil.copy2(db, target)
-        log.info("database backup: %s", target.name)
-    for old in sorted(folder.glob(f"{db.stem}-*.db"))[:-keep]:
-        old.unlink(missing_ok=True)
-
-
 def warn_insecure_defaults() -> None:
     if settings.admin_password in {"admin123", "changeme123"}:
         log.warning("!! ADMIN_PASSWORD masih default. Ganti di backend/.env sebelum dibuka ke internet.")
@@ -62,7 +41,7 @@ def warn_insecure_defaults() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    backup_db()
+    backup.backup_db()
     warn_insecure_defaults()
     migrate()
     cleanup_cache()
@@ -91,4 +70,19 @@ app.include_router(content_public.router)
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "drive_mode": drive_service.mode()}
+    """Server health: database, Google Drive mode, last backup, active sessions."""
+    info: dict = {"status": "ok", "drive_mode": drive_service.mode()}
+    try:
+        with SessionLocal() as db:
+            info["sessions_pending"] = db.query(PhotoSession).filter(PhotoSession.status == SessionStatus.pending).count()
+            info["sessions_total"] = db.query(PhotoSession).count()
+        info["database"] = "ok"
+    except Exception as e:  # an unreadable database is serious — still report it
+        info["database"] = f"error: {e}"
+        info["status"] = "degraded"
+    if settings.database_url.startswith("sqlite:///"):
+        backups = sorted((Path(settings.database_url.removeprefix("sqlite:///")).parent / "backups").glob("*.db"))
+        info["last_backup"] = backups[-1].name if backups else None
+        if not backups:
+            info["status"] = "degraded"  # the daily backup has never run
+    return info

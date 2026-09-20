@@ -7,7 +7,7 @@ import { Btn, Card, Field, Input, PageHeader, Textarea, focusFirstInvalid, toast
 
 export default function NewSessionPage() {
   const router = useRouter();
-  const [v, setV] = useState({ client_name: "", notes: "", drive_folder_id: "", photo_limit: 30, max_limit: "", pin: "", expires_at: "" });
+  const [v, setV] = useState({ client_name: "", notes: "", drive_folder_id: "", photo_limit: 30, max_limit: "", pin: "", expires_at: "", client_wa: "" });
   const [folder, setFolder] = useState<{ ok: boolean; msg: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [created, setCreated] = useState(false);
@@ -28,6 +28,7 @@ export default function NewSessionPage() {
     if (v.max_limit !== "" && Number(v.max_limit) < limit) e.max_limit = `Must be at least the package size (${limit}), or leave it blank.`;
     if (v.pin && !/^\d{4}$/.test(v.pin)) e.pin = "Exactly 4 digits, or leave blank for no PIN.";
     if (v.expires_at && new Date(v.expires_at) < new Date(new Date().toDateString())) e.expires_at = "That date is already in the past.";
+    if (v.client_wa && v.client_wa.replace(/\D/g, "").length < 8) e.client_wa = "Enter the number with country code, e.g. +62 812 3456 7890.";
     return e;
   }
 
@@ -67,6 +68,7 @@ export default function NewSessionPage() {
         max_limit: v.max_limit ? Number(v.max_limit) : null,
         pin: v.pin || null,
         expires_at: v.expires_at ? new Date(v.expires_at + "T23:59:59").toISOString() : null,
+        client_wa: v.client_wa || null,
       };
       const s = await api.post<SessionOut>("/api/admin/sessions", body);
       setCreated(true);
@@ -85,7 +87,10 @@ export default function NewSessionPage() {
       <PageHeader eyebrow="Proofing" title="New session" />
       <form onSubmit={onSubmit} noValidate className="grid lg:grid-cols-[minmax(0,560px)_1fr] gap-8 items-start">
         <div className="flex flex-col gap-6">
-          <Field label="Client name" error={errors.client_name}><Input invalid={!!errors.client_name} value={v.client_name} onChange={set("client_name")} placeholder="Ayu & Marco" /></Field>
+          <div className="grid sm:grid-cols-[1fr_220px] gap-5">
+            <Field label="Client name" error={errors.client_name}><Input invalid={!!errors.client_name} value={v.client_name} onChange={set("client_name")} placeholder="Ayu & Marco" /></Field>
+            <Field label="Client WhatsApp" hint="optional" error={errors.client_wa}><Input invalid={!!errors.client_wa} inputMode="tel" value={v.client_wa} onChange={set("client_wa")} placeholder="+62 812 3456 7890" /></Field>
+          </div>
           <Field label="Google Drive folder" hint="link or ID" error={errors.drive_folder_id}>
             <div className="flex gap-2">
               <Input invalid={!!errors.drive_folder_id} value={v.drive_folder_id} onChange={set("drive_folder_id")} onBlur={checkFolder} placeholder="https://drive.google.com/drive/folders/…" />

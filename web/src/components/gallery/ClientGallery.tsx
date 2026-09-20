@@ -82,10 +82,14 @@ export function ClientGallery({ slug }: { slug: string }) {
 
   // 2. autosave draft (debounced) — not in preview, not when completed
   const dirty = useRef(false);
+  const [saveState, setSaveState] = useState<"" | "saving" | "saved" | "offline">("");
   useEffect(() => {
     if (!data || data.preview || data.status === "completed" || stage === "sent") return;
     if (!dirty.current) return;
-    const h = setTimeout(() => { gapi.draft(slug, { file_ids: ids, notes, maybe_ids: maybe }).catch(() => {}); }, 800);
+    const h = setTimeout(() => {
+      setSaveState("saving");
+      gapi.draft(slug, { file_ids: ids, notes, maybe_ids: maybe }).then(() => setSaveState("saved")).catch(() => setSaveState("offline"));
+    }, 800);
     return () => clearTimeout(h);
   }, [ids, notes, maybe, data, slug, stage]);
 
@@ -122,6 +126,7 @@ export function ClientGallery({ slug }: { slug: string }) {
     setBusy(true);
     try {
       const r = await gapi.submit(slug, { file_ids: ids, notes, extra_ids: extraIds });
+      try { navigator.vibrate?.([18, 40, 28]); } catch {}
       setSent(r); setStage("sent");
     } catch (e) { setError(e instanceof Error ? e.message : "Error"); } finally { setBusy(false); }
   };
@@ -291,7 +296,11 @@ export function ClientGallery({ slug }: { slug: string }) {
             <div className="flex items-center justify-between gap-3">
               <div className="flex flex-col gap-0.5">
                 <span className="font-serif text-[26px] leading-none">{String(count).padStart(2, "0")} <span className="text-on-dark-mute">/ {String(limit).padStart(2, "0")}</span>{extras > 0 && <span className="text-[15px] ml-1" style={{ color: GOLD }}>+{extras}</span>}</span>
-                <span className="t-small text-on-dark-mute">{status}</span>
+                {/* fixed height so the bar never jumps when the save state appears */}
+                <span className="t-small text-on-dark-mute flex h-5 items-center gap-1.5 truncate" aria-live="polite">
+                  <span>{status}</span>
+                  {saveState && <span className={clsx("transition-opacity", saveState === "offline" ? "text-error" : "opacity-60")}>· {t[saveState]}</span>}
+                </span>
               </div>
               <button type="button" disabled={count === 0} onClick={openConfirm} className="t-mono text-ink px-5 py-3 rounded-full disabled:opacity-40" style={{ background: GOLD }}>{t.send} →</button>
             </div>
@@ -396,8 +405,32 @@ function Lightbox({ photos, index, onIndex, selected, marked, note, readOnly, fu
   selected: boolean; marked: boolean; note: string; readOnly: boolean; full: boolean; t: Dict;
   onToggle: () => void; onMark: () => void; onNote: (v: string) => void;
 }) {
-  const [dragX, setDragX] = useState<number | null>(null);
+  const start = useRef<{ x: number; y: number; axis: "x" | "y" | null } | null>(null);
+  const [dragX, setDragX] = useState(0); // finger offset while swiping
   const step = useCallback((d: number) => onIndex((index + d + photos.length) % photos.length), [index, photos.length, onIndex]);
+  // Preload neighbours so the next swipe shows a sharp photo immediately
+  useEffect(() => {
+    [index - 1, index + 1].forEach((i) => { const q = photos[(i + photos.length) % photos.length]; if (q) { const im = new Image(); im.src = gapi.img(q.full_url); } });
+  }, [index, photos]);
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length > 1 || (e.target as HTMLElement).closest("button, textarea, input, a")) { start.current = null; return; }
+    start.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, axis: null };
+  };
+  const onTouchMove = (e: React.TouchEvent) => {
+    const s = start.current;
+    if (!s || e.touches.length > 1) return;
+    const dx = e.touches[0].clientX - s.x, dy = e.touches[0].clientY - s.y;
+    if (!s.axis) { if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return; s.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y"; }
+    if (s.axis !== "x") return;
+    const atEdge = (dx > 0 && index === 0) || (dx < 0 && index === photos.length - 1);
+    setDragX(atEdge ? dx * 0.35 : dx); // resist at the ends of the list
+  };
+  const onTouchEnd = () => {
+    const s = start.current; start.current = null;
+    const dx = dragX; setDragX(0);
+    if (!s || s.axis !== "x") return;
+    if (Math.abs(dx) > 60) step(dx < 0 ? 1 : -1);
+  };
   useEffect(() => {
     document.documentElement.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onIndex(null); if (e.key === "ArrowRight") step(1); if (e.key === "ArrowLeft") step(-1); };
@@ -406,14 +439,14 @@ function Lightbox({ photos, index, onIndex, selected, marked, note, readOnly, fu
   }, [onIndex, step]);
   const p = photos[index];
   return (
-    <div className="fixed inset-0 z-[60] bg-dark text-on-dark flex flex-col" onPointerDown={(e) => setDragX(e.clientX)} onPointerUp={(e) => { if (dragX === null) return; const dx = e.clientX - dragX; setDragX(null); if (Math.abs(dx) > 60) step(dx < 0 ? 1 : -1); }}>
+    <div className="fixed inset-0 z-[60] bg-dark text-on-dark flex flex-col">
       <div className="flex items-center justify-between px-4 h-14 t-mono text-on-dark-mute">
         <button type="button" onClick={() => onIndex(null)} className="text-on-dark">✕</button>
         <span>{String(index + 1).padStart(2, "0")} / {String(photos.length).padStart(2, "0")}</span>
         {!readOnly && !selected ? <button type="button" onClick={onMark} className={clsx(marked && "text-on-dark")}>⚑ {marked ? t.unmark : t.mark}</button> : <span />}
       </div>
-      <div className="relative flex-1 min-h-0 flex items-center justify-center px-2 select-none">
-        <img key={p.file_id} src={gapi.img(p.full_url)} alt={p.name} className="max-h-full max-w-full object-contain" />
+      <div className="relative flex-1 min-h-0 flex items-center justify-center px-2 select-none" style={{ touchAction: "pinch-zoom" }} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd}>
+        <img key={p.file_id} src={gapi.img(p.full_url)} alt={p.name} className="max-h-full max-w-full object-contain" style={{ transform: dragX ? `translateX(${dragX}px)` : undefined, transition: dragX ? "none" : "transform 250ms var(--ease-out-soft)" }} />
         <button type="button" aria-label="prev" onClick={() => step(-1)} className="absolute inset-y-0 left-0 w-1/4" />
         <button type="button" aria-label="next" onClick={() => step(1)} className="absolute inset-y-0 right-0 w-1/4" />
       </div>

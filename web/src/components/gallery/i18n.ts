@@ -12,6 +12,7 @@ export interface Dict {
   confirmTitle: (n: number) => string; confirmBody: (n: number, e: number, done: number) => string; confirmBodyNoExtra: (n: number) => string;
   back: string; confirmSend: (n: number) => string; sending: string; thanks: (name: string) => string;
   finalTitle: string; finalBody: (n: number, e: number) => string; finalNo: string; finalYes: string;
+  saving: string; saved: string; offline: string;
   sentBody: (n: number, e: number) => string; locked: string; viewSelection: string; filterNone: string; extra: string;
 }
 
@@ -49,6 +50,7 @@ export const T: Record<Lang, Dict> = {
     finalTitle: "Send your selection?",
     finalBody: (n: number, e: number) => `${ph(n)}${e > 0 ? ` (${e} extra${e === 1 ? "" : "s"})` : ""} ${n === 1 ? "goes" : "go"} to the photographer for editing. After this the gallery locks and you can’t change your picks yourself.`,
     finalNo: "Not yet", finalYes: "Yes, send",
+    saving: "saving…", saved: "saved ✓", offline: "offline — picks kept on this device",
     thanks: (name: string) => `Thank you, ${name}.`,
     sentBody: (n: number, e: number) => `${ph(n)} ${n === 1 ? "is" : "are"} on the way to the edit${e ? ` — ${n - e} in your package and ${e} extra${e === 1 ? "" : "s"}` : ""}. We’ll be in touch within a day about delivery.`,
     locked: "Your gallery stays open to view, but choices are now locked.", viewSelection: "View my selection",
@@ -85,6 +87,7 @@ export const T: Record<Lang, Dict> = {
     finalTitle: "Kirim pilihan Anda?",
     finalBody: (n: number, e: number) => `${n} foto${e > 0 ? ` (${e} tambahan)` : ""} akan dikirim ke fotografer untuk diedit. Setelah ini galeri terkunci dan pilihan tidak bisa Anda ubah sendiri.`,
     finalNo: "Belum", finalYes: "Ya, kirim",
+    saving: "menyimpan…", saved: "tersimpan ✓", offline: "offline — pilihan aman di perangkat ini",
     thanks: (name: string) => `Terima kasih, ${name}.`,
     sentBody: (n: number, e: number) => `${n} foto sedang menuju proses edit${e ? ` — ${n - e} dalam paket dan ${e} tambahan` : ""}. Kami hubungi dalam sehari soal pengiriman.`,
     locked: "Galerimu tetap bisa dilihat, tapi pilihan sudah terkunci.", viewSelection: "Lihat pilihanku",

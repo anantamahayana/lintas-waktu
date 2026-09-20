@@ -34,6 +34,11 @@ class Branding(BaseModel):
     logo_url: str | None = None
 
 
+class PasswordChange(BaseModel):
+    current: str
+    new: str = Field(min_length=8, max_length=200)
+
+
 class BrandingUpdate(BaseModel):
     studio_name: str = Field("", max_length=120)
     tagline: str = Field("", max_length=200)
@@ -49,6 +54,7 @@ class SessionCreate(BaseModel):
     notes: str | None = None
     pin: str | None = Field(None, min_length=4, max_length=4, pattern=r"^\d{4}$")
     expires_at: datetime | None = None
+    client_wa: str | None = Field(None, max_length=25)  # optional; normalised to 62… format
 
     @field_validator("max_limit")
     @classmethod
@@ -67,6 +73,7 @@ class SessionUpdate(BaseModel):
     pin: str | None = Field(None, max_length=8)  # "" clears
     expires_at: datetime | None = None
     clear_expiry: bool = False
+    client_wa: str | None = Field(None, max_length=25)  # "" clears
 
 
 class SelectedPhotoOut(BaseModel):
@@ -94,6 +101,8 @@ class SessionOut(BaseModel):
     submitted_at: datetime | None
     first_opened_at: datetime | None = None
     last_seen_at: datetime | None = None
+    client_wa: str | None = None
+    is_new: bool = False  # sent by the client but not yet opened by the photographer
     draft_count: int = 0
     preview_urls: list[str] = []
     selected_count: int

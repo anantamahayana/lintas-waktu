@@ -5,7 +5,7 @@ import Link from "next/link";
 import { api, type SessionOut } from "@/lib/admin-api";
 import { Btn, Input, PageHeader, Pill, Stat, daysLeft, fmtDate, Empty, LoadError, SkeletonRows } from "@/components/admin/ui";
 
-type Filter = "all" | "choosing" | "unopened" | "completed" | "deadline";
+type Filter = "all" | "new" | "choosing" | "unopened" | "completed" | "deadline";
 
 export default function SessionsPage() {
   const [rows, setRows] = useState<SessionOut[] | null>(null);
@@ -19,6 +19,7 @@ export default function SessionsPage() {
   const buckets = useMemo(() => {
     const all = rows ?? [];
     const is = {
+      new: (s: SessionOut) => s.is_new,
       choosing: (s: SessionOut) => s.status === "pending" && !!s.first_opened_at,
       unopened: (s: SessionOut) => s.status === "pending" && !s.first_opened_at,
       completed: (s: SessionOut) => s.status === "completed",
@@ -55,8 +56,8 @@ export default function SessionsPage() {
         }
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
-        {([["choosing", "Choosing"], ["unopened", "Not opened yet"], ["completed", "Completed"], ["deadline", "Deadline ≤ 2 days"]] as const).map(([k, l]) => (
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-8">
+        {([["new", "Just sent · unread"], ["choosing", "Choosing"], ["unopened", "Not opened yet"], ["completed", "Completed"], ["deadline", "Deadline ≤ 2 days"]] as const).map(([k, l]) => (
           <Stat key={k} n={buckets.counts[k]} label={l} active={filter === k} onClick={() => setFilter(filter === k ? "all" : k)} />
         ))}
       </div>
@@ -92,7 +93,7 @@ export default function SessionsPage() {
                 </td>
                 <td className="py-3 pr-4">
                   <Link href={`/admin/sessions/${s.id}`} className="flex flex-col gap-0.5">
-                    <span className="text-[14px] font-medium">{s.client_name}</span>
+                    <span className="text-[14px] font-medium flex items-center gap-2">{s.client_name}{s.is_new && <span className="t-mono !text-[9px] bg-error text-white px-1.5 py-0.5">New</span>}</span>
                     <span className="t-small text-mute">{s.notes?.split("\n")[0] || `Created ${fmtDate(s.created_at)}`}</span>
                   </Link>
                 </td>

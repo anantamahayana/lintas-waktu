@@ -48,6 +48,10 @@ class PhotoSession(Base):
     draft_maybe: Mapped[str | None] = mapped_column(Text, nullable=True)  # "tandai dulu" shortlist
     first_opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Client's WhatsApp number (optional), digits only with country code: 6281234567890
+    client_wa: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # When the photographer last opened this session's result; drives the "new" marker on the dashboard.
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     @property
     def hard_limit(self) -> int:
@@ -79,3 +83,14 @@ class Setting(Base):
 
     key: Mapped[str] = mapped_column(String(64), primary_key=True)
     value: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class FailedAttempt(Base):
+    """One row = one failed attempt (gallery PIN or admin login). Backs the rate limiter,
+    so the counts survive a server restart."""
+
+    __tablename__ = "failed_attempts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    key: Mapped[str] = mapped_column(String(128), index=True)
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)

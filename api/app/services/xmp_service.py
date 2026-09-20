@@ -67,9 +67,12 @@ def build_zip(client_name: str, photos) -> bytes:
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         for p in photos:
             zf.writestr(f"{base_name(p.filename)}.xmp", xmp_for(p.filename, client_name, p.note, p.is_extra))
-        lines = [p.filename + ("  [extra]" if p.is_extra else "") + (f"  # {p.note}" if p.note else "") for p in photos]
-        zf.writestr("selected_files.txt", "\n".join(lines) + "\n")
-    return buf.getvalue()
+    return buf.getvalue()  # only .xmp files at the root, so they can be copied straight into the RAW folder
+
+
+def xmp_files(client_name: str, photos) -> list[dict]:
+    """[{name, content}] for writing the sidecars directly into a folder from the browser."""
+    return [{"name": f"{base_name(p.filename)}.xmp", "content": xmp_for(p.filename, client_name, p.note, p.is_extra)} for p in photos]
 
 
 def filenames_string(filenames: list[str]) -> str:
