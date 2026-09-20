@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { gapi, galleryToken, GalleryError, type GalleryData, type GalleryMeta } from "@/lib/gallery-api";
 import { T, type Dict, type Lang } from "./i18n";
+import { AlbumPreview } from "./AlbumPreview";
 
 type Filter = "all" | "selected" | "maybe";
 type Stage = "loading" | "pin" | "gallery" | "confirm" | "sent" | "expired";
@@ -121,6 +122,9 @@ export function ClientGallery({ slug }: { slug: string }) {
 
   const openConfirm = () => { setExtraIds(ids.slice(limit)); setStage("confirm"); };
   const [finalAsk, setFinalAsk] = useState(false);
+  const [album, setAlbum] = useState(false);
+  const albumMin = Math.max(2, Math.min(4, data?.photo_limit ?? 4)); // a few picks are enough for a first spread
+  const albumPhotos = useMemo(() => (data?.photos ?? []).filter((p) => selectedSet.has(p.file_id)).sort((a, b) => ids.indexOf(a.file_id) - ids.indexOf(b.file_id)), [data, selectedSet, ids]);
   const submit = async () => {
     setFinalAsk(false);
     setBusy(true);
@@ -191,8 +195,12 @@ export function ClientGallery({ slug }: { slug: string }) {
         <h1 className="t-display-sm">{t.thanks(first)}</h1>
         <p className="t-body max-w-[44ch]">{t.sentBody(sent.selected_count, sent.extra_count)}</p>
         <p className="t-small text-faint">{t.locked}</p>
-        <button type="button" onClick={() => { setFilter("selected"); setStage("gallery"); }} className="action">{t.viewSelection}</button>
+        <div className="flex flex-wrap justify-center gap-3">
+          {albumPhotos.length >= 2 && <button type="button" onClick={() => setAlbum(true)} className="t-mono text-ink px-6 py-3.5 rounded-full" style={{ background: GOLD }}>{t.albumBtn} →</button>}
+          <button type="button" onClick={() => { setFilter("selected"); setStage("gallery"); }} className="action">{t.viewSelection}</button>
+        </div>
         <span className="absolute bottom-8 t-wordmark">{studio}</span>
+        {album && <AlbumPreview photos={albumPhotos} clientName={data.client_name} studio={studio} t={t.album} onClose={() => setAlbum(false)} />}
       </Screen>
     );
   }
@@ -308,6 +316,10 @@ export function ClientGallery({ slug }: { slug: string }) {
               {([["all", t.all], ["selected", `${t.selected} ${count}`], ["maybe", `${t.marked} ${maybe.length}`]] as const).map(([k, l]) => (
                 <button key={k} type="button" onClick={() => setFilter(k)} className={clsx("flex-1 t-small py-1.5 rounded-full transition-colors", filter === k ? "bg-white text-ink" : "text-on-dark-mute")}>{l}</button>
               ))}
+              {/* the album takes shape once there are a few picks — a small reward for choosing */}
+              <button type="button" disabled={count < albumMin} onClick={() => setAlbum(true)} className={clsx("t-small py-1.5 px-3 rounded-full transition-all duration-500", count >= albumMin ? "text-ink" : "text-on-dark-mute/40")} style={count >= albumMin ? { background: GOLD } : undefined}>
+                ▤ {t.albumBtn}
+              </button>
             </div>
           </div>
         </div>
@@ -344,6 +356,7 @@ export function ClientGallery({ slug }: { slug: string }) {
       )}
 
       {/* Lightbox */}
+      {album && <AlbumPreview photos={albumPhotos} clientName={data.client_name} studio={studio} t={t.album} onClose={() => setAlbum(false)} />}
       {open !== null && visible[open] && (
         <Lightbox
           photos={visible}

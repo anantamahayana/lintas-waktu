@@ -13,6 +13,7 @@ export interface Dict {
   back: string; confirmSend: (n: number) => string; sending: string; thanks: (name: string) => string;
   finalTitle: string; finalBody: (n: number, e: number) => string; finalNo: string; finalYes: string;
   saving: string; saved: string; offline: string;
+  albumBtn: string; album: { title: string; sub: (n: number) => string; cover: string; end: string; endBody: string; close: string; shuffle: string; page: (a: number, b: number, n: number) => string; hint: string; };
   sentBody: (n: number, e: number) => string; locked: string; viewSelection: string; filterNone: string; extra: string;
 }
 
@@ -51,6 +52,11 @@ export const T: Record<Lang, Dict> = {
     finalBody: (n: number, e: number) => `${ph(n)}${e > 0 ? ` (${e} extra${e === 1 ? "" : "s"})` : ""} ${n === 1 ? "goes" : "go"} to the photographer for editing. After this the gallery locks and you can’t change your picks yourself.`,
     finalNo: "Not yet", finalYes: "Yes, send",
     saving: "saving…", saved: "saved ✓", offline: "offline — picks kept on this device",
+    albumBtn: "Preview album",
+    album: {
+      title: "Album preview", sub: (n: number) => `${n} photograph${n === 1 ? "" : "s"}`, cover: "Cover", end: "The end", endBody: "An impression of how your album could feel. The real one is laid out by hand, with your notes in mind.",
+      close: "Close", shuffle: "Shuffle layout", page: (a: number, b: number, n: number) => `Pages ${a}–${b} of ${n}`, hint: "Swipe or use the arrows to turn the pages. Change your picks and the album follows.",
+    },
     thanks: (name: string) => `Thank you, ${name}.`,
     sentBody: (n: number, e: number) => `${ph(n)} ${n === 1 ? "is" : "are"} on the way to the edit${e ? ` — ${n - e} in your package and ${e} extra${e === 1 ? "" : "s"}` : ""}. We’ll be in touch within a day about delivery.`,
     locked: "Your gallery stays open to view, but choices are now locked.", viewSelection: "View my selection",
@@ -88,6 +94,11 @@ export const T: Record<Lang, Dict> = {
     finalBody: (n: number, e: number) => `${n} foto${e > 0 ? ` (${e} tambahan)` : ""} akan dikirim ke fotografer untuk diedit. Setelah ini galeri terkunci dan pilihan tidak bisa Anda ubah sendiri.`,
     finalNo: "Belum", finalYes: "Ya, kirim",
     saving: "menyimpan…", saved: "tersimpan ✓", offline: "offline — pilihan aman di perangkat ini",
+    albumBtn: "Pratinjau album",
+    album: {
+      title: "Pratinjau album", sub: (n: number) => `${n} foto`, cover: "Sampul", end: "Selesai", endBody: "Gambaran bagaimana album Anda bisa terasa. Album aslinya kami tata dengan tangan, dengan catatan Anda dalam pertimbangan.",
+      close: "Tutup", shuffle: "Acak tata letak", page: (a: number, b: number, n: number) => `Halaman ${a}–${b} dari ${n}`, hint: "Geser atau pakai panah untuk membalik halaman. Ubah pilihan Anda, albumnya ikut berubah.",
+    },
     thanks: (name: string) => `Terima kasih, ${name}.`,
     sentBody: (n: number, e: number) => `${n} foto sedang menuju proses edit${e ? ` — ${n - e} dalam paket dan ${e} tambahan` : ""}. Kami hubungi dalam sehari soal pengiriman.`,
     locked: "Galerimu tetap bisa dilihat, tapi pilihan sudah terkunci.", viewSelection: "Lihat pilihanku",
