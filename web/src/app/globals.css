@@ -157,3 +157,7 @@
 .intro-line { transform-origin: left; transform: scaleX(0); animation: intro-line 0.9s 0.8s cubic-bezier(.6,0,.2,1) forwards; }
 .intro-logo { animation: intro-logo 0.6s ease both; }
 .intro-out { animation: intro-out 0.7s cubic-bezier(.7,0,.2,1) forwards; }
+
+/* Gallery tile waiting for its thumbnail: a slow breathe, nothing flashy */
+@keyframes tile-wait { 50% { opacity: 0.55; } }
+.tile-wait { animation: tile-wait 1.6s ease-in-out infinite; }

@@ -4,7 +4,7 @@ import json
 import time
 from collections import defaultdict
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Query, Request, Response
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session as DbSession
@@ -165,7 +165,7 @@ def unlock(slug: str, body: UnlockRequest, request: Request, db: DbSession = Dep
 
 
 @router.get("/gallery/{slug}", response_model=GalleryOut)
-def get_gallery(slug: str, db: DbSession = Depends(get_db), x_gallery_token: str | None = Header(None), authorization: str | None = Header(None)):
+def get_gallery(slug: str, background: BackgroundTasks, db: DbSession = Depends(get_db), x_gallery_token: str | None = Header(None), authorization: str | None = Header(None)):
     admin = is_admin_token(authorization)
     s = _session(db, slug)
     _authorize(s, x_gallery_token, admin=admin)
@@ -173,6 +173,12 @@ def get_gallery(slug: str, db: DbSession = Depends(get_db), x_gallery_token: str
         photos = drive_service.list_photos(s.drive_folder_id)
     except drive_service.DriveError as e:
         raise HTTPException(502, str(e))
+
+    # A cold cache means every thumbnail is a Drive round-trip while the client scrolls
+    # (tiles stay grey for many seconds). Pre-fetch in the background so the grid fills fast.
+    st = drive_service.cache_status(s.drive_folder_id)
+    if st["thumb"] < st["total"] and not st["warming"]:
+        background.add_task(drive_service.warm_cache, s.drive_folder_id)
 
     if not admin:  # the photographer's own preview must not count as "client opened the gallery"
         now = utcnow()

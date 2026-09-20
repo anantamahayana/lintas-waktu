@@ -23,13 +23,22 @@ export class GalleryError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
 
+export function isPreview(): boolean {
+  return typeof window !== "undefined" && new URLSearchParams(window.location.search).get("preview") === "1";
+}
+
 function headers(slug: string): Record<string, string> {
   const h: Record<string, string> = { "content-type": "application/json" };
   const t = galleryToken.get(slug);
   if (t) h["x-gallery-token"] = t;
-  // Photographer preview: reuse the admin token when present
-  const admin = typeof window !== "undefined" ? localStorage.getItem("lw_admin_token") : null;
-  if (admin) h.authorization = `Bearer ${admin}`;
+  // Photographer preview (/g/<slug>?preview=1 from the admin): send the admin token so
+  // the server shows the gallery without PIN and saves nothing. Never implied just because
+  // the photographer happens to be logged in to /admin in the same browser — that made
+  // real test submissions fail with "preview mode" and left the client's picks unsaved.
+  if (isPreview()) {
+    const admin = localStorage.getItem("lw_admin_token");
+    if (admin) h.authorization = `Bearer ${admin}`;
+  }
   return h;
 }
 

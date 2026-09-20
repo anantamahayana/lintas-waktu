@@ -72,6 +72,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
         title={s.client_name}
         actions={
           <>
+            <a className="action !py-2.5 !px-4" href={`${s.gallery_url}?preview=1`} target="_blank" rel="noreferrer" title="Opens the gallery as the photographer: no PIN, nothing saved, Send disabled">Preview</a>
             <Btn onClick={() => { navigator.clipboard.writeText(s.gallery_url); toast("Link copied"); }}>Copy link</Btn>
             <a className="ink-btn !py-2.5 !px-4" href={`https://wa.me/?text=${encodeURIComponent(waText)}`} target="_blank" rel="noreferrer">Send via WhatsApp</a>
           </>

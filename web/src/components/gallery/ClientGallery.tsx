@@ -207,7 +207,7 @@ export function ClientGallery({ slug }: { slug: string }) {
             return (
               <li key={p.file_id}>
                 <button type="button" disabled={nExtra === 0} onClick={() => toggleExtra(p.file_id)} className="relative block w-full aspect-[4/5] bg-line overflow-hidden" style={{ outline: `3px solid ${GOLD}`, outlineOffset: -3 }}>
-                  <img src={gapi.img(p.thumb_url)} alt="" className="w-full h-full object-cover" loading="lazy" />
+                  <Thumb src={gapi.img(p.thumb_url)} alt="" className="w-full h-full object-cover" />
                   {isX && <span className="absolute left-1.5 bottom-1.5 bg-ink t-mono !text-[9px] px-1.5 py-0.5" style={{ color: GOLD }}>{t.extra}</span>}
                 </button>
               </li>
@@ -252,7 +252,7 @@ export function ClientGallery({ slug }: { slug: string }) {
           return (
             <li key={p.file_id} className={clsx("relative aspect-[4/5] bg-line overflow-hidden transition-opacity duration-300", dim && "opacity-40")}>
               <button type="button" disabled={readOnly} onClick={() => toggle(p.file_id)} aria-pressed={sel} className="absolute inset-0 w-full h-full">
-                <img src={gapi.img(p.thumb_url)} alt={p.name} loading={i < 8 ? "eager" : "lazy"} className={clsx("w-full h-full object-cover transition-transform duration-500", sel && "scale-[0.94]")} />
+                <Thumb src={gapi.img(p.thumb_url)} alt={p.name} eager={i < 8} className={clsx("w-full h-full object-cover transition-transform duration-500", sel && "scale-[0.94]")} />
                 <span className="pointer-events-none absolute inset-0 transition-colors duration-300" style={{ boxShadow: sel ? `inset 0 0 0 3px ${GOLD}` : "none" }} />
                 {sel && <span className="absolute left-2 top-2 h-6 w-6 rounded-full flex items-center justify-center text-[12px] font-semibold text-ink" style={{ background: GOLD }}>✓</span>}
                 {notes[p.file_id] && <span className="absolute left-10 top-2 h-6 w-6 rounded-full bg-white/90 flex items-center justify-center text-[11px]">✎</span>}
@@ -417,5 +417,30 @@ function Lightbox({ photos, index, onIndex, selected, marked, note, readOnly, fu
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * Gallery tile image. On a cold server cache every thumbnail is a Google Drive round-trip,
+ * so tiles can sit empty for seconds — show a breathing placeholder until the bytes arrive
+ * and fade the photo in; retry once if the request drops. Without this, slow tiles read as
+ * "missing photos".
+ */
+function Thumb({ src, alt, eager, className }: { src: string; alt: string; eager?: boolean; className?: string }) {
+  const [state, setState] = useState<"wait" | "ok" | "retry" | "fail">("wait");
+  const url = state === "retry" ? `${src}&r=1` : src;
+  return (
+    <>
+      {state !== "ok" && <span aria-hidden className={clsx("absolute inset-0 bg-line", state !== "fail" && "tile-wait")} />}
+      <img
+        src={url}
+        alt={alt}
+        loading={eager ? "eager" : "lazy"}
+        decoding="async"
+        onLoad={() => setState("ok")}
+        onError={() => setState((s) => (s === "wait" ? "retry" : "fail"))}
+        className={clsx(className, "transition-opacity duration-500", state === "ok" ? "opacity-100" : "opacity-0")}
+      />
+    </>
   );
 }
