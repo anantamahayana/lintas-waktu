@@ -9,7 +9,7 @@ import { Btn, Card, Field, Input, Select, Textarea, confirm, focusFirstInvalid, 
 type Values = Omit<Project, "id" | "cover_url" | "photo_count" | "created_at" | "updated_at" | "photos" | "sort_order">;
 
 const empty: Values = {
-  slug: "", title: "", category: "wedding", location: "", date_label: "", month: null, drive_folder_id: "", cover_file_id: null, placeholder_urls: [],
+  slug: "", title: "", category: "wedding", kind: "photo", location: "", date_label: "", month: null, drive_folder_id: "", cover_file_id: null, placeholder_urls: [],
   pull_en: "", pull_id: "", body_en: "", body_id: "", facts: [], film_title: null, film_duration: null, film_url: null, featured: false, published: false,
 };
 
@@ -36,8 +36,11 @@ export function ProjectForm({ project }: { project?: Project }) {
     if (!v.title.trim()) e.title = "Give the project a title.";
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(v.slug)) e.slug = "Lowercase letters, numbers and hyphens only, e.g. ayu-marco.";
     if (v.month && !/^\d{4}-\d{2}$/.test(v.month)) e.month = "Use YYYY-MM, e.g. 2026-06.";
-    if (!v.drive_folder_id.trim() && v.placeholder_urls.length === 0) e.drive_folder_id = "Paste the Google Drive folder link or ID.";
-    if (v.film_url && !/^https?:\/\//.test(v.film_url)) e.film_url = "Paste the full link, starting with https://.";
+    const isFilm = v.kind === "film";
+    if (!isFilm && !v.drive_folder_id.trim() && v.placeholder_urls.length === 0) e.drive_folder_id = "Paste the Google Drive folder link or ID.";
+    const isVideoLink = (u: string) => /(youtu\.be\/|youtube\.com\/|vimeo\.com\/)/.test(u);
+    if (v.kind !== "photo" && !v.film_url) e.film_url = "A film project needs its YouTube or Vimeo link.";
+    else if (v.film_url && !isVideoLink(v.film_url)) e.film_url = "Only YouTube and Vimeo links can be embedded.";
     return e;
   }
 
@@ -106,11 +109,16 @@ export function ProjectForm({ project }: { project?: Project }) {
                 <option value="wedding">Wedding</option><option value="prewedding">Pre-wedding</option><option value="event">Event</option><option value="personal">Personal</option>
               </Select>
             </Field>
+            <Field label="Kind" hint="what this project is made of">
+              <Select value={v.kind} onChange={set("kind")}>
+                <option value="photo">Photographs</option><option value="both">Photographs + film</option><option value="film">Film only</option>
+              </Select>
+            </Field>
             <Field label="Location"><Input value={v.location} onChange={set("location")} placeholder="Uluwatu" /></Field>
             <Field label="Date label" hint="shown on the site"><Input value={v.date_label} onChange={set("date_label")} placeholder="June 2026" /></Field>
             <Field label="Month" hint="YYYY-MM, for ordering" error={errors.month}><Input invalid={!!errors.month} value={v.month ?? ""} onChange={set("month")} placeholder="2026-06" /></Field>
           </div>
-          <Field label="Google Drive folder" hint="link or ID — web-size JPEGs" error={errors.drive_folder_id}>
+          <Field label={v.kind === "film" ? "Google Drive folder with stills" : "Google Drive folder"} hint={v.kind === "film" ? "optional — a few frames; the first one becomes the poster" : "link or ID — web-size JPEGs"} error={errors.drive_folder_id}>
             <Input invalid={!!errors.drive_folder_id} value={v.drive_folder_id} onChange={set("drive_folder_id")} placeholder="https://drive.google.com/drive/folders/…" />
           </Field>
           {v.placeholder_urls.length > 0 && !v.drive_folder_id && (
@@ -152,13 +160,18 @@ export function ProjectForm({ project }: { project?: Project }) {
           </div>
         </Card>
 
-        <Card title="Film" >
-          <div className="grid sm:grid-cols-3 gap-4">
-            <Field label="Title"><Input value={v.film_title ?? ""} onChange={set("film_title")} placeholder="Highlight film" /></Field>
-            <Field label="Duration"><Input value={v.film_duration ?? ""} onChange={set("film_duration")} placeholder="5:12" /></Field>
-            <Field label="URL" hint="YouTube/Vimeo" error={errors.film_url}><Input invalid={!!errors.film_url} value={v.film_url ?? ""} onChange={set("film_url")} placeholder="https://…" /></Field>
-          </div>
-        </Card>
+        {v.kind !== "photo" && (
+          <Card title={v.kind === "film" ? "Film" : "Film · shown after the pull quote, before the photographs"}>
+            <div className="grid sm:grid-cols-3 gap-4">
+              <Field label="Title"><Input value={v.film_title ?? ""} onChange={set("film_title")} placeholder="Highlight film" /></Field>
+              <Field label="Duration"><Input value={v.film_duration ?? ""} onChange={set("film_duration")} placeholder="5:12" /></Field>
+              <Field label="Link" hint="YouTube or Vimeo" error={errors.film_url}><Input invalid={!!errors.film_url} value={v.film_url ?? ""} onChange={set("film_url")} placeholder="https://vimeo.com/…" /></Field>
+            </div>
+            <p className="t-small text-mute">
+              Nothing loads from YouTube/Vimeo until a visitor presses play. {v.kind === "film" && "Without a stills folder, the poster is taken from the video link (press Sync if Vimeo was unreachable when saving)."}
+            </p>
+          </Card>
+        )}
       </div>
 
       <div className="flex flex-col gap-4 lg:sticky lg:top-8">
@@ -173,8 +186,12 @@ export function ProjectForm({ project }: { project?: Project }) {
           {project && <Btn type="button" kind="danger" className="self-start" onClick={remove}>Delete project</Btn>}
         </Card>
 
-        <Card title={`Cover · ${photos.length} ${v.drive_folder_id ? "photos in folder" : "placeholder photos"}`}>
-          {photos.length === 0 ? (
+        <Card title={`Cover · ${photos.length} ${v.drive_folder_id ? "photos in folder" : v.placeholder_urls.length ? "placeholder photos" : "stills"}`}>
+          {photos.length === 0 && v.kind === "film" ? (
+            project?.film_poster_url
+              ? <div className="flex flex-col gap-2"><div className="aspect-video bg-line overflow-hidden"><img src={project.film_poster_url} alt="" className="w-full h-full object-cover" /></div><p className="t-small text-mute">Poster from the video link. Add a stills folder to use your own frame.</p></div>
+              : <p className="t-small text-faint">{project ? "No poster yet — the site shows a dark title slate. Press Sync to retry the video thumbnail, or add a stills folder." : "Save the project; the poster is taken from the video link."}</p>
+          ) : photos.length === 0 ? (
             <p className="t-small text-faint">{project ? "No photos found — check the folder and press Sync." : "Save the project to read the folder, then choose a cover."}</p>
           ) : (
             <ul className="grid grid-cols-4 gap-1.5 max-h-[420px] overflow-y-auto">

@@ -152,7 +152,8 @@
     "wedding": "Wedding",
     "prewedding": "Pre-wedding",
     "event": "Acara",
-    "personal": "Personal"
+    "personal": "Personal",
+    "film": "Film"
   },
   "work": {
     "eyebrow": "Karya pilihan · 2024 — 2026",
@@ -169,7 +170,10 @@
     "next": "Berikutnya",
     "playFilm": "Putar film",
     "more": "Karya lain yang mungkin kamu suka",
-    "all": "Semua karya"
+    "all": "Semua karya",
+    "kindFilm": "Film",
+    "kindBoth": "Foto + film",
+    "stills": "Cuplikan"
   },
   "services": {
     "eyebrow": "Layanan",

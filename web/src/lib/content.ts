@@ -6,7 +6,7 @@
  * the chrome still renders while the backend is unreachable.
  */
 import "server-only";
-import { type Category, type Project } from "./projects";
+import { type Category, type Kind, type Project } from "./projects";
 import { site as defaults } from "./site";
 
 const API = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -15,8 +15,9 @@ const REVALIDATE = 60; // seconds — and the API flushes the "content" tag on e
 type ApiFact = { label: string; value: string };
 type ApiPhoto = { file_id: string; filename: string; width: number; height: number; thumb_url: string; full_url: string };
 type ApiProject = {
-  slug: string; title: string; category: Category; location: string; date_label: string; month: string | null;
-  cover_url: string | null; pull: string; body: string; facts: ApiFact[]; film: { title?: string | null; duration?: string | null; url?: string | null } | null;
+  slug: string; title: string; category: Category; kind: Kind; location: string; date_label: string; month: string | null;
+  cover_url: string | null; pull: string; body: string; facts: ApiFact[];
+  film: { title?: string | null; duration?: string | null; url?: string | null; embed_url?: string | null; poster_url?: string | null } | null;
   featured: boolean; photos: ApiPhoto[];
 };
 type ApiSettings = {
@@ -45,6 +46,7 @@ function fromApi(p: ApiProject): SiteProject {
     slug: p.slug,
     title: p.title,
     category: p.category,
+    kind: p.kind ?? "photo",
     location: p.location,
     date: p.date_label,
     cover: p.cover_url ?? `api-${p.slug}`,
@@ -54,7 +56,9 @@ function fromApi(p: ApiProject): SiteProject {
     facts: p.facts,
     pull: p.pull,
     body: p.body,
-    film: p.film?.title || p.film?.url ? { title: p.film.title ?? "Film", duration: p.film.duration ?? "" } : undefined,
+    film: p.film?.embed_url
+      ? { title: p.film.title || "Film", duration: p.film.duration ?? "", embedUrl: p.film.embed_url, poster: abs(p.film.poster_url) }
+      : undefined,
     featured: p.featured,
   };
 }

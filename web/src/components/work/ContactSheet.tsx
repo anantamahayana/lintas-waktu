@@ -7,18 +7,21 @@ import { Link } from "@/i18n/navigation";
 import { Photo } from "@/components/ui/Photo";
 import { Reveal } from "@/components/ui/Reveal";
 import { categories, type Category } from "@/lib/projects";
+import { FilmBadge } from "@/components/work/Film";
 import type { SiteProject } from "@/lib/content";
 
 /** Portfolio: quiet text filters, three portrait columns, serif captions. */
 export function ContactSheet({ projects }: { projects: SiteProject[] }) {
   const t = useTranslations();
-  const [cat, setCat] = useState<Category | "all">("all");
-  const shown = useMemo(() => (cat === "all" ? projects : projects.filter((p) => p.category === cat)), [cat, projects]);
+  const [cat, setCat] = useState<Category | "all" | "film">("all");
+  // "Film" is a cross-cut: every project that carries a film, whatever its category
+  const shown = useMemo(() => (cat === "all" ? projects : cat === "film" ? projects.filter((p) => p.film) : projects.filter((p) => p.category === cat)), [cat, projects]);
+  const hasFilms = projects.some((p) => p.film);
 
   return (
     <>
       <div role="group" aria-label={t("work.filterLabel")} className="flex flex-wrap justify-center gap-x-8 gap-y-3 pb-12 lg:pb-16">
-        {(["all", ...categories] as const).map((c) => (
+        {(["all", ...categories, ...(hasFilms ? (["film"] as const) : [])] as const).map((c) => (
           <button
             key={c}
             type="button"
@@ -36,8 +39,9 @@ export function ContactSheet({ projects }: { projects: SiteProject[] }) {
           <Reveal as="li" key={p.slug} delay={(i % 3) * 80}>
             <Link href={`/work/${p.slug}`} className="group flex flex-col items-center text-center gap-4">
               <ViewTransition name={`photo-${p.slug}`} share="morph" default="none">
-                <div className="w-full aspect-[4/5]">
+                <div className="relative w-full aspect-[4/5]">
                   <Photo src={p.coverSrc} seed={p.cover} alt={p.title} sizes="(min-width:1024px) 33vw, (min-width:640px) 50vw, 100vw" className="h-full w-full" />
+                  {p.film && <FilmBadge duration={p.film.duration} />}
                 </div>
               </ViewTransition>
               <div className="flex flex-col gap-1">

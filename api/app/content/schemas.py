@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .models import InquiryStatus, ProjectCategory
+from .models import InquiryStatus, ProjectCategory, ProjectKind
 
 SLUG = r"^[a-z0-9]+(?:-[a-z0-9]+)*$"
 
@@ -16,12 +16,15 @@ class Film(BaseModel):
     title: str | None = None
     duration: str | None = None
     url: str | None = None
+    embed_url: str | None = None  # what the site's player loads (derived from url)
+    poster_url: str | None = None  # still shown before play (derived from url)
 
 
 class ProjectBase(BaseModel):
     slug: str = Field(min_length=2, max_length=80, pattern=SLUG)
     title: str = Field(min_length=1, max_length=160)
     category: ProjectCategory
+    kind: ProjectKind = ProjectKind.photo
     location: str = Field("", max_length=120)
     date_label: str = Field("", max_length=40)
     month: str | None = Field(None, pattern=r"^\d{4}-\d{2}$")
@@ -51,6 +54,7 @@ class ProjectUpdate(BaseModel):
     slug: str | None = Field(None, min_length=2, max_length=80, pattern=SLUG)
     title: str | None = Field(None, min_length=1, max_length=160)
     category: ProjectCategory | None = None
+    kind: ProjectKind | None = None
     location: str | None = None
     date_label: str | None = None
     month: str | None = None
@@ -98,6 +102,7 @@ class PublicProjectOut(BaseModel):
     slug: str
     title: str
     category: ProjectCategory
+    kind: ProjectKind
     location: str
     date_label: str
     month: str | None

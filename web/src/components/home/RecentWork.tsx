@@ -1,6 +1,7 @@
 import { ViewTransition } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
+import { FilmBadge } from "@/components/work/Film";
 import { Photo } from "@/components/ui/Photo";
 import { Reveal } from "@/components/ui/Reveal";
 import type { SiteProject } from "@/lib/content";
@@ -21,8 +22,9 @@ export function RecentWork({ projects }: { projects: SiteProject[] }) {
           <Reveal as="li" key={p.slug} delay={i * 100}>
             <Link href={`/work/${p.slug}`} className="group flex flex-col gap-4">
               <ViewTransition name={`photo-${p.slug}`} share="morph" default="none">
-                <div className="aspect-[4/5]">
+                <div className="relative aspect-[4/5]">
                   <Photo src={p.coverSrc} seed={p.cover} alt={p.title} sizes="(min-width:640px) 30vw, 100vw" className="h-full w-full" />
+                  {p.film && <FilmBadge duration={p.film.duration} />}
                 </div>
               </ViewTransition>
               <div className="flex flex-col gap-1">

@@ -22,6 +22,9 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       // Temporary dummy photos (lib/dummy-photos.ts) until real ones are uploaded via the admin
       { protocol: "https", hostname: "images.unsplash.com" },
+      // Film posters (YouTube / Vimeo thumbnails) for film-only projects
+      { protocol: "https", hostname: "i.ytimg.com" },
+      { protocol: "https", hostname: "i.vimeocdn.com" },
       // Portfolio photographs served by the API image proxy
       ...apiHosts(),
     ],

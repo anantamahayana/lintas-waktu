@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session as DbSession
 from ..auth import require_admin
 from ..database import get_db
 from ..services import drive_service
-from . import settings_store, site_cache
+from . import film as film_links, settings_store, site_cache
 from .models import Inquiry, InquiryStatus, Project
 from .schemas import (
     InquiryOut,
@@ -63,12 +63,19 @@ def placeholder_photos(p: Project) -> list[ProjectPhotoOut]:
     ]
 
 
+def film_out(p: Project) -> dict | None:
+    if not (p.film_title or p.film_url):
+        return None
+    info = film_links.parse(p.film_url)
+    return {"title": p.film_title, "duration": p.film_duration, "url": p.film_url, "embed_url": info["embed_url"] if info else None, "poster_url": p.film_poster_url}
+
+
 def cover_url(p: Project) -> str | None:
     if p.drive_folder_id:
         return f"/api/public/img/{p.drive_folder_id}/{p.cover_file_id}?size=full" if p.cover_file_id else None
     urls = placeholder_urls(p)
     if not urls:
-        return None
+        return p.film_poster_url  # film-only project: the poster stands in for the cover
     i = int(p.cover_file_id[len(PLACEHOLDER_ID):]) if p.cover_file_id and p.cover_file_id.startswith(PLACEHOLDER_ID) else 0
     return _sized(urls[i] if 0 <= i < len(urls) else urls[0], 1600)
 
@@ -97,6 +104,7 @@ def project_out(p: Project, with_photos: bool = False) -> dict:
         "facts": json.loads(p.facts or "[]"),
         "placeholder_urls": placeholder_urls(p),
         "cover_url": cover_url(p),
+        "film": film_out(p),
         "photo_count": len(photos),
     }
     if with_photos:
@@ -119,7 +127,20 @@ def _apply(p: Project, data: dict) -> None:
             v = _folder_id(v or "")
         if k == "placeholder_urls":
             v = json.dumps(list(v))
+        if k == "kind" and hasattr(v, "value"):
+            v = v.value
         setattr(p, k, v)
+
+
+def _check_film(p: Project, old_url: str | None) -> None:
+    """Film kinds need a playable link; refresh the poster when the link changed."""
+    if p.kind in ("film", "both"):
+        if not p.film_url:
+            raise HTTPException(400, "A film project needs the YouTube or Vimeo link")
+        if not film_links.parse(p.film_url):
+            raise HTTPException(400, "Paste a YouTube or Vimeo link — other players can't be embedded")
+    if p.film_url != old_url or (p.film_url and not p.film_poster_url):
+        p.film_poster_url = film_links.poster(p.film_url)
 
 
 # ---------------------------------------------------------------- projects
@@ -135,6 +156,7 @@ def create_project(body: ProjectCreate, background: BackgroundTasks, db: DbSessi
         raise HTTPException(409, "Slug already in use")
     p = Project()
     _apply(p, body.model_dump())
+    _check_film(p, None)
     if p.drive_folder_id:
         # validate the folder and pick a default cover
         try:
@@ -145,7 +167,7 @@ def create_project(body: ProjectCreate, background: BackgroundTasks, db: DbSessi
             raise HTTPException(400, "The Drive folder has no images")
         if not p.cover_file_id:
             p.cover_file_id = photos[0].file_id
-    elif not placeholder_urls(p):
+    elif not placeholder_urls(p) and p.kind != "film":
         raise HTTPException(400, "A project needs a Google Drive folder (or placeholder image URLs)")
     db.add(p)
     db.commit()
@@ -168,8 +190,10 @@ def update_project(project_id: str, body: ProjectUpdate, background: BackgroundT
     if "slug" in data and data["slug"] != p.slug and db.query(Project).filter(Project.slug == data["slug"]).first():
         raise HTTPException(409, "Slug already in use")
     folder_changed = "drive_folder_id" in data and _folder_id(data["drive_folder_id"] or "") != p.drive_folder_id
+    old_film = p.film_url
     _apply(p, data)
-    if not p.drive_folder_id and not placeholder_urls(p):
+    _check_film(p, old_film)
+    if not p.drive_folder_id and not placeholder_urls(p) and p.kind != "film":
         raise HTTPException(400, "A project needs a Google Drive folder (or placeholder image URLs)")
     if folder_changed and not p.drive_folder_id:
         p.cover_file_id = None  # back to placeholders
@@ -190,6 +214,9 @@ def update_project(project_id: str, body: ProjectUpdate, background: BackgroundT
 @router.post("/projects/{project_id}/sync", response_model=ProjectDetailOut)
 def sync_project(project_id: str, background: BackgroundTasks, db: DbSession = Depends(get_db)):
     p = _get(db, project_id)
+    if p.film_url and not p.film_poster_url:  # e.g. Vimeo was unreachable when the project was saved
+        p.film_poster_url = film_links.poster(p.film_url)
+        db.commit()
     if not p.drive_folder_id:
         return project_out(p, with_photos=True)
     try:

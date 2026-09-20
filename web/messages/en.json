@@ -152,7 +152,8 @@
     "wedding": "Wedding",
     "prewedding": "Pre-wedding",
     "event": "Event",
-    "personal": "Personal"
+    "personal": "Personal",
+    "film": "Film"
   },
   "work": {
     "eyebrow": "Selected work · 2024 — 2026",
@@ -169,7 +170,10 @@
     "next": "Next",
     "playFilm": "Play film",
     "more": "More work you might like",
-    "all": "All work"
+    "all": "All work",
+    "kindFilm": "Film",
+    "kindBoth": "Photo + film",
+    "stills": "Stills"
   },
   "services": {
     "eyebrow": "Services",

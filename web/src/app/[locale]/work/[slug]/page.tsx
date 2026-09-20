@@ -8,6 +8,7 @@ import { routing } from "@/i18n/routing";
 import { Photo } from "@/components/ui/Photo";
 import { Reveal } from "@/components/ui/Reveal";
 import { Gallery } from "@/components/work/Gallery";
+import { Film, FilmBadge } from "@/components/work/Film";
 import { getProject, getProjects, related } from "@/lib/content";
 
 type Params = Promise<{ locale: string; slug: string }>;
@@ -36,17 +37,28 @@ export default async function ProjectPage({ params }: { params: Params }) {
   const all = await getProjects(locale);
   const relatedProjects = related(all, slug);
 
+  const isFilm = p.kind === "film" && p.film;
+  const hasStills = p.gallery.length > 0;
+
   return (
     <article>
-      {/* Hero — the morph target */}
-      <ViewTransition name={`photo-${p.slug}`} share="morph" default="none">
-        <div className="h-[70vh] lg:h-[84vh] w-full">
-          <Photo src={p.coverSrc} seed={p.cover} alt={p.title} priority sizes="100vw" className="h-full w-full" />
-        </div>
-      </ViewTransition>
+      {/* Hero — a photograph, or for a film project the film itself (click to play) */}
+      {isFilm && p.film ? (
+        <ViewTransition name={`photo-${p.slug}`} share="morph" default="none">
+          <div className="wrap gutter pt-6 lg:pt-10">
+            <Film embedUrl={p.film.embedUrl!} poster={p.coverSrc ?? p.film.poster} title={p.title} label={p.film.title} duration={p.film.duration} playLabel={t("project.playFilm")} priority className="w-full aspect-video" />
+          </div>
+        </ViewTransition>
+      ) : (
+        <ViewTransition name={`photo-${p.slug}`} share="morph" default="none">
+          <div className="h-[70vh] lg:h-[84vh] w-full">
+            <Photo src={p.coverSrc} seed={p.cover} alt={p.title} priority sizes="100vw" className="h-full w-full" />
+          </div>
+        </ViewTransition>
+      )}
 
       <header className="wrap gutter pt-12 lg:pt-16 pb-12 lg:pb-16 flex flex-col items-center text-center gap-5">
-        <Reveal><span className="t-mono text-mute">{t(`categories.${p.category}`)} · {p.location} · {p.date}</span></Reveal>
+        <Reveal><span className="t-mono text-mute">{t(`categories.${p.category}`)}{p.kind !== "photo" && ` · ${t(p.kind === "film" ? "project.kindFilm" : "project.kindBoth")}`} · {p.location} · {p.date}</span></Reveal>
         <Reveal delay={80}><h1 className="t-display-sm">{p.title}</h1></Reveal>
         <Reveal delay={160}><p className="t-statement max-w-[36ch] text-balance">{p.pull}</p></Reveal>
         <Reveal delay={240} as="dl" className="flex flex-wrap justify-center gap-x-10 gap-y-3 pt-4">
@@ -59,25 +71,30 @@ export default async function ProjectPage({ params }: { params: Params }) {
         </Reveal>
       </header>
 
-      <Gallery seeds={p.gallery} srcs={p.gallerySrcs} title={p.title} />
+      {/* Photo + film: the film sits right after the words, before the photographs */}
+      {!isFilm && p.film && (
+        <section className="wrap gutter pb-12 lg:pb-16">
+          <Reveal>
+            <Film embedUrl={p.film.embedUrl!} poster={p.film.poster} title={p.title} label={p.film.title} duration={p.film.duration} playLabel={t("project.playFilm")} className="w-full aspect-video" />
+          </Reveal>
+        </section>
+      )}
+
+      {hasStills && (
+        <>
+          {isFilm && (
+            <div className="wrap gutter pt-4 pb-8 lg:pb-10 text-center">
+              <Reveal><span className="t-mono text-mute">{t("project.stills")}</span></Reveal>
+            </div>
+          )}
+          <Gallery seeds={p.gallery} srcs={p.gallerySrcs} title={p.title} />
+        </>
+      )}
 
       <section className="wrap gutter py-16 lg:py-24 flex flex-col items-center text-center gap-5">
         <Reveal><span className="t-mono text-mute">{t("project.theDay")}</span></Reveal>
         <Reveal delay={80}><p className="t-body max-w-[60ch]">{p.body}</p></Reveal>
       </section>
-
-      {p.film && (
-        <section className="wrap gutter pb-16 lg:pb-24">
-          <Reveal>
-            <button type="button" aria-label={t("project.playFilm")} className="group relative w-full aspect-video bg-dark flex items-center justify-center text-on-dark">
-              <span className="t-mono absolute left-5 top-5 text-on-dark-mute">{t("project.film")} · {p.film.duration}</span>
-              <span className="h-14 w-14 border border-on-dark/50 rounded-full flex items-center justify-center transition-transform duration-700 ease-out-soft group-hover:scale-110">
-                <span className="ml-0.5 border-y-[6px] border-y-transparent border-l-[10px] border-l-on-dark" />
-              </span>
-            </button>
-          </Reveal>
-        </section>
-      )}
 
       {/* More work — three related projects to choose from */}
       <section className="border-t border-line">
@@ -90,8 +107,9 @@ export default async function ProjectPage({ params }: { params: Params }) {
               <Reveal as="li" key={r.slug} delay={i * 100}>
                 <Link href={`/work/${r.slug}`} className="group flex flex-col items-center text-center gap-4">
                   <ViewTransition name={`photo-${r.slug}`} share="morph" default="none">
-                    <div className="w-full aspect-[4/5]">
+                    <div className="relative w-full aspect-[4/5]">
                       <Photo src={r.coverSrc} seed={r.cover} alt={r.title} sizes="(min-width:640px) 30vw, 100vw" className="h-full w-full" />
+                      {r.film && <FilmBadge duration={r.film.duration} />}
                     </div>
                   </ViewTransition>
                   <div className="flex flex-col gap-1">

@@ -16,6 +16,12 @@ class ProjectCategory(str, enum.Enum):
     personal = "personal"
 
 
+class ProjectKind(str, enum.Enum):
+    photo = "photo"  # photographs only
+    film = "film"  # a film with (optionally) a few stills
+    both = "both"  # photographs plus a film
+
+
 class Project(Base):
     """A portfolio project. Photographs live in a Google Drive folder (the same
     mechanism as proofing sessions); the cover is one of those files."""
@@ -26,6 +32,7 @@ class Project(Base):
     slug: Mapped[str] = mapped_column(String(80), unique=True, index=True)
     title: Mapped[str] = mapped_column(String(160))
     category: Mapped[ProjectCategory] = mapped_column(Enum(ProjectCategory))
+    kind: Mapped[str] = mapped_column(String(8), default="photo")  # ProjectKind value
     location: Mapped[str] = mapped_column(String(120), default="")
     date_label: Mapped[str] = mapped_column(String(40), default="")  # "June 2026"
     month: Mapped[str | None] = mapped_column(String(7), nullable=True)  # "2026-06", for ordering
@@ -43,6 +50,7 @@ class Project(Base):
     film_title: Mapped[str | None] = mapped_column(String(120), nullable=True)
     film_duration: Mapped[str | None] = mapped_column(String(12), nullable=True)
     film_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    film_poster_url: Mapped[str | None] = mapped_column(String(500), nullable=True)  # found from the link at save time
     featured: Mapped[bool] = mapped_column(Boolean, default=False)
     published: Mapped[bool] = mapped_column(Boolean, default=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
