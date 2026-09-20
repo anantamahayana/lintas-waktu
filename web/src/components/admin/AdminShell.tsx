@@ -9,6 +9,7 @@ import { confirm, confirmLeave, hasUnsavedChanges } from "@/components/admin/ui"
 
 const groups: { label: string; items: { href: string; label: string; exact?: boolean }[] }[] = [
   { label: "Proofing", items: [{ href: "/admin", label: "Sessions", exact: true }, { href: "/admin/sessions/new", label: "New session" }] },
+  { label: "Business", items: [{ href: "/admin/invoices", label: "Invoices" }] },
   { label: "Website", items: [{ href: "/admin/projects", label: "Projects" }, { href: "/admin/inquiries", label: "Inquiries" }] },
   { label: "", items: [{ href: "/admin/settings", label: "Site settings" }] },
 ];
@@ -63,9 +64,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const active = (href: string, exact?: boolean) => (exact ? pathname === href : pathname.startsWith(href));
 
   return (
-    <div className="min-h-dvh lg:grid lg:grid-cols-[240px_1fr]">
+    <div className="min-h-dvh lg:grid lg:grid-cols-[240px_1fr] print:block">
       {/* Sidebar */}
-      <aside className="border-b lg:border-b-0 lg:border-r border-line bg-[#f6f5f1]">
+      <aside className="border-b lg:border-b-0 lg:border-r border-line bg-[#f6f5f1] print:hidden">
         <div className="flex items-center justify-between px-5 py-4 lg:py-6">
           <Link href="/admin" className="flex flex-col gap-0.5">
             <span className="font-serif italic text-[20px] leading-none">Lintas Waktu</span>
@@ -96,7 +97,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
         </nav>
       </aside>
 
-      <main className="px-5 py-8 lg:px-12 lg:py-10 max-w-[1240px] w-full">{children}</main>
+      <main className="px-5 py-8 lg:px-12 lg:py-10 max-w-[1240px] w-full print:p-0 print:max-w-none">{children}</main>
     </div>
   );
 }

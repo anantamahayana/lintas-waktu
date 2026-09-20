@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { ApiError, api, type SiteSettings } from "@/lib/admin-api";
+import { ApiError, api, type InvoiceBusiness, type SiteSettings } from "@/lib/admin-api";
 import { Btn, Card, Field, Input, PageHeader, Textarea, confirm, focusFirstInvalid, toast, useUnsavedChanges, LoadError, SkeletonForm, type FieldErrors } from "@/components/admin/ui";
 
 type Branding = { studio_name: string; tagline: string; contact: string; logo_url: string | null };
@@ -114,6 +114,7 @@ export default function SettingsPage() {
             </div>
             <Field label="WhatsApp message template" hint="{name} {link} {pin} {package} {extras} {deadline} {studio} — lines whose value is empty are dropped"><Textarea value={s.whatsapp_template} onChange={set("whatsapp_template")} rows={6} /></Field>
           </Card>
+          <InvoiceCard />
           <PasswordCard />
         </div>
       </form>
@@ -154,6 +155,41 @@ function PasswordCard() {
         <Field label="Repeat new password" error={errors.again}><Input invalid={!!errors.again} type="password" autoComplete="new-password" value={v.again} onChange={set("again")} /></Field>
       </div>
       <div><Btn type="button" onClick={change} disabled={busy}>{busy ? "Changing…" : "Change password"}</Btn></div>
+    </Card>
+  );
+}
+
+/** Letterhead + bank details printed on invoices. Never exposed on the public site (only on invoice links). */
+function InvoiceCard() {
+  const [b, setB] = useState<InvoiceBusiness | null>(null);
+  const [saved, setSaved] = useState<InvoiceBusiness | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { api.get<InvoiceBusiness>("/api/admin/invoice-settings").then((x) => { setB(x); setSaved(x); }).catch(() => {}); }, []);
+  const dirty = !!b && !!saved && JSON.stringify(b) !== JSON.stringify(saved);
+  useUnsavedChanges(dirty);
+  if (!b) return null;
+  const set = (k: keyof InvoiceBusiness) => (e: { target: { value: string } }) => setB((x) => (x ? { ...x, [k]: typeof x[k] === "number" ? Number(e.target.value) : e.target.value } : x));
+  async function save() {
+    if (!b) return;
+    setBusy(true);
+    try { const r = await api.put<InvoiceBusiness>("/api/admin/invoice-settings", b); setB(r); setSaved(r); toast("Invoice details saved"); }
+    catch (err) { toast(err instanceof Error ? err.message : "Failed", true); } finally { setBusy(false); }
+  }
+  return (
+    <Card title="Invoices · letterhead & payment">
+      <div className="grid sm:grid-cols-2 gap-4">
+        <Field label="Business name"><Input value={b.name} onChange={set("name")} /></Field>
+        <Field label="Tagline"><Input value={b.tagline} onChange={set("tagline")} /></Field>
+        <Field label="Email on invoices"><Input value={b.email} onChange={set("email")} /></Field>
+        <Field label="Phone on invoices"><Input value={b.phone} onChange={set("phone")} /></Field>
+        <Field label="Number prefix" hint="LW → LW-2026-0001"><Input value={b.prefix} onChange={set("prefix")} maxLength={8} /></Field>
+        <Field label="Default due (days)"><Input type="number" min={0} value={b.default_due_days} onChange={set("default_due_days")} /></Field>
+        <Field label="Default tax %" hint="0 if not PKP"><Input type="number" min={0} max={100} value={b.tax_percent} onChange={set("tax_percent")} /></Field>
+      </div>
+      <Field label="Address" hint="footer of the document"><Textarea value={b.address} onChange={set("address")} rows={2} className="!min-h-[64px]" /></Field>
+      <Field label="Bank / payment details" hint="printed on invoices that still have a balance"><Textarea value={b.bank_details} onChange={set("bank_details")} rows={3} placeholder={"BCA 123 456 7890 · a.n. I Komang Ananta Mahayana"} /></Field>
+      <Field label="Default notes / terms"><Textarea value={b.default_terms} onChange={set("default_terms")} rows={3} /></Field>
+      <div><Btn type="button" kind="ink" onClick={save} disabled={busy || !dirty}>{busy ? "Saving…" : dirty ? "Save invoice details" : "Saved"}</Btn></div>
     </Card>
   );
 }

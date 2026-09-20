@@ -28,6 +28,7 @@ def migrate() -> None:
 
     from . import models  # noqa: F401  (registers tables on Base)
     from .content import models as _content  # noqa: F401
+    from .content import invoices as _invoices  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
     insp = inspect(engine)

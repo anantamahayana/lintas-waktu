@@ -169,3 +169,10 @@
 .admin-pop, .admin-toast { animation: admin-pop 220ms var(--ease-out-soft); }
 @keyframes admin-skel { 50% { opacity: 0.5; } }
 .admin-skel { animation: admin-skel 1.6s ease-in-out infinite; }
+
+/* Invoice: print as a clean A4 sheet — no chrome, no borders, real page margins */
+@media print {
+  @page { size: A4; margin: 14mm; }
+  body { background: #fff !important; }
+  .invoice-doc { border: 0 !important; max-width: none !important; padding: 0 !important; }
+}
