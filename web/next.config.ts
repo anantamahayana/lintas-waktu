@@ -12,8 +12,12 @@ function apiHosts() {
   });
 }
 
+const isLoopback = apiHosts().some((h) => ["localhost", "127.0.0.1"].includes(h.hostname));
+
 const nextConfig: NextConfig = {
   images: {
+    // Local dev: the API is on 127.0.0.1 and next/image refuses private IPs by default
+    ...(process.env.NODE_ENV !== "production" && isLoopback ? { dangerouslyAllowLocalIP: true } : {}),
     formats: ["image/avif", "image/webp"],
     remotePatterns: [
       // Temporary dummy photos (lib/dummy-photos.ts) until real ones are uploaded via the admin
