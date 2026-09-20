@@ -116,7 +116,9 @@ export function ClientGallery({ slug }: { slug: string }) {
   const setNote = (id: string, v: string) => { dirty.current = true; setNotes((n) => { const c = { ...n }; if (v.trim()) c[id] = v; else delete c[id]; return c; }); };
 
   const openConfirm = () => { setExtraIds(ids.slice(limit)); setStage("confirm"); };
+  const [finalAsk, setFinalAsk] = useState(false);
   const submit = async () => {
+    setFinalAsk(false);
     setBusy(true);
     try {
       const r = await gapi.submit(slug, { file_ids: ids, notes, extra_ids: extraIds });
@@ -215,10 +217,23 @@ export function ClientGallery({ slug }: { slug: string }) {
           })}
         </ul>
         <div className="fixed inset-x-0 bottom-0 bg-white border-t border-line px-5 py-4 flex flex-col gap-2 items-center">
-          <button type="button" disabled={busy || extraIds.length !== nExtra} onClick={submit} className="w-full max-w-[420px] py-4 t-mono text-ink disabled:opacity-40" style={{ background: GOLD }}>
+          <button type="button" disabled={busy || extraIds.length !== nExtra} onClick={() => setFinalAsk(true)} className="w-full max-w-[420px] py-4 t-mono text-ink disabled:opacity-40" style={{ background: GOLD }}>
             {busy ? t.sending : t.confirmSend(count)} →
           </button>
         </div>
+        {/* Last stop: sending locks the gallery, so ask once more in plain words */}
+        {finalAsk && (
+          <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center p-4 bg-ink/50 backdrop-blur-[2px] admin-fade" onMouseDown={(e) => { if (e.target === e.currentTarget) setFinalAsk(false); }}>
+            <div role="alertdialog" aria-modal="true" aria-labelledby="final-title" className="admin-pop w-full max-w-[420px] bg-white p-6 sm:p-7 flex flex-col gap-4">
+              <h2 id="final-title" className="font-serif text-[26px] leading-tight">{t.finalTitle}</h2>
+              <p className="t-body">{t.finalBody(count, nExtra)}</p>
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+                <button type="button" onClick={() => setFinalAsk(false)} className="t-mono px-5 py-3.5 border border-line text-ink">{t.finalNo}</button>
+                <button type="button" autoFocus onClick={submit} className="t-mono px-5 py-3.5 text-ink" style={{ background: GOLD }}>{t.finalYes} →</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

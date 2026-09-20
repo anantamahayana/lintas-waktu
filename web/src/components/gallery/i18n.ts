@@ -11,8 +11,11 @@ export interface Dict {
   noteFor: string; notePh: string; chosen: string; chooseThis: string; mark: string; unmark: string; close: string;
   confirmTitle: (n: number) => string; confirmBody: (n: number, e: number, done: number) => string; confirmBodyNoExtra: (n: number) => string;
   back: string; confirmSend: (n: number) => string; sending: string; thanks: (name: string) => string;
+  finalTitle: string; finalBody: (n: number, e: number) => string; finalNo: string; finalYes: string;
   sentBody: (n: number, e: number) => string; locked: string; viewSelection: string; filterNone: string; extra: string;
 }
+
+const ph = (n: number) => `${n} photograph${n === 1 ? "" : "s"}`;
 
 export const T: Record<Lang, Dict> = {
   en: {
@@ -39,12 +42,15 @@ export const T: Record<Lang, Dict> = {
     overBody: (n: number, max: number) => `Your package includes ${n} photographs. Photos beyond that are marked EXTRA and charged per photo — you can choose up to ${max - n} more, and change which ones count as extras before sending.`,
     yesExtra: "Yes, add as extra", notNow: "Not now",
     noteFor: "Note for this photo", notePh: "Crop tighter, black & white, …", chosen: "Chosen — tap to undo", chooseThis: "Choose this photo", mark: "Mark", unmark: "Unmark", close: "Close",
-    confirmTitle: (n: number) => `Send ${n} photographs?`,
+    confirmTitle: (n: number) => `Send ${ph(n)}?`,
     confirmBody: (n: number, e: number, done: number) => `${n} in your package, ${e} extra${e === 1 ? "" : "s"}. Tap a photo to choose which ones count as extras (${done}/${e} marked).`,
-    confirmBodyNoExtra: (n: number) => `${n} photographs. After sending, the gallery locks — ask us if you need to change something later.`,
-    back: "Back to gallery", confirmSend: (n: number) => `Send ${n} photographs`, sending: "Sending…",
+    confirmBodyNoExtra: (n: number) => `${ph(n)}. After sending, the gallery locks — ask us if you need to change something later.`,
+    back: "Back to gallery", confirmSend: (n: number) => `Send ${ph(n)}`, sending: "Sending…",
+    finalTitle: "Send your selection?",
+    finalBody: (n: number, e: number) => `${ph(n)}${e > 0 ? ` (${e} extra${e === 1 ? "" : "s"})` : ""} ${n === 1 ? "goes" : "go"} to the photographer for editing. After this the gallery locks and you can’t change your picks yourself.`,
+    finalNo: "Not yet", finalYes: "Yes, send",
     thanks: (name: string) => `Thank you, ${name}.`,
-    sentBody: (n: number, e: number) => `${n} photographs are on their way to the edit${e ? ` — ${n - e} in your package and ${e} extra${e === 1 ? "" : "s"}` : ""}. We’ll be in touch within a day about delivery.`,
+    sentBody: (n: number, e: number) => `${ph(n)} ${n === 1 ? "is" : "are"} on the way to the edit${e ? ` — ${n - e} in your package and ${e} extra${e === 1 ? "" : "s"}` : ""}. We’ll be in touch within a day about delivery.`,
     locked: "Your gallery stays open to view, but choices are now locked.", viewSelection: "View my selection",
     filterNone: "Nothing here yet.", extra: "Extra",
   },
@@ -76,6 +82,9 @@ export const T: Record<Lang, Dict> = {
     confirmBody: (n: number, e: number, done: number) => `${n} dalam paket, ${e} tambahan. Ketuk foto untuk menentukan mana yang jadi tambahan (${done}/${e} ditandai).`,
     confirmBodyNoExtra: (n: number) => `${n} foto. Setelah dikirim, galeri terkunci — hubungi kami kalau perlu mengubah sesuatu.`,
     back: "Kembali ke galeri", confirmSend: (n: number) => `Kirim ${n} foto`, sending: "Mengirim…",
+    finalTitle: "Kirim pilihan Anda?",
+    finalBody: (n: number, e: number) => `${n} foto${e > 0 ? ` (${e} tambahan)` : ""} akan dikirim ke fotografer untuk diedit. Setelah ini galeri terkunci dan pilihan tidak bisa Anda ubah sendiri.`,
+    finalNo: "Belum", finalYes: "Ya, kirim",
     thanks: (name: string) => `Terima kasih, ${name}.`,
     sentBody: (n: number, e: number) => `${n} foto sedang menuju proses edit${e ? ` — ${n - e} dalam paket dan ${e} tambahan` : ""}. Kami hubungi dalam sehari soal pengiriman.`,
     locked: "Galerimu tetap bisa dilihat, tapi pilihan sudah terkunci.", viewSelection: "Lihat pilihanku",
