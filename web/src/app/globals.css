@@ -161,3 +161,9 @@
 /* Gallery tile waiting for its thumbnail: a slow breathe, nothing flashy */
 @keyframes tile-wait { 50% { opacity: 0.55; } }
 .tile-wait { animation: tile-wait 1.6s ease-in-out infinite; }
+
+/* Admin micro-motion: dialogs and toasts ease in, nothing bounces */
+@keyframes admin-fade { from { opacity: 0; } }
+@keyframes admin-pop { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
+.admin-fade { animation: admin-fade 180ms ease-out; }
+.admin-pop, .admin-toast { animation: admin-pop 220ms var(--ease-out-soft); }

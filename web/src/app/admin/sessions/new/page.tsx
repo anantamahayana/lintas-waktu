@@ -3,13 +3,15 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { api, type SessionOut, type SiteSettings } from "@/lib/admin-api";
-import { Btn, Card, Field, Input, PageHeader, Textarea, toast } from "@/components/admin/ui";
+import { Btn, Card, Field, Input, PageHeader, Textarea, toast, useUnsavedChanges } from "@/components/admin/ui";
 
 export default function NewSessionPage() {
   const router = useRouter();
   const [v, setV] = useState({ client_name: "", notes: "", drive_folder_id: "", photo_limit: 30, max_limit: "", pin: "", expires_at: "" });
   const [folder, setFolder] = useState<{ ok: boolean; msg: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [created, setCreated] = useState(false);
+  useUnsavedChanges(!created && (v.client_name !== "" || v.drive_folder_id !== ""));
   const set = (k: keyof typeof v) => (e: { target: { value: string } }) => setV((s) => ({ ...s, [k]: e.target.value }));
 
   // defaults from site settings
@@ -47,6 +49,7 @@ export default function NewSessionPage() {
         expires_at: v.expires_at ? new Date(v.expires_at + "T23:59:59").toISOString() : null,
       };
       const s = await api.post<SessionOut>("/api/admin/sessions", body);
+      setCreated(true);
       toast("Session created");
       router.push(`/admin/sessions/${s.id}`);
     } catch (err) {

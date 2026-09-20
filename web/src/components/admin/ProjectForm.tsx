@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { api, type Fact, type Project, type ProjectPhoto } from "@/lib/admin-api";
-import { Btn, Card, Field, Input, Select, Textarea, toast } from "@/components/admin/ui";
+import { Btn, Card, Field, Input, Select, Textarea, confirm, toast, useUnsavedChanges } from "@/components/admin/ui";
 
 type Values = Omit<Project, "id" | "cover_url" | "photo_count" | "created_at" | "updated_at" | "photos" | "sort_order">;
 
@@ -22,6 +22,9 @@ export function ProjectForm({ project }: { project?: Project }) {
   const [photos, setPhotos] = useState<ProjectPhoto[]>(project?.photos ?? []);
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<"en" | "id">("en");
+  const [saved, setSaved] = useState<Values>(project ? { ...empty, ...project } : empty);
+  const dirty = JSON.stringify(v) !== JSON.stringify(saved);
+  useUnsavedChanges(dirty);
   const set = <K extends keyof Values>(k: K) => (e: { target: { value: string } }) => setV((s) => ({ ...s, [k]: e.target.value }));
 
   const facts = v.facts ?? [];
@@ -29,16 +32,28 @@ export function ProjectForm({ project }: { project?: Project }) {
 
   async function save(e: FormEvent) {
     e.preventDefault();
+    // Going live (or off the site) is the one change visitors notice — say so.
+    if (project && v.published !== saved.published) {
+      const ok = await confirm(v.published
+        ? { title: "Publish this project?", body: <>“{v.title}” will appear on the website within a minute, with its cover and every photo in the folder.</>, action: "Publish" }
+        : { title: "Take this project off the website?", body: <>“{v.title}” and its page will disappear from the site within a minute. Nothing is deleted; you can publish it again later.</>, action: "Unpublish", danger: true });
+      if (!ok) return;
+    } else if (!project && v.published) {
+      const ok = await confirm({ title: "Create and publish?", body: <>“{v.title}” will go live on the website right away. Untick “Published” to save it as a draft first.</>, action: "Create & publish" });
+      if (!ok) return;
+    }
     setBusy(true);
     try {
       const body = { ...v, month: v.month || null, film_title: v.film_title || null, film_duration: v.film_duration || null, film_url: v.film_url || null };
-      const saved = project
+      const result = project
         ? await api.patch<Project>(`/api/admin/projects/${project.id}`, body)
         : await api.post<Project>("/api/admin/projects", body);
       toast(project ? "Saved" : "Project created");
-      setPhotos(saved.photos ?? []);
-      if (!project) router.replace(`/admin/projects/${saved.id}`);
-      else setV((s) => ({ ...s, cover_file_id: saved.cover_file_id }));
+      setPhotos(result.photos ?? []);
+      const next = { ...v, cover_file_id: result.cover_file_id };
+      setV(next);
+      setSaved(next);
+      if (!project) router.replace(`/admin/projects/${result.id}`);
     } catch (err) {
       toast(err instanceof Error ? err.message : "Could not save", true);
     } finally {
@@ -53,8 +68,10 @@ export function ProjectForm({ project }: { project?: Project }) {
   }
 
   async function remove() {
-    if (!project || !window.confirm("Delete this project from the website? Photos in Drive are untouched.")) return;
-    try { await api.del(`/api/admin/projects/${project.id}`); toast("Deleted"); router.push("/admin/projects"); }
+    if (!project) return;
+    const ok = await confirm({ title: `Delete “${project.title}”?`, body: "The project and its copy are removed from the admin and the website. Photographs in Google Drive are not touched. This cannot be undone.", action: "Delete project", danger: true });
+    if (!ok) return;
+    try { await api.del(`/api/admin/projects/${project.id}`); setSaved(v); toast(`“${project.title}” deleted`); router.push("/admin/projects"); }
     catch (err) { toast(err instanceof Error ? err.message : "Failed", true); }
   }
 
@@ -130,7 +147,7 @@ export function ProjectForm({ project }: { project?: Project }) {
           <label className="flex items-center gap-3 t-small"><input type="checkbox" checked={v.published} onChange={(e) => setV((s) => ({ ...s, published: e.target.checked }))} /> Published on the website</label>
           <label className="flex items-center gap-3 t-small"><input type="checkbox" checked={v.featured} onChange={(e) => setV((s) => ({ ...s, featured: e.target.checked }))} /> Featured on the home page</label>
           <div className="flex flex-wrap gap-2 pt-2">
-            <Btn kind="ink" type="submit" disabled={busy}>{busy ? "Saving…" : project ? "Save changes" : "Create project"}</Btn>
+            <Btn kind="ink" type="submit" disabled={busy || (!!project && !dirty)}>{busy ? "Saving…" : project ? (dirty ? "Save changes" : "Saved") : "Create project"}</Btn>
             {project && <Btn type="button" onClick={sync}>Sync folder</Btn>}
             {project && v.published && <a className="link t-mono self-center" href={`/work/${v.slug}`} target="_blank" rel="noreferrer">View ↗</a>}
           </div>

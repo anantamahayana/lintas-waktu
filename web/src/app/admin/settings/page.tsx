@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { api, type SiteSettings } from "@/lib/admin-api";
-import { Btn, Card, Field, Input, PageHeader, Textarea, toast } from "@/components/admin/ui";
+import { Btn, Card, Field, Input, PageHeader, Textarea, confirm, toast, useUnsavedChanges } from "@/components/admin/ui";
 
 type Branding = { studio_name: string; tagline: string; contact: string; logo_url: string | null };
 
@@ -10,9 +10,12 @@ export default function SettingsPage() {
   const [s, setS] = useState<SiteSettings | null>(null);
   const [b, setB] = useState<Branding | null>(null);
   const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState<SiteSettings | null>(null);
+  const dirty = !!s && !!saved && JSON.stringify(s) !== JSON.stringify(saved);
+  useUnsavedChanges(dirty);
 
   useEffect(() => {
-    api.get<SiteSettings>("/api/admin/site-settings").then(setS).catch((e) => toast(e.message, true));
+    api.get<SiteSettings>("/api/admin/site-settings").then((x) => { setS(x); setSaved(x); }).catch((e) => toast(e.message, true));
     api.get<Branding>("/api/admin/branding").then(setB).catch(() => {});
   }, []);
   if (!s) return <p className="t-small text-mute">Loading…</p>;
@@ -27,6 +30,7 @@ export default function SettingsPage() {
       await api.put("/api/admin/site-settings", s);
       // keep the proofing gallery's branding in step (studio name + tagline + contact)
       await api.put("/api/admin/branding", { studio_name: s.studio_name, tagline: s.descriptor_en, contact: s.whatsapp_display || s.email }).catch(() => {});
+      setSaved(s);
       toast("Settings saved");
     } catch (err) { toast(err instanceof Error ? err.message : "Failed", true); } finally { setBusy(false); }
   }
@@ -36,12 +40,13 @@ export default function SettingsPage() {
     try { const r = await api.upload<Branding>("/api/admin/branding/logo", fd); setB(r); toast("Logo uploaded"); } catch (err) { toast(err instanceof Error ? err.message : "Failed", true); }
   }
   async function removeLogo() {
+    if (!(await confirm({ title: "Remove the logo?", body: "Client galleries show the studio name as text instead. You can upload a logo again any time.", action: "Remove logo", danger: true }))) return;
     try { await api.del("/api/admin/branding/logo"); setB((x) => (x ? { ...x, logo_url: null } : x)); toast("Logo removed"); } catch (err) { toast(err instanceof Error ? err.message : "Failed", true); }
   }
 
   return (
     <>
-      <PageHeader eyebrow="Website" title="Site settings" actions={<Btn kind="ink" onClick={(e) => save(e as unknown as FormEvent)} disabled={busy}>{busy ? "Saving…" : "Save changes"}</Btn>} />
+      <PageHeader eyebrow="Website" title="Site settings" actions={<Btn kind="ink" onClick={(e) => save(e as unknown as FormEvent)} disabled={busy || !dirty}>{busy ? "Saving…" : dirty ? "Save changes" : "Saved"}</Btn>} />
       <form onSubmit={save} className="grid lg:grid-cols-2 gap-6 items-start">
         <div className="flex flex-col gap-6">
           <Card title="Studio">

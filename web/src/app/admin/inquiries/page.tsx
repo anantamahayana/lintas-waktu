@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 import { api, type Inquiry, type InquiryStatus } from "@/lib/admin-api";
-import { Btn, Card, Field, PageHeader, Pill, Stat, Textarea, fmtDate, toast } from "@/components/admin/ui";
+import { Btn, Card, Field, PageHeader, Pill, Stat, Textarea, confirm, fmtDate, toast } from "@/components/admin/ui";
 
 const STATUSES: InquiryStatus[] = ["new", "replied", "booked", "closed"];
 const TONE: Record<InquiryStatus, "new" | "warn" | "ok" | "mute"> = { new: "new", replied: "warn", booked: "ok", closed: "mute" };
@@ -29,8 +29,9 @@ export default function InquiriesPage() {
     try { await api.patch(`/api/admin/inquiries/${i.id}`, { internal_note: note }); toast("Note saved"); load(); } catch (e) { toast(e instanceof Error ? e.message : "Failed", true); }
   }
   async function remove(i: Inquiry) {
-    if (!window.confirm("Delete this inquiry?")) return;
-    try { await api.del(`/api/admin/inquiries/${i.id}`); setSel(null); load(); } catch (e) { toast(e instanceof Error ? e.message : "Failed", true); }
+    const ok = await confirm({ title: `Delete the message from ${i.name}?`, body: "The inquiry, its status and your note are removed for good. Export the CSV first if you want a record.", action: "Delete", danger: true });
+    if (!ok) return;
+    try { await api.del(`/api/admin/inquiries/${i.id}`); setSel(null); toast(`Message from ${i.name} deleted`); load(); } catch (e) { toast(e instanceof Error ? e.message : "Failed", true); }
   }
 
   const csv = () => {

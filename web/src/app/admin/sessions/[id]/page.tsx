@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { api, type CacheStatus, type SessionDetail } from "@/lib/admin-api";
-import { Btn, Card, Field, Input, PageHeader, Pill, Textarea, daysLeft, fmtDate, toast } from "@/components/admin/ui";
+import { Btn, Card, Field, Input, PageHeader, Pill, Textarea, confirm, daysLeft, fmtDate, toast, useUnsavedChanges, type ConfirmOptions } from "@/components/admin/ui";
 
 export default function SessionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -41,10 +41,11 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
 
   if (!s) return <p className="t-small text-mute">Loading…</p>;
 
-  const act = async (label: string, fn: () => Promise<unknown>, confirmMsg?: string) => {
-    if (confirmMsg && !window.confirm(confirmMsg)) return;
+  const act = async (label: string, fn: () => Promise<unknown>, ask?: ConfirmOptions) => {
+    if (ask && !(await confirm(ask))) return;
     try { await fn(); toast(label); await load(); } catch (e) { toast(e instanceof Error ? e.message : "Failed", true); }
   };
+  const nPicks = s.selected_count + s.extra_count;
 
   const waText = [
     `Hi ${s.client_name}, your photographs are ready to choose from.`,
@@ -116,10 +117,10 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
           <Card title="Manage">
             <div className="flex flex-col gap-2">
               <Btn onClick={() => act("Folder re-read", () => api.post(`/api/admin/sessions/${id}/sync`))}>Sync Drive folder</Btn>
-              <Btn onClick={() => act("All devices signed out", () => api.post(`/api/admin/sessions/${id}/relock`))}>Re-lock all devices</Btn>
-              {s.status === "completed" && <Btn onClick={() => act("Reopened", () => api.post(`/api/admin/sessions/${id}/reopen`), "Let the client change their selection? Their picks become the starting draft.")}>Reopen for changes</Btn>}
-              <Btn kind="danger" onClick={() => act("Selections reset", () => api.post(`/api/admin/sessions/${id}/reset`), "Wipe every pick, note and mark? The client starts from zero.")}>Reset all selections</Btn>
-              <Btn kind="danger" onClick={() => act("Deleted", async () => { await api.del(`/api/admin/sessions/${id}`); router.push("/admin"); }, "Delete this session permanently?")}>Delete session</Btn>
+              <Btn onClick={() => act("All devices signed out", () => api.post(`/api/admin/sessions/${id}/relock`), { title: "Re-lock every device?", body: "Everyone who opened this gallery will have to enter the PIN again. Their picks are kept.", action: "Re-lock" })}>Re-lock all devices</Btn>
+              {s.status === "completed" && <Btn onClick={() => act("Reopened", () => api.post(`/api/admin/sessions/${id}/reopen`), { title: "Reopen for changes?", body: <>{s.client_name} can edit their selection again; the {nPicks} photos they sent become the starting draft. You will get a new submission when they press Send.</>, action: "Reopen" })}>Reopen for changes</Btn>}
+              <Btn kind="danger" onClick={() => act("Selections reset", () => api.post(`/api/admin/sessions/${id}/reset`), { title: "Reset all selections?", body: <>Every pick, note and mark by {s.client_name} is wiped{nPicks ? <> — {nPicks} photos so far</> : null}. They start from zero. This cannot be undone.</>, action: "Reset everything", danger: true })}>Reset all selections</Btn>
+              <Btn kind="danger" onClick={() => act(`Session for ${s.client_name} deleted`, async () => { await api.del(`/api/admin/sessions/${id}`); router.push("/admin"); }, { title: `Delete ${s.client_name}’s session?`, body: "The gallery link stops working immediately and the selection, notes and exports are gone for good. Photographs in Google Drive are not touched.", action: "Delete session", danger: true })}>Delete session</Btn>
             </div>
           </Card>
         </div>
@@ -180,8 +181,13 @@ function EditForm({ s, onDone }: { s: SessionDetail; onDone: () => void }) {
     pin: "", expires_at: s.expires_at ? s.expires_at.slice(0, 10) : "", notes: s.notes ?? "",
   });
   const [busy, setBusy] = useState(false);
+  const [initial] = useState(v);
+  const dirty = JSON.stringify(v) !== JSON.stringify(initial);
+  useUnsavedChanges(dirty);
   const set = (k: keyof typeof v) => (e: { target: { value: string } }) => setV((x) => ({ ...x, [k]: e.target.value }));
   async function save() {
+    if (v.pin !== "" && !(await confirm({ title: "Change the PIN?", body: "The old PIN stops working at once — remember to send the new one to the client.", action: "Change PIN" }))) return;
+    if (v.drive_folder_id !== s.drive_folder_id && !(await confirm({ title: "Switch the Drive folder?", body: "Picks that point at photos not in the new folder are dropped from the gallery.", action: "Switch folder" }))) return;
     setBusy(true);
     try {
       await api.patch(`/api/admin/sessions/${s.id}`, {

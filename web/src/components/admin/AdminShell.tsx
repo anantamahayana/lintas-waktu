@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
 import { token } from "@/lib/admin-api";
+import { confirm, confirmLeave, hasUnsavedChanges } from "@/components/admin/ui";
 
 const groups: { label: string; items: { href: string; label: string; exact?: boolean }[] }[] = [
   { label: "Proofing", items: [{ href: "/admin", label: "Sessions", exact: true }, { href: "/admin/sessions/new", label: "New session" }] },
@@ -30,6 +31,31 @@ export function AdminShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isLogin && !token.get()) router.replace("/admin/login");
   }, [isLogin, router, pathname]);
+
+  // Unsaved changes: intercept in-app links (capture phase, before Next's
+  // Link handler) and ask first. External links are left to `beforeunload`.
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (!hasUnsavedChanges() || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey) return;
+      const a = (e.target as HTMLElement).closest("a[href]") as HTMLAnchorElement | null;
+      if (!a || a.target === "_blank" || a.origin !== location.origin) return;
+      const href = a.getAttribute("href")!;
+      if (href === pathname) return;
+      e.preventDefault();
+      e.stopPropagation();
+      confirmLeave().then((ok) => { if (ok) router.push(href); });
+    };
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
+  }, [pathname, router]);
+
+  async function logout() {
+    if (!(await confirmLeave())) return;
+    const ok = await confirm({ title: "Log out?", body: "You will need the admin password to get back in. Client galleries stay open.", action: "Log out" });
+    if (!ok) return;
+    token.clear();
+    router.replace("/admin/login");
+  }
 
   if (isLogin) return <>{children}</>;
   if (!hasToken) return null;
@@ -65,7 +91,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           ))}
           <div className="mt-auto pt-6 flex flex-col gap-2 px-2 t-small text-mute">
             <a href="/" target="_blank" rel="noreferrer" className="link self-start">View website ↗</a>
-            <button type="button" onClick={() => { token.clear(); router.replace("/admin/login"); }} className="link self-start">Log out</button>
+            <button type="button" onClick={logout} className="link self-start">Log out</button>
           </div>
         </nav>
       </aside>

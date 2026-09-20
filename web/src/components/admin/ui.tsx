@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import clsx from "clsx";
 
 /* Small admin UI kit — same tokens as the site, denser spacing. */
@@ -26,15 +26,18 @@ export function Card({ title, children, className }: { title?: string; children:
   );
 }
 
-export function Btn({ children, kind = "ghost", className, ...rest }: React.ButtonHTMLAttributes<HTMLButtonElement> & { kind?: "ink" | "ghost" | "danger" }) {
+type BtnProps = React.ButtonHTMLAttributes<HTMLButtonElement> & { kind?: "ink" | "ghost" | "danger" | "danger-solid"; ref?: React.Ref<HTMLButtonElement> };
+export function Btn({ children, kind = "ghost", className, ref, ...rest }: BtnProps) {
   return (
     <button
+      ref={ref}
       {...rest}
       className={clsx(
         "t-mono inline-flex items-center justify-center gap-2 px-4 py-2.5 transition-colors duration-200 disabled:opacity-40 disabled:pointer-events-none",
         kind === "ink" && "bg-ink text-white hover:bg-dark",
         kind === "ghost" && "border border-line text-ink hover:border-ink",
         kind === "danger" && "border border-line text-mute hover:border-error hover:text-error",
+        kind === "danger-solid" && "bg-error text-white hover:bg-[#8c3627]",
         className,
       )}
     >
@@ -82,22 +85,106 @@ export function Stat({ n, label, active, onClick }: { n: number | string; label:
   );
 }
 
-/** Tiny toast; call `toast(msg)` from anywhere in the admin. */
+/* ------------------------------------------------------------------ toasts
+   Stacked, bottom-centre. `toast(msg)` for success, `toast(msg, true)` for
+   errors (stay longer, dismissable). Call from anywhere in the admin. */
+type Toast = { id: number; m: string; err: boolean };
 let listener: ((m: string, err?: boolean) => void) | null = null;
 export function toast(message: string, err = false) { listener?.(message, err); }
 export function Toaster() {
-  const [t, setT] = useState<{ m: string; err: boolean } | null>(null);
+  const [items, setItems] = useState<Toast[]>([]);
   useEffect(() => {
-    listener = (m, err = false) => { setT({ m, err }); setTimeout(() => setT(null), 3200); };
+    let n = 0;
+    listener = (m, err = false) => {
+      const id = ++n;
+      setItems((xs) => [...xs.slice(-3), { id, m, err }]);
+      setTimeout(() => setItems((xs) => xs.filter((x) => x.id !== id)), err ? 6000 : 3200);
+    };
     return () => { listener = null; };
   }, []);
-  if (!t) return null;
+  if (items.length === 0) return null;
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-ink text-white t-small px-4 py-3 flex items-center gap-3 shadow-lg">
-      <span className={clsx("h-2 w-2 rounded-full", t.err ? "bg-error" : "bg-[#c9a84c]")} />
-      {t.m}
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] flex flex-col items-center gap-2 pointer-events-none">
+      {items.map((t) => (
+        <div key={t.id} role={t.err ? "alert" : "status"} className="admin-toast pointer-events-auto bg-ink text-white t-small px-4 py-3 flex items-center gap-3 shadow-lg max-w-[min(92vw,480px)]">
+          <span className={clsx("h-2 w-2 shrink-0 rounded-full", t.err ? "bg-error" : "bg-[#c9a84c]")} />
+          <span>{t.m}</span>
+          {t.err && <button type="button" onClick={() => setItems((xs) => xs.filter((x) => x.id !== t.id))} className="ml-1 text-white/60 hover:text-white" aria-label="Dismiss">×</button>}
+        </div>
+      ))}
     </div>
   );
+}
+
+/* ------------------------------------------------------------------ confirm
+   `await confirm({ title, body, action, danger })` → boolean. One dialog,
+   mounted once in the shell (<ConfirmHost/>), styled like the rest. */
+export type ConfirmOptions = {
+  title: string;
+  body?: ReactNode;
+  /** label of the confirming button, e.g. "Delete" */
+  action?: string;
+  cancel?: string;
+  danger?: boolean;
+};
+type Pending = ConfirmOptions & { resolve: (ok: boolean) => void };
+let confirmListener: ((p: Pending) => void) | null = null;
+export function confirm(opts: ConfirmOptions): Promise<boolean> {
+  if (!confirmListener) return Promise.resolve(window.confirm(opts.title));
+  return new Promise((resolve) => confirmListener?.({ ...opts, resolve }));
+}
+export function ConfirmHost() {
+  const [p, setP] = useState<Pending | null>(null);
+  const okRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => { confirmListener = setP; return () => { confirmListener = null; }; }, []);
+  const close = useCallback((ok: boolean) => { p?.resolve(ok); setP(null); }, [p]);
+  useEffect(() => {
+    if (!p) return;
+    okRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") close(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [p, close]);
+  if (!p) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-ink/40 backdrop-blur-[2px] admin-fade" onMouseDown={(e) => { if (e.target === e.currentTarget) close(false); }}>
+      <div role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" className="admin-pop w-full max-w-[440px] bg-white border border-line p-6 flex flex-col gap-4 shadow-xl">
+        <h2 id="confirm-title" className="font-serif text-[24px] leading-tight">{p.title}</h2>
+        {p.body && <div className="t-small text-mute leading-relaxed">{p.body}</div>}
+        <div className="flex justify-end gap-2 pt-2">
+          <Btn type="button" onClick={() => close(false)}>{p.cancel ?? "Cancel"}</Btn>
+          <Btn ref={okRef} type="button" kind={p.danger ? "danger-solid" : "ink"} onClick={() => close(true)}>{p.action ?? "Continue"}</Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ unsaved changes
+   A form reports `dirty`; the tab then warns before closing, and the shell
+   asks (via confirmLeave) before following any in-app link or logging out. */
+const dirtyForms = new Set<symbol>();
+export function useUnsavedChanges(dirty: boolean) {
+  const key = useRef(Symbol("form"));
+  useEffect(() => {
+    const k = key.current;
+    if (dirty) dirtyForms.add(k); else dirtyForms.delete(k);
+    return () => { dirtyForms.delete(k); };
+  }, [dirty]);
+  useEffect(() => {
+    if (!dirty) return;
+    const onUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    window.addEventListener("beforeunload", onUnload);
+    return () => window.removeEventListener("beforeunload", onUnload);
+  }, [dirty]);
+}
+export function hasUnsavedChanges() { return dirtyForms.size > 0; }
+/** Ask before leaving a dirty form; resolves true when navigation may proceed. */
+export async function confirmLeave() {
+  if (!hasUnsavedChanges()) return true;
+  const ok = await confirm({ title: "Leave without saving?", body: "The changes on this page have not been saved and will be lost.", action: "Leave", danger: true, cancel: "Stay" });
+  if (ok) dirtyForms.clear();
+  return ok;
 }
 
 export function fmtDate(iso: string | null | undefined, withTime = false) {
