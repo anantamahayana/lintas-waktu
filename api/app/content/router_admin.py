@@ -173,7 +173,7 @@ def create_project(body: ProjectCreate, background: BackgroundTasks, db: DbSessi
     db.commit()
     db.refresh(p)
     if p.drive_folder_id:
-        background.add_task(drive_service.warm_cache, p.drive_folder_id)
+        background.add_task(drive_service.warm_cache, p.drive_folder_id, 4, True)
     background.add_task(site_cache.invalidate, f"project created: {p.slug}")
     return project_out(p, with_photos=True)
 
@@ -204,7 +204,7 @@ def update_project(project_id: str, body: ProjectUpdate, background: BackgroundT
             raise HTTPException(400, str(e))
         if p.cover_file_id not in {ph.file_id for ph in photos}:
             p.cover_file_id = photos[0].file_id if photos else None
-        background.add_task(drive_service.warm_cache, p.drive_folder_id)
+        background.add_task(drive_service.warm_cache, p.drive_folder_id, 4, True)
     db.commit()
     db.refresh(p)
     background.add_task(site_cache.invalidate, f"project updated: {p.slug}")
@@ -223,7 +223,7 @@ def sync_project(project_id: str, background: BackgroundTasks, db: DbSession = D
         drive_service.list_photos(p.drive_folder_id, refresh=True)
     except drive_service.DriveError as e:
         raise HTTPException(400, str(e))
-    background.add_task(drive_service.warm_cache, p.drive_folder_id)
+    background.add_task(drive_service.warm_cache, p.drive_folder_id, 4, True)
     background.add_task(site_cache.invalidate, f"project synced: {p.slug}")
     return project_out(p, with_photos=True)
 

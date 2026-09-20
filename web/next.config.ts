@@ -19,6 +19,10 @@ const nextConfig: NextConfig = {
     // Local dev: the API is on 127.0.0.1 and next/image refuses private IPs by default
     ...(process.env.NODE_ENV !== "production" && isLoopback ? { dangerouslyAllowLocalIP: true } : {}),
     formats: ["image/avif", "image/webp"],
+    // 75 for chrome (nav, cards); 85 for the photographs themselves — they are the product
+    qualities: [75, 85],
+    // full-width rows on 2K/retina screens get a 2560 variant instead of an upscaled 1920
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2560],
     remotePatterns: [
       // Temporary dummy photos (lib/dummy-photos.ts) until real ones are uploaded via the admin
       { protocol: "https", hostname: "images.unsplash.com" },

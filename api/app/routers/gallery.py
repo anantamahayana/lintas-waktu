@@ -222,9 +222,11 @@ def get_gallery(slug: str, background: BackgroundTasks, db: DbSession = Depends(
 async def get_image(slug: str, file_id: str, size: str = "thumb", t: str | None = Query(None), db: DbSession = Depends(get_db)):
     s = _session(db, slug)
     _authorize(s, t, "img")
+    folder = s.drive_folder_id
+    db.close()  # a cold fetch can take many seconds; don't hold a pooled connection meanwhile
     size = "full" if size == "full" else "thumb"
     try:
-        data, media_type = await run_in_threadpool(drive_service.get_image, s.drive_folder_id, file_id, size)
+        data, media_type = await run_in_threadpool(drive_service.get_image, folder, file_id, size)
     except drive_service.DriveError as e:
         raise HTTPException(404, str(e))
     return Response(data, media_type=media_type, headers={"Cache-Control": "private, max-age=604800, immutable"})

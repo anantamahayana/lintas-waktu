@@ -30,7 +30,11 @@ from ..config import get_settings
 SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 IMAGE_MIMES = ("image/jpeg", "image/png", "image/webp")
 THUMB_PX = 640
-FULL_PX = 2048  # lightbox size; originals (often 15 MB+) are never kept
+FULL_PX = 2560  # lightbox / full-width rows on 2K screens; originals (often 15 MB+) are never kept
+# Drive's own resizer is soft and heavily compressed. Ask it for a larger render and scale
+# down here with Lanczos: much sharper, still no original download.
+DRIVE_OVERSAMPLE = 1.5
+JPEG_QUALITY = 88
 DRIVE_API = "https://www.googleapis.com/drive/v3"
 LIST_FIELDS = "nextPageToken, files(id, name, mimeType, thumbnailLink, imageMediaMetadata(width, height))"
 
@@ -210,7 +214,7 @@ def _resize(data: bytes, px: int) -> bytes:
         im = ImageOps.exif_transpose(im).convert("RGB")
         im.thumbnail((px, px), Image.LANCZOS)
         out = io.BytesIO()
-        im.save(out, "JPEG", quality=85, optimize=True, progressive=True)
+        im.save(out, "JPEG", quality=JPEG_QUALITY, optimize=True, progressive=True)
         return out.getvalue()
 
 
@@ -258,16 +262,56 @@ def get_image(folder_id: str, file_id: str, size: str) -> tuple[bytes, str]:
     if photo is None:
         raise DriveError("Foto tidak ditemukan")
 
-    px = FULL_PX if size == "full" else THUMB_PX
+    px = THUMB_PX if size == "thumb" else FULL_PX
 
     if is_mock():
         data = _resize(_download_mock(photo), px)
+    elif size == "hq":
+        # Website tier: from the original file, Lanczos-scaled here (≈ +3 dB over Drive's render).
+        # Costs a full download per photo, so only portfolio/site folders are warmed this way.
+        try:
+            data = _resize(_download_real(photo), px)
+        except DriveError:
+            raw = _download_drive_thumb(photo, int(px * DRIVE_OVERSAMPLE))
+            if not raw:
+                raise
+            data = _resize(raw, px)
     else:
-        # Fast path: Drive-rendered resize. Fallback: download original and resize locally.
-        data = _download_drive_thumb(photo, px) or _resize(_download_real(photo), px)
+        # Proofing tier: an oversized Drive render, sharpened by our own downscale — fast for
+        # hundreds of photos. Fallback: download the original and resize locally.
+        raw = _download_drive_thumb(photo, int(px * DRIVE_OVERSAMPLE))
+        data = _resize(raw, px) if raw else _resize(_download_real(photo), px)
 
     _write_atomic(cached, data)
     return data, "image/jpeg"
+
+
+def get_image_website(folder_id: str, file_id: str) -> tuple[bytes, str]:
+    """Full-size for the website: the sharp `hq` tier when it is on disk; otherwise the fast Drive
+    tier right away, while `hq` is built in the background for the next visitor. Nobody waits
+    a minute for one photograph, and the page sharpens itself as the cache fills."""
+    import threading
+
+    if _cache_path(folder_id, file_id, "hq").exists():
+        return get_image(folder_id, file_id, "hq")
+    data = get_image(folder_id, file_id, "full")
+    key = f"{folder_id}/{file_id}"
+    if key not in _building_hq:
+        _building_hq.add(key)
+
+        def build():
+            try:
+                get_image(folder_id, file_id, "hq")
+            except Exception:
+                pass
+            finally:
+                _building_hq.discard(key)
+
+        threading.Thread(target=build, daemon=True).start()
+    return data
+
+
+_building_hq: set[str] = set()
 
 
 # ---------------------------------------------------------------- warming, status, cleanup
@@ -286,8 +330,9 @@ def cache_status(folder_id: str) -> dict:
     return {"total": len(photos), "thumb": thumb, "full": full, "warming": folder_id in _warming}
 
 
-def warm_cache(folder_id: str, workers: int = 6) -> None:
-    """Pre-fetch every thumbnail (then full images) so the client never waits. Runs in a background task."""
+def warm_cache(folder_id: str, workers: int = 6, hq: bool = False) -> None:
+    """Pre-fetch every thumbnail (then full images) so the client never waits. Runs in a background task.
+    `hq` (portfolio / site folders): the full size comes from the originals — slower, sharper."""
     from concurrent.futures import ThreadPoolExecutor
 
     if folder_id in _warming:
@@ -305,7 +350,7 @@ def warm_cache(folder_id: str, workers: int = 6) -> None:
 
         with ThreadPoolExecutor(max_workers=workers) as ex:
             list(ex.map(fetch, [(p, "thumb") for p in photos]))
-            list(ex.map(fetch, [(p, "full") for p in photos]))
+            list(ex.map(fetch, [(p, "hq" if hq else "full") for p in photos]))
     except DriveError:
         pass
     finally:

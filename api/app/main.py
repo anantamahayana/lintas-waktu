@@ -22,7 +22,11 @@ log = logging.getLogger("uvicorn.error")
 
 
 def cleanup_cache() -> None:
-    """Keep image cache only for folders of sessions that are pending or recently completed."""
+    """Keep image cache for: sessions that are pending or recently completed, every portfolio
+    project (published or not — they are the website), and the site-images folder."""
+    from .content.models import Project
+    from .content import site_images
+
     cutoff = utcnow() - timedelta(days=settings.cache_retention_days)
     with SessionLocal() as db:
         keep = {
@@ -30,6 +34,9 @@ def cleanup_cache() -> None:
             for s in db.query(PhotoSession).all()
             if s.status == SessionStatus.pending or (s.submitted_at and s.submitted_at.replace(tzinfo=cutoff.tzinfo) > cutoff)
         }
+        keep |= {p.drive_folder_id for p in db.query(Project).all() if p.drive_folder_id}
+        if site_images.folder_id(db):
+            keep.add(site_images.folder_id(db))
     removed = drive_service.purge_except(keep)
     if removed:
         log.info("cache cleanup: removed %d folder cache(s)", removed)

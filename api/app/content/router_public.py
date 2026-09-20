@@ -74,9 +74,12 @@ async def get_image(folder_id: str, file_id: str, size: str = "thumb", db: DbSes
     allowed = db.query(Project.id).filter(Project.drive_folder_id == folder_id, Project.published.is_(True)).first()
     if not allowed and folder_id != site_images.folder_id(db):
         raise HTTPException(404, "Not found")
-    size = "full" if size == "full" else "thumb"
+    db.close()  # a cold fetch can take many seconds; don't hold a pooled connection meanwhile
     try:
-        data, media_type = await run_in_threadpool(drive_service.get_image, folder_id, file_id, size)
+        if size == "full":
+            data, media_type = await run_in_threadpool(drive_service.get_image_website, folder_id, file_id)
+        else:
+            data, media_type = await run_in_threadpool(drive_service.get_image, folder_id, file_id, "thumb")
     except drive_service.DriveError as e:
         raise HTTPException(404, str(e))
     return Response(data, media_type=media_type, headers={"Cache-Control": "public, max-age=2592000, immutable"})

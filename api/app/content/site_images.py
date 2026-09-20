@@ -134,7 +134,7 @@ def put_site_images(body: SiteImagesIn, background: BackgroundTasks, db: DbSessi
             if not photos:
                 raise HTTPException(400, "The Drive folder has no images")
             _put(db, KEY_MAP, "{}")  # files from the old folder no longer apply
-            background.add_task(drive_service.warm_cache, fid)
+            background.add_task(drive_service.warm_cache, fid, 4, True)
         _put(db, KEY_FOLDER, fid)
     if body.slots is not None:
         current = slot_map(db)
@@ -155,5 +155,5 @@ def put_site_images(body: SiteImagesIn, background: BackgroundTasks, db: DbSessi
 def sync_site_images(background: BackgroundTasks, db: DbSession = Depends(get_db)):
     folder = folder_id(db)
     if folder:
-        background.add_task(drive_service.warm_cache, folder)
+        background.add_task(drive_service.warm_cache, folder, 4, True)
     return _out(db, refresh=True)

@@ -21,6 +21,7 @@ export function Photo({
   sizes = "(min-width: 1024px) 33vw, 100vw",
   priority = false,
   eager = false,
+  quality = 85,
 }: {
   src?: string;
   seed?: string;
@@ -34,6 +35,8 @@ export function Photo({
   priority?: boolean;
   /** load immediately without preload hint (e.g. hidden crossfade layers) */
   eager?: boolean;
+  /** next/image quality; must be one of next.config images.qualities */
+  quality?: 75 | 85;
 }) {
   const url = src ?? dummyPhoto(seed);
   return (
@@ -46,6 +49,7 @@ export function Photo({
         alt={alt}
         fill
         sizes={sizes}
+        quality={quality}
         priority={priority}
         loading={eager ? "eager" : undefined}
         className="object-cover"
