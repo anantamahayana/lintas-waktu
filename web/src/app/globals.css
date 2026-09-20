@@ -177,9 +177,19 @@
   .invoice-doc { border: 0 !important; max-width: none !important; padding: 0 !important; }
 }
 
-/* Album preview: photos settling onto the page, and the "swipe" hint hand */
+/* Album preview ---------------------------------------------------------------
+   --p is the page-turn progress (0 → 1) on .album-book; --dir is 1 (forward) or -1.
+   Dragging writes --p directly; releasing transitions it. Everything else is derived. */
+@property --p { syntax: "<number>"; inherits: true; initial-value: 0; }
+.album-book { --p: 0; --dir: 1; transform: rotateX(calc(sin(var(--p) * 3.14159) * 1.5deg)) scale(0.96); transition: transform 700ms var(--ease-out-soft); }
+.album-book.album-in { transform: rotateX(calc(sin(var(--p) * 3.14159) * 1.5deg)) scale(1); }
+.album-book.album-ease { transition: --p 720ms cubic-bezier(.4, .05, .2, 1), transform 700ms var(--ease-out-soft); }
+.album-leaf { transform: rotateY(calc(var(--p) * var(--dir) * -180deg)); will-change: transform; }
+.album-shade { opacity: calc(sin(var(--p) * 3.14159)); }
+.album-cast { opacity: calc(sin(var(--p) * 3.14159) * 0.9); }
+/* photos settle onto the page only when the book first opens; page turns never replay it */
 @keyframes album-cell { from { opacity: 0; transform: translateY(6px) scale(.985); } to { opacity: 1; transform: none; } }
-.album-cell { animation: album-cell 600ms var(--ease-out-soft) both; }
+.album-book:not(.album-open) .album-cell { animation: album-cell 600ms var(--ease-out-soft) both; }
 @keyframes album-swipe { 0%, 100% { transform: translateX(6px); } 50% { transform: translateX(-8px); } }
 .album-swipe { display: inline-block; animation: album-swipe 1.4s ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce) { .album-cell, .album-swipe { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .album-cell, .album-swipe { animation: none !important; } .album-book.album-ease { transition-duration: 1ms; } }

@@ -92,41 +92,56 @@ export function AlbumPreview({ photos, clientName, studio, onClose, t }: { photo
   const spreads = useMemo(() => buildSpreads(photos, seed), [photos, seed]);
   const total = spreads.length;
 
-  /* ---- page turn: a leaf whose angle follows the pointer, then eases home ----
-     turn.dir  : which way the leaf goes
-     turn.p    : 0 → 1 progress (angle = p × 180°)
-     turn.anim : true while easing (CSS transition), false while the finger holds it */
-  const [turn, setTurn] = useState<{ dir: 1 | -1; p: number; anim: boolean } | null>(null);
+  /* ---- page turn ----
+     React only knows *that* a turn is happening (and which way). The progress itself
+     lives in a CSS variable (--p, 0 → 1) on the book: dragging writes it straight to
+     the DOM (no re-render per frame), releasing hands it to a CSS transition of --p
+     (registered with @property in globals.css). Leaf angle, its shading and the
+     shadow it casts are all derived from --p in CSS, so every frame is the browser's. */
+  const [turn, setTurn] = useState<{ dir: 1 | -1; anim: boolean } | null>(null);
+  const pending = useRef<{ target: number } | null>(null);
   const bookRef = useRef<HTMLDivElement>(null);
-  const drag = useRef<{ x: number; dir: 1 | -1; moved: boolean } | null>(null);
+  const drag = useRef<{ x: number; dir: 1 | -1; moved: boolean; p: number } | null>(null);
+  const settleTimer = useRef<{ id: number | null }>({ id: null });
 
   useEffect(() => { const h = requestAnimationFrame(() => setVisible(true)); return () => cancelAnimationFrame(h); }, []);
+  useEffect(() => { const h = setTimeout(() => bookRef.current?.classList.add("album-open"), 900); return () => clearTimeout(h); }, []);
   useEffect(() => { const h = setTimeout(() => setHint(false), 4200); return () => clearTimeout(h); }, []);
 
   const canGo = useCallback((d: 1 | -1) => (d === 1 ? idx < total - 1 : idx > 0), [idx, total]);
-
-  /** Start an eased turn from the current progress (button, key, swipe or drag release). */
-  const settleTimer = useRef<{ id: number | null }>({ id: null });
+  const setP = (p: number) => bookRef.current?.style.setProperty("--p", String(p));
   const finish = useCallback((dir: 1 | -1, completed: boolean) => {
     if (settleTimer.current.id) { clearTimeout(settleTimer.current.id); settleTimer.current.id = null; }
+    pending.current = null;
+    setP(0);
     if (completed) setIdx((i) => i + dir);
     setTurn(null);
   }, []);
+  /** Ease the leaf from its current progress to rest (0) or the far side (1). */
   const settle = useCallback((dir: 1 | -1, from: number, complete: boolean) => {
     const target = complete ? 1 : 0;
-    // nothing to animate (released exactly where it started): just let go
     if (Math.abs(from - target) < 0.005) { finish(dir, complete); return; }
-    setTurn({ dir, p: from, anim: true });
-    // next frame so the transition sees a change
-    requestAnimationFrame(() => requestAnimationFrame(() => setTurn({ dir, p: target, anim: true })));
-    // safety net: if transitionend never arrives (tab hidden, interrupted), finish anyway
-    settleTimer.current.id = window.setTimeout(() => finish(dir, complete), 900);
+    bookRef.current?.style.setProperty("--dir", String(dir));
+    setP(from);
+    pending.current = { target };
+    setTurn({ dir, anim: true }); // the .album-ease class lands on commit; the effect below then moves --p
+    // safety net in case transitionend never arrives (hidden tab, interrupted)
+    settleTimer.current.id = window.setTimeout(() => finish(dir, complete), 950);
   }, [finish]);
+  // once the easing class is on the element, change --p so the transition runs
+  useEffect(() => {
+    if (!turn?.anim || !pending.current) return;
+    const el = bookRef.current;
+    if (!el) return;
+    void el.offsetWidth; // flush the class change so the value change below transitions
+    setP(pending.current.target);
+  }, [turn]);
   const go = useCallback((d: 1 | -1) => { if (turn || !canGo(d)) return; setHint(false); settle(d, 0, true); }, [turn, canGo, settle]);
-  const onLeafDone = (e: React.TransitionEvent) => {
-    if (e.target !== e.currentTarget || e.propertyName !== "transform") return; // ignore children's transitions
-    if (!turn || !turn.anim) return;
-    finish(turn.dir, turn.p === 1);
+  const onBookTransitionEnd = (e: React.TransitionEvent) => {
+    if (e.target !== e.currentTarget || e.propertyName !== "--p") return;
+    if (!turn) return;
+    const p = Number(bookRef.current?.style.getPropertyValue("--p") || 0);
+    finish(turn.dir, p >= 0.999);
   };
 
   // pointer: press on a page half and pull it across; release past 35% to complete
@@ -136,24 +151,27 @@ export function AlbumPreview({ photos, clientName, studio, onClose, t }: { photo
     if (!box) return;
     const dir: 1 | -1 = e.clientX > box.left + box.width / 2 ? 1 : -1;
     if (!canGo(dir)) return;
-    drag.current = { x: e.clientX, dir, moved: false };
+    drag.current = { x: e.clientX, dir, moved: false, p: 0 };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
   const onMove = (e: React.PointerEvent) => {
     const d = drag.current, box = bookRef.current?.getBoundingClientRect();
     if (!d || !box) return;
     const dx = (e.clientX - d.x) * -d.dir; // positive = pulling in the turning direction
-    if (!d.moved && Math.abs(dx) < 6) return;
-    d.moved = true;
-    setHint(false);
-    setTurn({ dir: d.dir, p: Math.max(0, Math.min(1, dx / (box.width * 0.9))), anim: false });
+    if (!d.moved) {
+      if (Math.abs(dx) < 6) return;
+      d.moved = true;
+      setHint(false);
+      bookRef.current?.style.setProperty("--dir", String(d.dir));
+      setTurn({ dir: d.dir, anim: false }); // mounts the leaf; progress comes from --p
+    }
+    d.p = Math.max(0, Math.min(1, dx / (box.width * 0.9)));
+    setP(d.p);
   };
   const onUp = () => {
     const d = drag.current; drag.current = null;
-    if (!d) return;
-    if (!d.moved) { if (turn && !turn.anim) setTurn(null); return; } // a tap: handled by the arrows / corners
-    const p = turn?.p ?? 0;
-    settle(d.dir, p, p > 0.35);
+    if (!d || !d.moved) return; // a tap: handled by the arrows / corners
+    settle(d.dir, d.p, d.p > 0.35);
   };
 
   useEffect(() => {
@@ -179,9 +197,6 @@ export function AlbumPreview({ photos, clientName, studio, onClose, t }: { photo
   const underLeft = turn?.dir === -1 ? prv?.left : cur.left;
   const underKindR = turn?.dir === 1 ? nxt?.kind : cur.kind;
   const underKindL = turn?.dir === -1 ? prv?.kind : cur.kind;
-  const angle = turn ? turn.p * 180 * (turn.dir === 1 ? -1 : 1) : 0;
-  const shade = turn ? Math.sin(turn.p * Math.PI) : 0; // strongest mid-turn
-  const ease = "transform 720ms cubic-bezier(.4,.05,.2,1)";
 
   return (
     <div className={clsx("fixed inset-0 z-[70] bg-[#161513] text-on-dark flex flex-col select-none transition-opacity duration-500", visible ? "opacity-100" : "opacity-0")}>
@@ -197,32 +212,31 @@ export function AlbumPreview({ photos, clientName, studio, onClose, t }: { photo
         <div className="relative flex-1 min-w-0 h-full flex items-center justify-center" style={{ perspective: "2600px" }}>
           <div
             ref={bookRef}
-            onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
-            className={clsx("relative aspect-[2/1.35] w-full transition-transform duration-700 ease-out-soft cursor-grab active:cursor-grabbing", visible ? "scale-100" : "scale-[0.96]")}
+            onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onTransitionEnd={onBookTransitionEnd}
+            className={clsx("album-book relative aspect-[2/1.35] w-full cursor-grab active:cursor-grabbing", visible && "album-in", turn?.anim && "album-ease")}
             // fit both ways: never wider than the column, never taller than the space between header and footer
-            style={{ maxWidth: "min(1100px, calc((100dvh - 200px) * 1.48))", transformStyle: "preserve-3d", touchAction: "none", transform: turn ? `rotateX(${1.5 * shade}deg)` : undefined }}
+            style={{ maxWidth: "min(1100px, calc((100dvh - 200px) * 1.48))", transformStyle: "preserve-3d", touchAction: "none" }}
           >
             {/* the two resting pages (under the leaf while turning) */}
-            <Sheet page={underLeft ?? cur.left} side="left" kind={underKindL ?? cur.kind} {...sheetProps} />
-            <Sheet page={underRight ?? cur.right} side="right" kind={underKindR ?? cur.kind} {...sheetProps} />
+            <Sheet key={`${turn?.dir === -1 ? idx - 1 : idx}-L`} page={underLeft ?? cur.left} side="left" kind={underKindL ?? cur.kind} {...sheetProps} />
+            <Sheet key={`${turn?.dir === 1 ? idx + 1 : idx}-R`} page={underRight ?? cur.right} side="right" kind={underKindR ?? cur.kind} {...sheetProps} />
             {/* shadow the leaf casts on the page it is landing on */}
             {turn && (
-              <div className={clsx("pointer-events-none absolute inset-y-0 w-1/2", turn.dir === 1 ? "left-0" : "left-1/2")} style={{ background: turn.dir === 1 ? "linear-gradient(to left, rgba(0,0,0,.45), transparent 70%)" : "linear-gradient(to right, rgba(0,0,0,.45), transparent 70%)", opacity: shade * 0.9 }} />
+              <div className={clsx("pointer-events-none absolute inset-y-0 w-1/2 album-cast", turn.dir === 1 ? "left-0" : "left-1/2")} style={{ background: turn.dir === 1 ? "linear-gradient(to left, rgba(0,0,0,.45), transparent 70%)" : "linear-gradient(to right, rgba(0,0,0,.45), transparent 70%)" }} />
             )}
             {/* the leaf */}
             {turn && (
               <div
-                onTransitionEnd={onLeafDone}
-                className={clsx("absolute top-0 bottom-0 w-1/2", turn.dir === 1 ? "left-1/2 origin-left" : "left-0 origin-right")}
-                style={{ transformStyle: "preserve-3d", transform: `rotateY(${angle}deg)`, transition: turn.anim ? ease : "none" }}
+                className={clsx("album-leaf absolute top-0 bottom-0 w-1/2", turn.dir === 1 ? "left-1/2 origin-left" : "left-0 origin-right")}
+                style={{ transformStyle: "preserve-3d" }}
               >
                 <div className="absolute inset-0 [backface-visibility:hidden]">
                   <Sheet page={turn.dir === 1 ? cur.right : cur.left} side={turn.dir === 1 ? "right" : "left"} kind={cur.kind} {...sheetProps} flat />
-                  <div className="pointer-events-none absolute inset-0" style={{ background: turn.dir === 1 ? "linear-gradient(to right, rgba(0,0,0,.05), rgba(0,0,0,.55))" : "linear-gradient(to left, rgba(0,0,0,.05), rgba(0,0,0,.55))", opacity: shade }} />
+                  <div className="pointer-events-none absolute inset-0 album-shade" style={{ background: turn.dir === 1 ? "linear-gradient(to right, rgba(0,0,0,.05), rgba(0,0,0,.55))" : "linear-gradient(to left, rgba(0,0,0,.05), rgba(0,0,0,.55))" }} />
                 </div>
                 <div className="absolute inset-0 [backface-visibility:hidden]" style={{ transform: "rotateY(180deg)" }}>
                   <Sheet page={turn.dir === 1 ? (nxt?.left ?? cur.left) : (prv?.right ?? cur.right)} side={turn.dir === 1 ? "left" : "right"} kind={turn.dir === 1 ? (nxt?.kind ?? cur.kind) : (prv?.kind ?? cur.kind)} {...sheetProps} flat />
-                  <div className="pointer-events-none absolute inset-0" style={{ background: turn.dir === 1 ? "linear-gradient(to left, rgba(0,0,0,.05), rgba(0,0,0,.5))" : "linear-gradient(to right, rgba(0,0,0,.05), rgba(0,0,0,.5))", opacity: shade }} />
+                  <div className="pointer-events-none absolute inset-0 album-shade" style={{ background: turn.dir === 1 ? "linear-gradient(to left, rgba(0,0,0,.05), rgba(0,0,0,.5))" : "linear-gradient(to right, rgba(0,0,0,.05), rgba(0,0,0,.5))" }} />
                 </div>
               </div>
             )}
