@@ -359,6 +359,12 @@
         "location": "Uluwatu, or not sure yet"
       },
       "errorGeneric": "Something went wrong — please try WhatsApp or email."
+    },
+    "availability": {
+      "eyebrow": "Availability",
+      "lead": "Struck-through days are already spoken for. Everything else is open — and a date not on this calendar yet is worth asking about.",
+      "taken": "Taken",
+      "note": "Updated live from our booking calendar. Pencilled-in dates are not shown, so ask even if your day looks free."
     }
   },
   "notFound": {

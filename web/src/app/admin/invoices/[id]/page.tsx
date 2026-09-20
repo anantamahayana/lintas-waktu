@@ -57,6 +57,7 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
             {inv.status === "sent" && <Btn kind="ink" onClick={() => setStatus("paid", { title: `Mark ${inv.number} as paid?`, body: `${money(t.total, inv.currency)} in full. The document gets a Paid stamp and can’t be edited any more.`, action: "Mark paid" })}>Mark paid</Btn>}
             {inv.status !== "void" && inv.status !== "draft" && <Btn kind="danger" onClick={() => setStatus("void", { title: `Void ${inv.number}?`, body: "The link stays open but the document is stamped Void. Use this instead of deleting a sent or paid invoice.", action: "Void", danger: true })}>Void</Btn>}
             <Btn onClick={duplicate}>Duplicate</Btn>
+            <Link href={`/admin/calendar?invoice=${inv.id}`} className="action !py-2.5 !px-4">Add to calendar</Link>
           </>
         }
       />

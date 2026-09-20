@@ -413,6 +413,9 @@ def set_status(invoice_id: str, body: StatusChange, db: DbSession = Depends(get_
     elif body.status == InvoiceStatus.draft:
         inv.paid_at = None
     log(db, inv, body.status.value, {"hash": doc_hash(inv), "total": totals(inv).total})
+    from .bookings import sync_from_invoice
+
+    sync_from_invoice(db, inv.id, body.status.value, inv.deposit_paid or 0)
     db.commit()
     db.refresh(inv)
     return out(db, inv)

@@ -4,6 +4,7 @@ import { pageMeta } from "@/lib/seo";
 import { Photo } from "@/components/ui/Photo";
 import { Reveal } from "@/components/ui/Reveal";
 import { ContactForm } from "@/components/contact/ContactForm";
+import { Availability } from "@/components/contact/Availability";
 import { waLink } from "@/lib/site";
 import { getSite } from "@/lib/content";
 
@@ -55,6 +56,10 @@ export default async function ContactPage({
         <Reveal delay={100} className="relative lg:col-span-7 lg:col-start-6 border border-line p-6 sm:p-8 lg:p-10">
           <ContactForm initialKind={kind} whatsapp={site.whatsapp.number} />
         </Reveal>
+      </section>
+
+      <section className="wrap gutter pb-20 lg:pb-28 border-t border-line pt-16 lg:pt-20">
+        <Availability locale={locale} />
       </section>
     </div>
   );

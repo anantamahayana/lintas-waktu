@@ -359,6 +359,12 @@
         "location": "Uluwatu, atau belum tahu"
       },
       "errorGeneric": "Terjadi kesalahan — coba lewat WhatsApp atau email."
+    },
+    "availability": {
+      "eyebrow": "Ketersediaan",
+      "lead": "Tanggal yang dicoret sudah terisi. Selebihnya masih terbuka — dan tanggal yang belum ada di kalender ini tetap bisa ditanyakan.",
+      "taken": "Terisi",
+      "note": "Diperbarui langsung dari kalender booking kami. Tanggal yang masih tentatif tidak ditampilkan, jadi tetap tanyakan meski tanggalmu terlihat kosong."
     }
   },
   "notFound": {

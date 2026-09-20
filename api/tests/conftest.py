@@ -16,6 +16,7 @@ from app.database import SessionLocal, migrate  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models import FailedAttempt, PhotoSession  # noqa: E402
 from app.content.invoices import Invoice, InvoiceEvent  # noqa: E402
+from app.content.bookings import Booking  # noqa: E402
 from app.routers import gallery  # noqa: E402
 from app.services import drive_service  # noqa: E402
 
@@ -32,6 +33,7 @@ def _db_bersih(monkeypatch):
         db.query(FailedAttempt).delete()
         db.query(Invoice).delete()
         db.query(InvoiceEvent).delete()
+        db.query(Booking).delete()
         db.commit()
     yield
 

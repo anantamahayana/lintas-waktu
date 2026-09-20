@@ -11,6 +11,7 @@ from .database import SessionLocal, migrate
 from .models import PhotoSession, SessionStatus, utcnow
 from .routers import admin, gallery
 from .content import router_admin as content_admin, router_public as content_public
+from .content import bookings as content_bookings
 from .content import invoices as content_invoices
 from .content import models as content_models  # noqa: F401  (registers tables)
 from .services import backup, drive_service
@@ -69,6 +70,8 @@ app.include_router(content_admin.router)
 app.include_router(content_public.router)
 app.include_router(content_invoices.router)
 app.include_router(content_invoices.public)
+app.include_router(content_bookings.router)
+app.include_router(content_bookings.public)
 
 
 @app.get("/api/health")

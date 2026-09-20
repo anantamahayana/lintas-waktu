@@ -182,3 +182,11 @@ export type InvoiceBusiness = {
   name: string; tagline: string; address: string; email: string; phone: string; bank_details: string; prefix: string;
   default_terms: string; default_due_days: number; tax_percent: number;
 };
+
+// ---------------------------------------------------------------- calendar
+export type BookingStatus = "tentative" | "booked" | "blocked" | "done" | "cancelled";
+export type Booking = {
+  id: string; title: string; kind: string; status: BookingStatus; start_date: string; end_date: string; start_time: string | null; location: string | null;
+  client_name: string | null; client_wa: string | null; notes: string | null; invoice_id: string | null; invoice_number: string | null; session_id: string | null;
+  public: boolean; created_at: string; updated_at: string; conflicts: string[];
+};
