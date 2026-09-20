@@ -259,19 +259,23 @@ function Arrow({ dir, onClick, disabled }: { dir: 1 | -1; onClick: () => void; d
   );
 }
 
-/** A lifted page corner: the classic "there is more" cue; tapping it turns the page. */
+/** A lifted page corner: a small paper curl at the outer bottom corner — the classic
+ *  "there is more" cue. What shows beneath it is the next page's paper, never the
+ *  table. Grows a little on hover; tapping it turns the page. */
 function Corner({ side, onClick }: { side: "left" | "right"; onClick: () => void }) {
+  const right = side === "right";
   return (
-    <button
-      type="button"
-      aria-hidden
-      tabIndex={-1}
-      onClick={onClick}
-      className={clsx("absolute bottom-0 h-16 w-16 sm:h-20 sm:w-20 group", side === "right" ? "right-0" : "left-0")}
-    >
+    <button type="button" aria-hidden tabIndex={-1} onClick={onClick} className={clsx("absolute bottom-0 h-14 w-14 sm:h-16 sm:w-16 group z-20", right ? "right-0" : "left-0")}>
+      {/* the page beneath, revealed */}
+      <span className={clsx("absolute bottom-0 h-7 w-7 sm:h-9 sm:w-9 transition-all duration-500 ease-out-soft group-hover:h-12 group-hover:w-12", right ? "right-0" : "left-0")} style={{ background: "#e8e5de", clipPath: right ? "polygon(100% 0, 100% 100%, 0 100%)" : "polygon(0 0, 0 100%, 100% 100%)" }} />
+      {/* the curled corner itself: paper front turning towards the light */}
       <span
-        className={clsx("absolute bottom-0 block h-8 w-8 sm:h-10 sm:w-10 transition-all duration-500 ease-out-soft group-hover:h-14 group-hover:w-14 sm:group-hover:h-16 sm:group-hover:w-16", side === "right" ? "right-0" : "left-0")}
-        style={{ background: side === "right" ? "linear-gradient(225deg, #161513 50%, #e9e6df 50%, #f7f5f0 65%, #d9d6cf 100%)" : "linear-gradient(135deg, #161513 50%, #e9e6df 50%, #f7f5f0 65%, #d9d6cf 100%)", boxShadow: side === "right" ? "-4px -4px 10px rgba(0,0,0,.25)" : "4px -4px 10px rgba(0,0,0,.25)" }}
+        className={clsx("absolute bottom-0 h-7 w-7 sm:h-9 sm:w-9 transition-all duration-500 ease-out-soft group-hover:h-12 group-hover:w-12", right ? "right-0" : "left-0")}
+        style={{
+          background: right ? "linear-gradient(225deg, #fbfaf7 0%, #f1efe9 45%, #cfccc4 100%)" : "linear-gradient(135deg, #fbfaf7 0%, #f1efe9 45%, #cfccc4 100%)",
+          clipPath: right ? "polygon(0 100%, 100% 0, 0 0)" : "polygon(100% 100%, 0 0, 100% 0)",
+          filter: right ? "drop-shadow(-2px -2px 3px rgba(0,0,0,.18))" : "drop-shadow(2px -2px 3px rgba(0,0,0,.18))",
+        }}
       />
     </button>
   );
