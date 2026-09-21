@@ -20,6 +20,7 @@ type Cell = { p: GPhoto; x: number; y: number; w: number; h: number };
 type Page = { cells: Cell[] };
 type Spread = { left: Page; right: Page; kind: "cover" | "spread" | "end" };
 
+/** Landscape album: each page is 1.3 : 1 (a 13×10 book), so a spread is 2.6 : 1 (see aspect-[2.6/1]). */
 const wide = (p: GPhoto) => p.width >= p.height;
 
 /** Seeded shuffle so "shuffle layout" gives a new but stable arrangement. */
@@ -36,7 +37,7 @@ function rng(seed: number) {
 function layoutPages(photos: GPhoto[], seed: number): Page[] {
   const r = rng(seed);
   const pages: Page[] = [];
-  const M = 6; // outer margin %
+  const M = 7; // outer margin %
   const G = 3; // gutter %
   let i = 0;
   while (i < photos.length) {
@@ -49,27 +50,28 @@ function layoutPages(photos: GPhoto[], seed: number): Page[] {
       i += 1;
       continue;
     }
-    // two: side by side for portraits, stacked for landscapes
+    // two — the page is landscape (1.3 : 1), so:
+    //   portraits stand side by side; two landscapes stack, narrowed so they keep a ~3:2 feel
     if (!c || roll < 0.78) {
       if (!wide(a) && !wide(b)) {
         const w = (100 - 2 * M - G) / 2;
         pages.push({ cells: [{ p: a, x: M, y: M, w, h: 100 - 2 * M }, { p: b, x: M + w + G, y: M, w, h: 100 - 2 * M }] });
+      } else if (wide(a) && wide(b)) {
+        const h = (100 - 2 * M - G) / 2, w = 64;
+        pages.push({ cells: [{ p: a, x: (100 - w) / 2, y: M, w, h }, { p: b, x: (100 - w) / 2, y: M + h + G, w, h }] });
       } else {
-        const h = (100 - 2 * M - G) / 2;
-        pages.push({ cells: [{ p: a, x: M, y: M, w: 100 - 2 * M, h }, { p: b, x: M, y: M + h + G, w: 100 - 2 * M, h }] });
+        // one of each: the landscape takes the wider column
+        const [l, pt] = wide(a) ? [a, b] : [b, a];
+        const wl = (100 - 2 * M - G) * 0.6, wp = 100 - 2 * M - G - wl;
+        pages.push({ cells: [{ p: l, x: M, y: M, w: wl, h: 100 - 2 * M }, { p: pt, x: M + wl + G, y: M, w: wp, h: 100 - 2 * M }] });
       }
       i += 2;
       continue;
     }
-    // three: one tall + two small, or one wide + two below
-    const heroFirst = wide(a) ? r() < 0.5 : true;
-    if (heroFirst && !wide(a)) {
-      const w1 = (100 - 2 * M - G) * 0.58, w2 = 100 - 2 * M - G - w1, h2 = (100 - 2 * M - G) / 2;
-      pages.push({ cells: [{ p: a, x: M, y: M, w: w1, h: 100 - 2 * M }, { p: b, x: M + w1 + G, y: M, w: w2, h: h2 }, { p: c, x: M + w1 + G, y: M + h2 + G, w: w2, h: h2 }] });
-    } else {
-      const h1 = (100 - 2 * M - G) * 0.6, h2 = 100 - 2 * M - G - h1, w2 = (100 - 2 * M - G) / 2;
-      pages.push({ cells: [{ p: a, x: M, y: M, w: 100 - 2 * M, h: h1 }, { p: b, x: M, y: M + h1 + G, w: w2, h: h2 }, { p: c, x: M + w2 + G, y: M + h1 + G, w: w2, h: h2 }] });
-    }
+    // three on a landscape page: a hero on the left, two stacked on the right
+    // (a landscape hero gets the wider column; a portrait hero a narrower one)
+    const w1 = (100 - 2 * M - G) * (wide(a) ? 0.62 : 0.46), w2 = 100 - 2 * M - G - w1, h2 = (100 - 2 * M - G) / 2;
+    pages.push({ cells: [{ p: a, x: M, y: M, w: w1, h: 100 - 2 * M }, { p: b, x: M + w1 + G, y: M, w: w2, h: h2 }, { p: c, x: M + w1 + G, y: M + h2 + G, w: w2, h: h2 }] });
     i += 3;
   }
   return pages;
@@ -213,9 +215,9 @@ export function AlbumPreview({ photos, clientName, studio, onClose, t }: { photo
           <div
             ref={bookRef}
             onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onTransitionEnd={onBookTransitionEnd}
-            className={clsx("album-book relative aspect-[2/1.35] w-full cursor-grab active:cursor-grabbing", visible && "album-in", turn?.anim && "album-ease")}
+            className={clsx("album-book relative aspect-[2.6/1] w-full cursor-grab active:cursor-grabbing", visible && "album-in", turn?.anim && "album-ease")}
             // fit both ways: never wider than the column, never taller than the space between header and footer
-            style={{ maxWidth: "min(1100px, calc((100dvh - 200px) * 1.48))", transformStyle: "preserve-3d", touchAction: "none" }}
+            style={{ maxWidth: "min(1240px, calc((100dvh - 200px) * 2.6))", transformStyle: "preserve-3d", touchAction: "none" }}
           >
             {/* the two resting pages (under the leaf while turning) */}
             <Sheet key={`${turn?.dir === -1 ? idx - 1 : idx}-L`} page={underLeft ?? cur.left} side="left" kind={underKindL ?? cur.kind} {...sheetProps} />
