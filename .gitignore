@@ -24,3 +24,6 @@ api/cache/
 api/uploads/
 api/backups/
 api/service_account.json
+
+# private reference material, not part of the product
+Web Reference/
