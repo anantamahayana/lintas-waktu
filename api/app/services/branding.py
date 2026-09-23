@@ -7,12 +7,12 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session as DbSession
 
-from ..config import BACKEND_DIR
+from ..config import BACKEND_DIR, get_settings
 from ..models import Setting
 from ..schemas import Branding
 
 KEYS = ("studio_name", "tagline", "contact")
-UPLOAD_DIR = BACKEND_DIR / "uploads"
+UPLOAD_DIR = Path(get_settings().upload_dir)
 LOGO_NAME = "logo"
 LOGO_TYPES = {"image/png": ".png", "image/jpeg": ".jpg", "image/svg+xml": ".svg", "image/webp": ".webp"}
 

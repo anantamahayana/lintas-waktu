@@ -1,0 +1,10 @@
+.venv
+.env
+service_account.json
+photo_platform.db*
+cache
+backups
+uploads
+tests
+__pycache__
+*.pyc
