@@ -5,7 +5,7 @@ import clsx from "clsx";
 import { money } from "./InvoiceDoc";
 import { VERIFY, type Lang } from "./strings";
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL ?? ""; // "" = same origin, through the /api rewrites
 
 type Result = {
   valid: boolean; reason: "match" | "outdated" | "no_match" | "unknown" | "void"; number: string; status?: string | null; kind?: string | null;

@@ -5,7 +5,7 @@
  * localStorage (same approach as the original platform); every request
  * carries it as a Bearer token. 401 → back to /admin/login.
  */
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? ""; // "" = same origin, through the /api rewrites
 const KEY = "lw_admin_token";
 
 export const token = {

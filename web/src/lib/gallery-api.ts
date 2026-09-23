@@ -1,7 +1,7 @@
 "use client";
 
 /** Client-gallery API (no admin auth; per-gallery token after PIN unlock). */
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? ""; // "" = same origin, through the /api rewrites
 
 export type Branding = { studio_name: string; tagline: string; contact: string; logo_url: string | null };
 export type GalleryMeta = { client_name: string; locked: boolean; expired: boolean; preview: boolean; branding: Branding };
