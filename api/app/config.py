@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     )
 
     admin_password: str = "admin123"
+    # Forgot the password set in the admin panel? Set ADMIN_PASSWORD_RESET=1 (and a new
+    # ADMIN_PASSWORD), redeploy, sign in, then remove the flag again.
+    admin_password_reset: bool = False
     secret_key: str = "dev-secret-key-change-in-production"
     access_token_expire_minutes: int = 480
     database_url: str = f"sqlite:///{BACKEND_DIR / 'photo_platform.db'}"

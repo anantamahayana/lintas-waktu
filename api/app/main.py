@@ -54,6 +54,13 @@ async def lifespan(app: FastAPI):
     backup.backup_db()
     warn_insecure_defaults()
     migrate()
+    if settings.admin_password_reset:
+        from .models import Setting
+
+        with SessionLocal() as db:
+            n = db.query(Setting).filter(Setting.key == "admin_password").delete()
+            db.commit()
+        log.warning("ADMIN_PASSWORD_RESET: panel password cleared (%d) — ADMIN_PASSWORD applies. Remove the flag now.", n)
     cleanup_cache()
     yield
 
