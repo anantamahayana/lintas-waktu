@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+import logging
 import time
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Query, Request, Response
@@ -14,6 +15,8 @@ from ..database import get_db
 from ..models import PhotoSession, SelectedPhoto, SessionStatus, utcnow
 from ..schemas import Branding, DraftRequest, GalleryMeta, GalleryOut, Photo, SubmitOut, SubmitRequest, UnlockOut, UnlockRequest
 from ..services import backup, branding, drive_service, ratelimit
+
+log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["gallery"])
 
@@ -177,7 +180,11 @@ def get_gallery(slug: str, background: BackgroundTasks, db: DbSession = Depends(
         now = utcnow()
         s.first_opened_at = s.first_opened_at or now
         s.last_seen_at = now
-        db.commit()
+        try:
+            db.commit()
+        except Exception:  # visit tracking must never keep a client out of their gallery
+            log.exception("could not record gallery visit for %s", slug)
+            db.rollback()
 
     if s.status == SessionStatus.completed:
         sel_ids = [p.drive_file_id for p in s.selected_photos]
