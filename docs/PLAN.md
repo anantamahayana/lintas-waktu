@@ -19,10 +19,10 @@ Dugaan penyebab dari sesi desktop sudah dicek terhadap kode; hasilnya di kolom "
 - **1b. Warming lanjut setelah restart.** Status `_warming` hanya di memori; restart di tengah proses menghentikannya. → Saat API start, lanjutkan warming untuk sesi aktif yang belum lengkap.
 - **1c. Tombol "Salin link / WhatsApp" di admin diberi peringatan** selama thumbnail belum 100%.
 
-### 2. Hanya foto yang terlihat yang dipasang (prioritas utama)
-- Virtualisasi grid di `web/src/components/gallery/ClientGallery.tsx`: render per baris, hanya baris di sekitar layar (mis. `@tanstack/react-virtual`, atau `content-visibility: auto` sebagai langkah pertama yang murah).
-- Jaga: filter, lightbox (`setOpen(i)`), panel pilihan, dan scroll ke foto tertentu tetap bekerja.
-- Uji di Safari iOS dengan galeri mock ±800 foto.
+### 2. Hanya foto yang terlihat yang dipasang (prioritas utama) — ✅ selesai
+- `WindowedGrid` di `web/src/components/gallery/ClientGallery.tsx`, tanpa library tambahan: hanya baris di sekitar layar yang dipasang (satu layar di atas, dua di bawah), sisanya jadi padding setinggi baris aslinya. Kolom dan jarak dibaca dari CSS Tailwind yang sama.
+- Diuji di Chromium ukuran iPhone 13 dan desktop dengan galeri mock 800 foto: 10–32 kotak terpasang (dulu 800), tinggi halaman tetap, lightbox membuka foto yang benar.
+- Masih perlu dicoba di iPhone sungguhan (Safari).
 
 ### 3. Gambar langsung dari Railway, tidak lewat Vercel
 - Hanya untuk endpoint gambar: `gapi.img()` memakai URL publik API, request data tetap lewat rewrite.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import clsx from "clsx";
 import { gapi, galleryToken, GalleryError, type GalleryData, type GalleryMeta } from "@/lib/gallery-api";
 import { T, type Dict, type Lang } from "./i18n";
@@ -271,8 +271,7 @@ export function ClientGallery({ slug }: { slug: string }) {
         </div>
       </header>
 
-      <ul className="px-1.5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1.5 max-w-[1200px] mx-auto">
-        {visible.map((p, i) => {
+      <WindowedGrid items={visible} aspect={5 / 4} className="px-1.5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1.5 max-w-[1200px] mx-auto" renderItem={(p, i) => {
           const sel = selectedSet.has(p.file_id);
           const isMaybe = maybeSet.has(p.file_id);
           const isExtra = sel && ids.indexOf(p.file_id) >= limit;
@@ -292,8 +291,7 @@ export function ClientGallery({ slug }: { slug: string }) {
               <button type="button" onClick={() => setOpen(i)} aria-label="⤢" className="absolute right-2 bottom-2 h-8 w-8 rounded-full bg-white/85 flex items-center justify-center text-[12px] lg:opacity-0 lg:[li:hover_&]:opacity-100 transition-opacity">⤢</button>
             </li>
           );
-        })}
-      </ul>
+        }} />
       {visible.length === 0 && <p className="t-body text-center py-16">{t.filterNone}</p>}
 
       {/* Sticky selection bar */}
@@ -487,6 +485,73 @@ function Lightbox({ photos, index, onIndex, selected, marked, note, readOnly, fu
  * and fade the photo in; retry once if the request drops. Without this, slow tiles read as
  * "missing photos".
  */
+/**
+ * A grid that mounts only the rows near the viewport (the page scrolls, not the grid). With
+ * ~800 photos, keeping every tile and its decoded image alive makes iOS Safari stutter and can
+ * reload the tab. Columns and gap are read from the CSS, so the Tailwind classes stay the one
+ * source of layout; the rows outside the window become top/bottom padding of the same height.
+ */
+function WindowedGrid<T>({ items, aspect, className, renderItem }: { items: T[]; aspect: number; className: string; renderItem: (item: T, index: number) => ReactNode }) {
+  const ref = useRef<HTMLUListElement>(null);
+  const [geo, setGeo] = useState({ cols: 0, stride: 0 }); // stride = row height + row gap
+  const [range, setRange] = useState<[number, number]>([0, 0]); // [first, last) row
+
+  // ResizeObserver fires once on observe, then on every width change (breakpoints included)
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      const cs = getComputedStyle(el);
+      const cols = cs.gridTemplateColumns.split(" ").length;
+      const colGap = parseFloat(cs.columnGap) || 0;
+      const inner = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const stride = ((inner - colGap * (cols - 1)) / cols) * aspect + (parseFloat(cs.rowGap) || 0);
+      setGeo((g) => (g.cols === cols && Math.abs(g.stride - stride) < 0.5 ? g : { cols, stride }));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [aspect]);
+
+  const rows = geo.cols ? Math.ceil(items.length / geo.cols) : 0;
+
+  // one screen of rows above and two below stay mounted, so a fast flick never shows gaps for long
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !geo.stride) return;
+    let raf = 0;
+    const update = () => {
+      raf = 0;
+      const top = el.getBoundingClientRect().top;
+      const vh = window.innerHeight;
+      const first = Math.max(0, Math.floor((-top - vh) / geo.stride));
+      const last = Math.max(first, Math.min(rows, Math.ceil((-top + 2 * vh) / geo.stride)));
+      setRange((r) => (r[0] === first && r[1] === last ? r : [first, last]));
+    };
+    const schedule = () => { if (!raf) raf = requestAnimationFrame(update); };
+    schedule();
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+    };
+  }, [geo, rows]);
+
+  // before the first measurement: a screenful, laid out by the CSS alone
+  if (!geo.cols || range[1] === 0) {
+    return <ul ref={ref} className={className}>{items.slice(0, 24).map((p, i) => renderItem(p, i))}</ul>;
+  }
+  const last = Math.min(range[1], rows);
+  const first = Math.min(range[0], last);
+  const start = first * geo.cols;
+  return (
+    <ul ref={ref} className={className} style={{ paddingTop: first * geo.stride, paddingBottom: (rows - last) * geo.stride }}>
+      {items.slice(start, last * geo.cols).map((p, k) => renderItem(p, start + k))}
+    </ul>
+  );
+}
+
 function Thumb({ src, alt, eager, className }: { src: string; alt: string; eager?: boolean; className?: string }) {
   const [state, setState] = useState<"wait" | "ok" | "retry" | "fail">("wait");
   const url = state === "retry" ? `${src}&r=1` : src;
