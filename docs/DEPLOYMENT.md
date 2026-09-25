@@ -12,6 +12,7 @@ Kerja lain di branch terpisah, gabung ke `main` lewat pull request.
 |---|---|
 | Proyek | `lintas-waktu` (team "Lintas Waktu", plan Hobby) |
 | Root Directory | `web` · Framework Preset **Next.js** (dengan "Other" situs 404) |
+| Function Region | **Singapore (sin1)** — sejak 25 Sep 2026, sama dengan Railway (sebelumnya default Washington) |
 | Domain | **https://www.lintaswaktuvisual.com** (utama) · `lintaswaktuvisual.com` → 308 ke www · `lintas-waktu-omega.vercel.app` |
 | Env | `API_URL` = https://lintas-waktu-production.up.railway.app (tujuan rewrite `/api/*`) · `REVALIDATE_SECRET` (sama dengan Railway) · `NEXT_PUBLIC_SITE_URL` (? pastikan = https://www.lintaswaktuvisual.com — sitemap/og:url pernah menampilkan apex) |
 | Sengaja tidak diset | `NEXT_PUBLIC_API_URL` — browser memanggil `/api/{gallery,admin,public}/*` di origin yang sama, `web/next.config.ts` meneruskannya ke `API_URL` |
@@ -24,7 +25,8 @@ Catatan: plan Hobby resminya untuk non-komersial — pertimbangkan Pro.
 | Proyek / service | "incredible-enjoyment" / `lintas-waktu` · plan trial (? upgrade ke Hobby sebelum kredit habis) |
 | Domain | https://lintas-waktu-production.up.railway.app (belum ada custom domain) |
 | Build | Root Directory `api`, Dockerfile (`api/railway.json`, healthcheck `/api/health`). Build dari root repo (Railpack) gagal. |
-| Volume | di `/data` |
+| Region | **Southeast Asia (Singapore)**, 1 replica — sejak 25 Sep 2026 (sebelumnya US West). Klien di Bali/Indonesia; jangan tambah replica selama database SQLite di volume. |
+| Volume | `lintas-waktu-volume` di `/data`, ±454 MB (plan trial) |
 | Env | `PORT=8080` · `DATABASE_URL=sqlite:////data/photo_platform.db` · `CACHE_DIR`, `UPLOAD_DIR` di bawah `/data` (? path persisnya) · `FRONTEND_URL` (? pastikan = https://www.lintaswaktuvisual.com — dipakai untuk link galeri/invoice) · `GOOGLE_SERVICE_ACCOUNT_JSON` · `ADMIN_PASSWORD` · `REVALIDATE_SECRET` · `SECRET_KEY` (?) |
 | `ADMIN_PASSWORD_RESET` | sudah dihapus. Hanya untuk lupa password panel: set `1` + `ADMIN_PASSWORD` baru, deploy, login, hapus lagi. |
 
