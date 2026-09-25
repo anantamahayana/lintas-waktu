@@ -229,7 +229,7 @@ export function ClientGallery({ slug }: { slug: string }) {
 
   // follow the other devices: when the tab comes back, on focus, and every PULL_MS while visible
   const pull = useCallback(async () => {
-    if (!data || stage !== "gallery" || pending.current || inflight.current) return;
+    if (!data || data.status === "completed" || stage !== "gallery" || pending.current || inflight.current) return;
     try {
       const d = await gapi.getDraft(slug);
       if (d.rev !== data.rev || d.status === "completed") { loadGallery(); return; } // reset, or sent elsewhere
@@ -303,8 +303,14 @@ export function ClientGallery({ slug }: { slug: string }) {
       try { navigator.vibrate?.([18, 40, 28]); } catch {}
       pending.current = null;
       localDraft.clear(slug);
+      // the gallery is locked from here: "View my selection" must open it read-only
+      setData((d) => (d ? { ...d, status: "completed", selected_ids: ids, notes } : d));
       setSent(r); setStage("sent");
-    } catch (e) { setError(e instanceof Error ? e.message : "Error"); } finally { setBusy(false); }
+    } catch (e) {
+      // already sent (another tap, another device): show the thank-you screen, not a dead end
+      if (e instanceof GalleryError && e.status === 409) { pending.current = null; localDraft.clear(slug); loadGallery(); }
+      else setError(e instanceof Error ? e.message : "Error");
+    } finally { setBusy(false); }
   };
 
   // ------------------------------------------------------------ render
@@ -508,6 +514,16 @@ export function ClientGallery({ slug }: { slug: string }) {
               <span className="t-small !text-[12px] text-on-dark-mute truncate" aria-live="polite">{saveState === "offline" ? <span className="text-error">{t.offline}</span> : status}</span>
             </div>
             <button type="button" disabled={count === 0} onClick={openConfirm} className="h-11 px-5 rounded-full t-mono text-ink disabled:opacity-40 active:scale-95 transition-transform shrink-0" style={{ background: GOLD }}>{t.send} →</button>
+          </div>
+        </div>
+      )}
+
+      {readOnly && (
+        <div className="fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(10px,env(safe-area-inset-bottom))] flex justify-center pointer-events-none">
+          <div className="pointer-events-auto w-full max-w-[460px] bg-ink/95 backdrop-blur text-on-dark rounded-full p-1.5 pl-3 flex items-center gap-3 shadow-[0_14px_36px_-14px_rgba(0,0,0,.55)]">
+            <span className="h-9 w-9 shrink-0 rounded-full flex items-center justify-center text-ink" style={{ background: GOLD }}>✓</span>
+            <span className="flex-1 min-w-0 t-small !text-[13px] truncate">{t.sentBar(count)}</span>
+            {sent && <button type="button" onClick={() => setStage("sent")} className="h-11 px-4 rounded-full border border-on-dark/30 t-mono shrink-0 active:scale-95 transition-transform">{t.back}</button>}
           </div>
         </div>
       )}
@@ -809,6 +825,7 @@ function Lightbox({ photos, index, onIndex, onClose, selected, marked, note, rea
               <textarea value={note} onChange={(e) => onNote(e.target.value)} rows={2} placeholder={t.notePh} className="bg-transparent text-on-dark text-[16px] outline-none resize-none placeholder:text-on-dark-mute/60" />
             </label>
           )}
+          {readOnly && selected && <span className="w-full h-[52px] rounded-full t-mono text-ink flex items-center justify-center" style={{ background: GOLD }}>✓ {t.chosenLocked}</span>}
           {!readOnly && (
             <button type="button" disabled={!selected && full} onClick={onToggle}
               className={clsx("w-full h-[52px] t-mono rounded-full transition-all duration-300 active:scale-[0.98] disabled:opacity-40", selected ? "text-ink" : "border border-on-dark/40 text-on-dark")} style={selected ? { background: GOLD } : undefined}>

@@ -14,7 +14,7 @@ export interface Dict {
   finalTitle: string; finalBody: (n: number, e: number) => string; finalNo: string; finalYes: string;
   saving: string; saved: string; offline: string;
   albumBtn: string; album: { title: string; sub: (n: number) => string; cover: string; end: string; endBody: string; close: string; shuffle: string; page: (a: number, b: number, n: number) => string; hint: string; };
-  sentBody: (n: number, e: number) => string; locked: string; viewSelection: string; filterNone: string; extra: string;
+  sentBody: (n: number, e: number) => string; locked: string; viewSelection: string; filterNone: string; extra: string; sentBar: (n: number) => string; chosenLocked: string;
 }
 
 const ph = (n: number) => `${n} photograph${n === 1 ? "" : "s"}`;
@@ -59,7 +59,7 @@ export const T: Record<Lang, Dict> = {
     },
     thanks: (name: string) => `Thank you, ${name}.`,
     sentBody: (n: number, e: number) => `${ph(n)} ${n === 1 ? "is" : "are"} on the way to the edit${e ? ` — ${n - e} in your package and ${e} extra${e === 1 ? "" : "s"}` : ""}. We’ll be in touch within a day about delivery.`,
-    locked: "Your gallery stays open to view, but choices are now locked.", viewSelection: "View my selection",
+    locked: "Your gallery stays open to view, but choices are now locked.", viewSelection: "View my selection", sentBar: (n: number) => `Sent · ${ph(n)} · view only`, chosenLocked: "In your selection",
     filterNone: "Nothing here yet.", extra: "Extra",
   },
   id: {
@@ -101,7 +101,7 @@ export const T: Record<Lang, Dict> = {
     },
     thanks: (name: string) => `Terima kasih, ${name}.`,
     sentBody: (n: number, e: number) => `${n} foto sedang menuju proses edit${e ? ` — ${n - e} dalam paket dan ${e} tambahan` : ""}. Kami hubungi dalam sehari soal pengiriman.`,
-    locked: "Galerimu tetap bisa dilihat, tapi pilihan sudah terkunci.", viewSelection: "Lihat pilihanku",
+    locked: "Galerimu tetap bisa dilihat, tapi pilihan sudah terkunci.", viewSelection: "Lihat pilihanku", sentBar: (n: number) => `Terkirim · ${n} foto · hanya dilihat`, chosenLocked: "Termasuk pilihanmu",
     filterNone: "Belum ada di sini.", extra: "Tambahan",
   },
 };
