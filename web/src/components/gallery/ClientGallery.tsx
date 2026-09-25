@@ -43,6 +43,44 @@ function mergePicks(base: Picks, mine: Picks, theirs: Picks): Picks {
   };
 }
 
+/*
+ * Back button / Android back gesture closes the overlay on top (viewer, album, guide, dialogs)
+ * instead of leaving the gallery. Each open overlay adds one history entry; closing it from the
+ * UI removes that entry again (skipping our own popstate).
+ */
+const layers: { close: () => void }[] = [];
+let skipPops = 0;
+let popBound = false;
+function onPopLayer() {
+  if (skipPops > 0) { skipPops--; return; }
+  layers.pop()?.close();
+}
+function useBackClose(open: boolean, close: () => void) {
+  const ref = useRef(close);
+  useEffect(() => { ref.current = close; });
+  useEffect(() => {
+    if (!open) return;
+    const layer = { close: () => ref.current() };
+    layers.push(layer);
+    window.history.pushState(null, "");
+    if (!popBound) { window.addEventListener("popstate", onPopLayer); popBound = true; }
+    return () => {
+      const i = layers.indexOf(layer);
+      if (i >= 0) { layers.splice(i, 1); skipPops++; window.history.back(); }
+    };
+  }, [open]);
+}
+
+/** While a dialog is up, the page behind it does not scroll. */
+function useScrollLock(active: boolean) {
+  useEffect(() => {
+    if (!active) return;
+    const h = document.documentElement, prev = h.style.overflow;
+    h.style.overflow = "hidden";
+    return () => { h.style.overflow = prev; };
+  }, [active]);
+}
+
 function fmt(iso: string | null, lang: Lang) {
   if (!iso) return null;
   return new Date(iso).toLocaleDateString(lang === "id" ? "id-ID" : "en-GB", { day: "numeric", month: "long" });
@@ -263,6 +301,15 @@ export function ClientGallery({ slug }: { slug: string }) {
   const openConfirm = () => { setExtraIds(ids.slice(limit)); setStage("confirm"); };
   const [finalAsk, setFinalAsk] = useState(false);
   const [album, setAlbum] = useState(false);
+  const closeGuide = () => { setGuide(false); sessionStorage.setItem(`lw_guide_${slug}`, "1"); };
+  const closeLightbox = () => { const i = open; setOpen(null); if (i !== null) gridApi.current?.reveal(i); };
+  useBackClose(open !== null, closeLightbox);
+  useBackClose(album, () => setAlbum(false));
+  useBackClose(guide, closeGuide);
+  useBackClose(!!overPrompt, () => setOverPrompt(null));
+  useBackClose(stage === "confirm", () => setStage("gallery"));
+  useBackClose(finalAsk, () => setFinalAsk(false));
+  useScrollLock(guide || !!overPrompt || finalAsk);
   const albumMin = Math.max(2, Math.min(4, data?.photo_limit ?? 4)); // a few picks are enough for a first spread
   const albumPhotos = useMemo(() => (data?.photos ?? []).filter((p) => selectedSet.has(p.file_id)).sort((a, b) => ids.indexOf(a.file_id) - ids.indexOf(b.file_id)), [data, selectedSet, ids]);
   const submit = async () => {
@@ -399,7 +446,6 @@ export function ClientGallery({ slug }: { slug: string }) {
   const status = full ? t.quotaReached : count === 0 ? t.tapToChoose : extras > 0 ? t.overBy(extras) : count < limit ? t.leftIn(limit - count) : t.packageFull;
   const pct = Math.min(1, count / Math.max(1, limit));
   const filters = [["all", t.all, data.photos.length], ["selected", t.selected, count], ["maybe", t.marked, maybe.length]] as const;
-  const closeLightbox = () => { const i = open; setOpen(null); if (i !== null) gridApi.current?.reveal(i); };
 
   return (
     <div className="min-h-dvh pb-28 bg-white">
@@ -485,8 +531,8 @@ export function ClientGallery({ slug }: { slug: string }) {
 
       {/* Guide */}
       {guide && (
-        <div className="fixed inset-0 z-50 bg-dark/55 flex items-end sm:items-center justify-center p-3" onClick={() => { setGuide(false); sessionStorage.setItem(`lw_guide_${slug}`, "1"); }}>
-          <div className="admin-pop w-full max-w-[420px] bg-white p-6 flex flex-col gap-4" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 bg-dark/55 flex items-end sm:items-center justify-center p-3 touch-none overscroll-contain" role="dialog" aria-modal="true">
+          <div className="admin-pop w-full max-w-[420px] max-h-[90dvh] overflow-y-auto overscroll-contain touch-pan-y bg-white p-6 flex flex-col gap-4">
             <span className="t-mono text-mute">{t.howItWorks}</span>
             <h2 className="t-display-sm !text-[30px]">{t.guideTitle}</h2>
             <p className="t-body">{t.guideIntro(limit, hard, deadline)}</p>
@@ -495,14 +541,14 @@ export function ClientGallery({ slug }: { slug: string }) {
                 <li key={i} className="flex gap-3"><span className="h-9 w-9 shrink-0 rounded-full bg-[#ece9e2] flex items-center justify-center text-[13px]">{["✓", "⤢", "✎", "⚑", "→"][i]}</span><span className="flex flex-col"><span className="text-[14px] font-medium">{h}</span><span className="t-small text-mute">{d}</span></span></li>
               ))}
             </ol>
-            <button type="button" onClick={() => { setGuide(false); sessionStorage.setItem(`lw_guide_${slug}`, "1"); }} className="ink-btn w-full">{t.gotIt} →</button>
+            <button type="button" onClick={closeGuide} className="ink-btn w-full">{t.gotIt} →</button>
           </div>
         </div>
       )}
 
       {/* Over-package prompt */}
       {overPrompt && (
-        <div className="fixed inset-0 z-[70] bg-dark/55 flex items-center justify-center p-5" onClick={() => setOverPrompt(null)}>
+        <div className="fixed inset-0 z-[70] bg-dark/55 flex items-center justify-center p-5 touch-none overscroll-contain" onClick={() => setOverPrompt(null)}>
           <div className="admin-pop w-full max-w-[360px] bg-white p-6 flex flex-col gap-4" onClick={(e) => e.stopPropagation()}>
             <span className="t-mono text-mute">{t.packageFull}</span>
             <h2 className="t-display-sm !text-[28px]">{t.overTitle}</h2>
@@ -742,7 +788,7 @@ function Lightbox({ photos, index, onIndex, onClose, selected, marked, note, rea
     <div className="fixed inset-0 z-[60] text-on-dark select-none" role="dialog" aria-modal="true" aria-label={p.name}>
       <div className="absolute inset-0 bg-dark" style={{ opacity: 1 - fade, transition: anim ? `opacity 260ms ${ease}` : undefined }} />
 
-      <div ref={stage} className="absolute inset-x-0 overflow-hidden" style={{ top: showChrome ? 60 : 0, bottom: showChrome ? panelH : 0, touchAction: "none", transition: `top 300ms ${ease}, bottom 300ms ${ease}` }}
+      <div ref={stage} className="absolute inset-x-0 overflow-hidden" style={{ top: showChrome ? 64 : 0, bottom: showChrome ? panelH : 0, touchAction: "none", transition: `top 300ms ${ease}, bottom 300ms ${ease}` }}
         onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} onTouchCancel={onTouchEnd} onClick={onClick} onMouseMove={onMouseMove}>
         {[-1, 0, 1].map((o) => {
           const i = index + o;
@@ -758,12 +804,12 @@ function Lightbox({ photos, index, onIndex, onClose, selected, marked, note, rea
       </div>
 
       {/* top bar */}
-      <div className={clsx("absolute inset-x-0 top-0 h-[60px] px-2 flex items-center justify-between t-mono transition-all duration-300", showChrome ? "opacity-100" : "opacity-0 -translate-y-3 pointer-events-none")}>
-        <button type="button" onClick={onClose} aria-label={t.close} className="h-11 w-11 rounded-full flex items-center justify-center text-[18px] text-on-dark active:bg-white/10">✕</button>
+      <div className={clsx("absolute inset-x-0 top-0 h-[64px] px-3 flex items-center justify-between t-mono transition-all duration-300", showChrome ? "opacity-100" : "opacity-0 -translate-y-3 pointer-events-none")}>
+        <button type="button" onClick={onClose} aria-label={t.close} className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center text-[22px] text-on-dark active:scale-90 active:bg-white/20 transition-transform">✕</button>
         <span className="text-on-dark-mute tabular-nums">{String(index + 1).padStart(2, "0")} / {String(photos.length).padStart(2, "0")}</span>
         {!readOnly && !selected ? (
-          <button type="button" onClick={onMark} aria-pressed={marked} className={clsx("h-11 px-4 rounded-full flex items-center gap-2 active:bg-white/10", marked ? "bg-white text-ink" : "text-on-dark")}>⚑ <span className="hidden sm:inline">{marked ? t.unmark : t.mark}</span></button>
-        ) : <span className="w-11" />}
+          <button type="button" onClick={onMark} aria-pressed={marked} className={clsx("h-12 pl-4 pr-5 rounded-full flex items-center gap-2 text-[13px] active:scale-95 transition-transform", marked ? "bg-white text-ink" : "bg-white/10 text-on-dark")}><span className="text-[18px] leading-none">⚑</span>{marked ? t.unmark : t.mark}</button>
+        ) : <span className="w-12" />}
       </div>
 
       {/* arrows for mouse users; touch uses swipes */}
@@ -832,6 +878,7 @@ function JustifiedGrid({ items, api, renderTile }: { items: GPhoto[]; api?: Reac
     if (!width) return null;
     const target = width < 640 ? 150 : width < 1024 ? 210 : 270;
     const gap = width < 640 ? 4 : 6;
+    const maxPer = width < 640 ? 3 : 4;
     const rows: { top: number; h: number; boxes: (Box & { i: number })[] }[] = [];
     let top = 0, start = 0, sum = 0;
     const close = (end: number, h: number, stretch: boolean) => {
@@ -847,6 +894,7 @@ function JustifiedGrid({ items, api, renderTile }: { items: GPhoto[]; api?: Reac
     };
     for (let i = 0; i < items.length; i++) {
       const r = photoRatio(items[i]);
+      if (i - start === maxPer) { close(i, (width - gap * (maxPer - 1)) / sum, true); start = i; sum = 0; } // never more than maxPer in a row
       const n = i - start + 1;
       const hWith = (width - gap * (n - 1)) / (sum + r);
       if (n > 1 && hWith < target) {
