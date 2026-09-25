@@ -107,23 +107,6 @@ export function ClientGallery({ slug }: { slug: string }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [open, setOpen] = useState<number | null>(null); // lightbox index within `visible`
   const gridApi = useRef<GridApi | null>(null);
-  // The selection bar steps aside while the client scrolls down through photos, and comes back
-  // on the way up or as soon as scrolling pauses.
-  const [barHidden, setBarHidden] = useState(false);
-  useEffect(() => {
-    let last = window.scrollY;
-    let idle = 0;
-    const onScroll = () => {
-      const y = window.scrollY;
-      if (y > last + 8 && y > 240) setBarHidden(true);
-      else if (y < last - 8) setBarHidden(false);
-      last = y;
-      window.clearTimeout(idle);
-      idle = window.setTimeout(() => setBarHidden(false), 900);
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => { window.removeEventListener("scroll", onScroll); window.clearTimeout(idle); };
-  }, []);
   const [guide, setGuide] = useState(false);
   const [overPrompt, setOverPrompt] = useState<string | null>(null);
   const [extraIds, setExtraIds] = useState<string[]>([]);
@@ -513,9 +496,9 @@ export function ClientGallery({ slug }: { slug: string }) {
       </div>
       {visible.length === 0 && <p className="t-body text-center py-16">{t.filterNone}</p>}
 
-      {/* Selection bar: one slim line, out of the way while scrolling down */}
+      {/* Selection bar: one slim line, always there */}
       {!readOnly && (
-        <div className={clsx("fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(10px,env(safe-area-inset-bottom))] flex justify-center pointer-events-none transition-transform duration-500 ease-[var(--ease-out-soft)]", barHidden && "translate-y-[150%]")}>
+        <div className={clsx("fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(10px,env(safe-area-inset-bottom))] flex justify-center pointer-events-none")}>
           <div className="pointer-events-auto w-full max-w-[460px] bg-ink/95 backdrop-blur text-on-dark rounded-full p-1.5 pl-2 flex items-center gap-3 shadow-[0_14px_36px_-14px_rgba(0,0,0,.55)]">
             <ProgressRing value={pct} over={extras > 0}>
               <span key={count} className="count-nod font-serif text-[17px] leading-none tabular-nums">{count}</span>
