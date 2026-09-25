@@ -16,6 +16,7 @@ gallery never depends on short-lived Drive links or re-downloads 15 MB originals
 from __future__ import annotations
 
 import hashlib
+import logging
 import io
 import os
 import threading
@@ -26,6 +27,8 @@ from pathlib import Path
 import httpx
 
 from ..config import get_settings
+
+log = logging.getLogger("uvicorn.error")
 
 SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 IMAGE_MIMES = ("image/jpeg", "image/png", "image/webp")
@@ -240,8 +243,11 @@ def list_photos(folder_id: str, refresh: bool = False) -> list[DrivePhoto]:
         if not refresh and folder_id in _list_cache:
             return _list_cache[folder_id]
     photos = _list_mock(folder_id) if is_mock() else _list_real(folder_id)
-    with _list_lock:
-        _list_cache[folder_id] = photos
+    if photos:  # an empty answer (upload in progress, access lost) must not stick until the next restart
+        with _list_lock:
+            _list_cache[folder_id] = photos
+    else:
+        log.warning("drive: folder %s lists no JPEG/PNG photos", folder_id)
     return photos
 
 
