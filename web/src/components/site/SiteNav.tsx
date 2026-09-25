@@ -6,7 +6,8 @@ import { useLocale, useTranslations } from "next-intl";
 import clsx from "clsx";
 import { Link, usePathname } from "@/i18n/navigation";
 
-const left = [["work", "/work"], ["services", "/services"]] as const;
+const left = [["home", "/"], ["work", "/work"], ["services", "/services"]] as const;
+const isActive = (pathname: string, href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 const right = [["about", "/about"], ["contact", "/contact"]] as const;
 
 /**
@@ -45,7 +46,7 @@ export function SiteNav() {
     <Link
       href={href}
       onClick={close}
-      className={clsx("link t-mono", pathname.startsWith(href) ? "text-ink" : "text-mute hover:text-ink")}
+      className={clsx("link t-mono", isActive(pathname, href) ? "text-ink" : "text-mute hover:text-ink")}
     >
       {t(`nav.${k}`)}
     </Link>
@@ -135,7 +136,7 @@ function MobileMenu({ open, close }: { open: boolean; close: () => void }) {
       <nav className="gutter flex-1 flex flex-col justify-center">
         <ul className="border-t border-line">
           {items.map(([k, href], i) => {
-            const active = pathname.startsWith(href);
+            const active = isActive(pathname, href);
             return (
               <li key={k} className="border-b border-line">
                 <Link
