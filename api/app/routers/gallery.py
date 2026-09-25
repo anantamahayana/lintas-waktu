@@ -208,8 +208,8 @@ def get_gallery(slug: str, background: BackgroundTasks, db: DbSession = Depends(
                 file_id=p.file_id,
                 filename=p.filename,
                 name=p.name,
-                width=p.width,
-                height=p.height,
+                width=(wh := drive_service.display_size(s.drive_folder_id, p))[0],
+                height=wh[1],
                 thumb_url=_img(slug, p.file_id, "thumb", tok),
                 full_url=_img(slug, p.file_id, "full", tok),
             )

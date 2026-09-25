@@ -46,3 +46,11 @@ Dugaan penyebab dari sesi desktop sudah dicek terhadap kode; hasilnya di kolom "
 - Perubahan yang belum terkirim disimpan di perangkat (`localDraft`) dan dipulihkan hanya kalau server masih di versi yang sama; kalau perangkat lain sudah menyimpan, server yang dipakai — pilihan yang sudah dihapus tidak muncul lagi.
 - Dikirim seketika saat halaman ditinggalkan (`keepalive`), dikirim ulang saat online kembali.
 - Diuji: laptop memilih → HP yang tab-nya terbuka ikut berubah dalam ±12 detik; dua perangkat memilih bersamaan → digabung; perangkat ketiga melihat hasil yang sama. Tes API: `api/tests/test_draft_sync.py`.
+
+## UI galeri klien (26 Sep 2026) — ✅ tahap 1
+- Grid mengikuti bentuk foto: baris rata (justified), portrait sempit, landscape lebar; urutan foto tetap. Bentuk dibaca dari thumbnail yang sudah diputar sesuai EXIF (`display_size`), cadangan dari metadata Drive + `rotation`.
+- Filter (Semua / Pilihan / Ditandai) pindah ke bilah atas yang menempel; tombol album muncul setelah beberapa pilihan.
+- Bilah bawah jadi satu baris ramping (cincin progres, status, Kirim), menyingkir saat scroll ke bawah.
+- Tombol di foto: area sentuh 44 px, tampilan kecil transparan; di desktop muncul saat hover.
+- Lightbox: geser kiri/kanan dengan foto berikutnya ikut masuk, geser ke bawah untuk menutup, ketuk dua kali / cubit untuk zoom (geser untuk melihat sekitar), ketuk sekali untuk menyembunyikan tombol; thumbnail tampil dulu, foto besar menyusul.
+- Umpan balik kecil: centang "pop", angka mengangguk, getar singkat (Android) saat memilih.

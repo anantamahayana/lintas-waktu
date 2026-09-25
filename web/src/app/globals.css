@@ -162,6 +162,13 @@
 @keyframes tile-wait { 50% { opacity: 0.55; } }
 .tile-wait { animation: tile-wait 1.6s ease-in-out infinite; }
 
+/* Gallery micro-feedback: a pick lands with a small pop, the counter nods when it changes */
+@keyframes pick-pop { 0% { transform: scale(0.4); opacity: 0; } 60% { transform: scale(1.15); opacity: 1; } 100% { transform: scale(1); } }
+.pick-pop { animation: pick-pop 320ms var(--ease-out-soft) both; }
+@keyframes count-nod { 40% { transform: translateY(-3px) scale(1.08); } }
+.count-nod { animation: count-nod 360ms var(--ease-out-soft); }
+@media (prefers-reduced-motion: reduce) { .pick-pop, .count-nod { animation: none; } }
+
 /* Admin micro-motion: dialogs and toasts ease in, nothing bounces */
 @keyframes admin-fade { from { opacity: 0; } }
 @keyframes admin-pop { from { opacity: 0; transform: translateY(8px) scale(0.98); } }

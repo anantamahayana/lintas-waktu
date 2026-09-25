@@ -39,7 +39,7 @@ FULL_PX = 2560  # lightbox / full-width rows on 2K screens; originals (often 15 
 DRIVE_OVERSAMPLE = 1.5
 JPEG_QUALITY = 88
 DRIVE_API = "https://www.googleapis.com/drive/v3"
-LIST_FIELDS = "nextPageToken, files(id, name, mimeType, thumbnailLink, imageMediaMetadata(width, height))"
+LIST_FIELDS = "nextPageToken, files(id, name, mimeType, thumbnailLink, imageMediaMetadata(width, height, rotation))"
 
 _list_cache: dict[str, list["DrivePhoto"]] = {}
 _list_lock = threading.Lock()
@@ -143,12 +143,15 @@ def _list_real(folder_id: str) -> list[DrivePhoto]:
                 if f.get("mimeType") not in IMAGE_MIMES:
                     continue
                 meta = f.get("imageMediaMetadata") or {}
+                w, h = int(meta.get("width") or 3), int(meta.get("height") or 2)
+                if int(meta.get("rotation") or 0) % 2:  # stored sideways (EXIF): the photo is really h × w
+                    w, h = h, w
                 photos.append(
                     DrivePhoto(
                         file_id=f["id"],
                         filename=f["name"],
-                        width=int(meta.get("width") or 3),
-                        height=int(meta.get("height") or 2),
+                        width=w,
+                        height=h,
                         thumbnail_link=f.get("thumbnailLink"),
                     )
                 )
@@ -359,6 +362,29 @@ def get_image(folder_id: str, file_id: str, size: str) -> tuple[bytes, str]:
         except OSError:
             log.warning("cache: could not write %s (disk full?)", cached.name)
     return data, "image/jpeg"
+
+
+_dims: dict[tuple[str, str], tuple[int, int]] = {}
+
+
+def display_size(folder_id: str, photo: "DrivePhoto") -> tuple[int, int]:
+    """Width × height as the photo is seen (EXIF rotation applied), for the gallery layout.
+    Read from the cached thumbnail's header when there is one (it is transposed on resize, so it
+    is always upright); otherwise Drive's metadata."""
+    key = (folder_id, photo.file_id)
+    if key in _dims:
+        return _dims[key]
+    f = _folder_dir(folder_id) / "thumb" / f"{hashlib.sha1(photo.file_id.encode()).hexdigest()}.jpg"
+    if f.exists():
+        try:
+            from PIL import Image
+
+            with Image.open(f) as im:  # header only
+                _dims[key] = im.size
+                return im.size
+        except Exception:
+            pass
+    return photo.width, photo.height
 
 
 def get_image_website(folder_id: str, file_id: str) -> tuple[bytes, str]:
