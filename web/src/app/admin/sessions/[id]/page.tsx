@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useCallback, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useState, type MouseEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
@@ -78,6 +78,26 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
   });
   const waHref = `https://wa.me/${s.client_wa ?? ""}?text=${encodeURIComponent(waText)}`;
 
+  // Sharing before the thumbnails are ready makes the client the one who waits (and the tiles stay
+  // grey on a phone). Ask once; the photographer can still send it.
+  const preparing = s.status !== "completed" && !!cache && !cache.ready;
+  const okToShare = () => !preparing || confirm({
+    title: "Gallery still preparing",
+    body: `${cache!.thumb} of ${cache!.total} photos are ready. If the client opens it now, the rest load slowly. Share anyway, or wait until it says “Gallery ready”?`,
+    action: "Share anyway",
+    cancel: "Wait",
+  });
+  const copyLink = async () => {
+    if (!(await okToShare())) return;
+    try { await navigator.clipboard.writeText(s.gallery_url); toast("Link copied"); } catch { toast("Could not copy — select the link under Session", true); }
+  };
+  const sendWa = async (e: MouseEvent) => {
+    if (!preparing) return; // plain link
+    e.preventDefault();
+    if (!(await okToShare())) return;
+    if (!window.open(waHref, "_blank", "noreferrer")) window.location.href = waHref; // popup blocked after the dialog
+  };
+
   const status = s.status === "completed" ? <Pill tone="ok">Completed · sent {fmtDate(s.submitted_at)}</Pill>
     : cache && !cache.ready ? <Pill tone="warn">Preparing gallery… {cache.thumb} / {cache.total}</Pill>
     : s.first_opened_at ? <Pill tone="warn">Choosing · gallery ready</Pill> : <Pill tone="mute">Gallery ready · not opened yet</Pill>;
@@ -93,8 +113,8 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
         actions={
           <>
             <a className="action !py-2.5 !px-4" href={`${s.gallery_url}?preview=1`} target="_blank" rel="noreferrer" title="Opens the gallery as the photographer: no PIN, nothing saved, Send disabled">Preview</a>
-            <Btn onClick={() => { navigator.clipboard.writeText(s.gallery_url); toast("Link copied"); }}>Copy link</Btn>
-            <a className="ink-btn !py-2.5 !px-4" href={waHref} target="_blank" rel="noreferrer" title={s.client_wa ? `Opens the chat with +${s.client_wa}` : "No client number saved — WhatsApp will ask you to pick the contact"}>Send via WhatsApp</a>
+            <Btn onClick={copyLink}>Copy link</Btn>
+            <a className="ink-btn !py-2.5 !px-4" href={waHref} target="_blank" rel="noreferrer" onClick={sendWa} title={s.client_wa ? `Opens the chat with +${s.client_wa}` : "No client number saved — WhatsApp will ask you to pick the contact"}>Send via WhatsApp</a>
           </>
         }
       />

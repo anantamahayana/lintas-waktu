@@ -19,6 +19,26 @@ export const galleryToken = {
   clear: (slug: string) => localStorage.removeItem(tokenKey(slug)),
 };
 
+/**
+ * The client's picks, kept on this device the moment they change. `synced` turns true once the
+ * server confirmed the same picks, so an unsynced copy (tab closed or offline before the autosave
+ * landed) wins over the server's older draft on the next visit. `rev` ties it to one round of the
+ * gallery: after the photographer resets it, an old copy is ignored.
+ */
+export type LocalDraft = { rev: number; ids: string[]; notes: Record<string, string>; maybe: string[]; synced: boolean };
+const draftKey = (slug: string) => `lw_draft_${slug}`;
+export const localDraft = {
+  get(slug: string): LocalDraft | null {
+    try { return JSON.parse(localStorage.getItem(draftKey(slug)) || "null"); } catch { return null; }
+  },
+  set(slug: string, d: LocalDraft) {
+    try { localStorage.setItem(draftKey(slug), JSON.stringify(d)); } catch {}
+  },
+  clear(slug: string) {
+    try { localStorage.removeItem(draftKey(slug)); } catch {}
+  },
+};
+
 export class GalleryError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
@@ -57,8 +77,9 @@ export const gapi = {
   meta: (slug: string) => req<GalleryMeta>(slug, "/meta"),
   unlock: (slug: string, pin: string) => req<{ token: string }>(slug, "/unlock", { method: "POST", body: JSON.stringify({ pin }) }),
   load: (slug: string) => req<GalleryData>(slug, ""),
-  draft: (slug: string, body: { file_ids: string[]; notes: Record<string, string>; maybe_ids: string[] }) =>
-    req<void>(slug, "/draft", { method: "PUT", body: JSON.stringify(body) }),
+  draft: (slug: string, body: { file_ids: string[]; notes: Record<string, string>; maybe_ids: string[] }, keepalive = false) =>
+    // keepalive: the request outlives the page (tab closed, app switched away mid-debounce)
+    req<void>(slug, "/draft", { method: "PUT", body: JSON.stringify(body), keepalive }),
   submit: (slug: string, body: { file_ids: string[]; notes: Record<string, string>; extra_ids: string[] }) =>
     req<{ selected_count: number; extra_count: number; message: string }>(slug, "/submit", { method: "POST", body: JSON.stringify(body) }),
   img: (path: string) => `${API_URL}${path}`,

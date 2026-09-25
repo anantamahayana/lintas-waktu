@@ -14,10 +14,10 @@ Dugaan penyebab dari sesi desktop sudah dicek terhadap kode; hasilnya di kolom "
 
 ## Langkah
 
-### 1. Pastikan foto sudah siap sebelum link dikirim (sebagian sudah ada)
+### 1. Pastikan foto sudah siap sebelum link dikirim — 1b & 1c ✅, 1a menunggu cek Railway
 - **1a. Cache harus di volume Railway.** `cache_dir` default-nya `api/cache` di dalam container. Kalau `CACHE_DIR` tidak diarahkan ke volume, setiap deploy/restart menghapus semua foto kecil dan galeri kembali dingin. → Set `CACHE_DIR` ke path volume dan catat di `api/.env.example`. *Cek dulu di dashboard Railway.*
-- **1b. Warming lanjut setelah restart.** Status `_warming` hanya di memori; restart di tengah proses menghentikannya. → Saat API start, lanjutkan warming untuk sesi aktif yang belum lengkap.
-- **1c. Tombol "Salin link / WhatsApp" di admin diberi peringatan** selama thumbnail belum 100%.
+- **1b. Warming lanjut setelah restart.** ✅ `resume_warming` di `api/app/main.py`: saat API start, galeri yang masih *pending* dan belum lengkap diproses lagi, satu folder per waktu; foto yang sudah ada di disk dilewati.
+- **1c. Peringatan saat membagikan.** ✅ *Copy link* dan *Send via WhatsApp* menampilkan dialog "Gallery still preparing" selama thumbnail belum 100%; fotografer tetap bisa memilih *Share anyway*.
 
 ### 2. Hanya foto yang terlihat yang dipasang (prioritas utama) — ✅ selesai
 - `WindowedGrid` di `web/src/components/gallery/ClientGallery.tsx`, tanpa library tambahan: hanya baris di sekitar layar yang dipasang (satu layar di atas, dua di bawah), sisanya jadi padding setinggi baris aslinya. Kolom dan jarak dibaca dari CSS Tailwind yang sama.
@@ -39,3 +39,10 @@ Dugaan penyebab dari sesi desktop sudah dicek terhadap kode; hasilnya di kolom "
 1. **1a** (cek konfigurasi, hampir tanpa kode) dan **2** — paling terasa bagi klien, tanpa biaya.
 2. **1b, 1c**, lalu **3** dan **4**.
 3. **5** setelah domain ada.
+
+## Terkait: pilihan klien tidak boleh hilang — ✅ selesai
+Pilihan sudah disimpan otomatis ke server, tetapi baru 0,8 detik setelah ketukan terakhir; keluar lebih cepat dari itu, aplikasi ditutup iOS, atau koneksi putus membuat pilihan terakhir hilang.
+- Setiap perubahan langsung disimpan juga di perangkat klien (`localDraft`, `web/src/lib/gallery-api.ts`).
+- Saat halaman ditinggalkan / disembunyikan, draf dikirim seketika (`fetch` dengan `keepalive`); saat online kembali, dikirim ulang.
+- Saat membuka lagi: salinan di perangkat yang belum terkirim menang atas draf server; yang sudah terkirim tidak — perangkat lain yang lebih baru tetap dihormati. Salinan lama diabaikan setelah fotografer me-reset galeri.
+- Diuji di Chromium: keluar 0,1 detik setelah memilih, memilih saat offline, dan ganti perangkat — semua pilihan kembali.

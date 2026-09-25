@@ -343,6 +343,8 @@ def warm_cache(folder_id: str, workers: int = 6, hq: bool = False) -> None:
 
         def fetch(args):
             p, size = args
+            if _cache_path(folder_id, p.file_id, size).exists():  # resumed run: skip what is on disk
+                return
             try:
                 get_image(folder_id, p.file_id, size)
             except Exception:

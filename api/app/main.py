@@ -1,4 +1,5 @@
 import logging
+import threading
 from pathlib import Path
 from contextlib import asynccontextmanager
 from datetime import timedelta
@@ -42,6 +43,21 @@ def cleanup_cache() -> None:
         log.info("cache cleanup: removed %d folder cache(s)", removed)
 
 
+def resume_warming() -> None:
+    """Warming runs in memory, so a restart or redeploy mid-way stops it. Pick up every open
+    gallery whose images are not all on disk yet — one folder at a time, the server is small."""
+    try:
+        with SessionLocal() as db:
+            folders = list(dict.fromkeys(s.drive_folder_id for s in db.query(PhotoSession).filter(PhotoSession.status == SessionStatus.pending)))
+        for folder in folders:
+            st = drive_service.cache_status(folder)
+            if st["total"] and (st["thumb"] < st["total"] or st["full"] < st["total"]):
+                log.info("cache: resuming warm-up of %s (%d/%d thumbnails)", folder, st["thumb"], st["total"])
+                drive_service.warm_cache(folder)
+    except Exception:
+        log.exception("cache: resuming warm-up failed")
+
+
 def warn_insecure_defaults() -> None:
     if settings.admin_password in {"admin123", "changeme123"}:
         log.warning("!! ADMIN_PASSWORD masih default. Ganti di backend/.env sebelum dibuka ke internet.")
@@ -62,6 +78,7 @@ async def lifespan(app: FastAPI):
             db.commit()
         log.warning("ADMIN_PASSWORD_RESET: panel password cleared (%d) — ADMIN_PASSWORD applies. Remove the flag now.", n)
     cleanup_cache()
+    threading.Thread(target=resume_warming, daemon=True).start()
     yield
 
 

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import clsx from "clsx";
-import { gapi, galleryToken, GalleryError, type GalleryData, type GalleryMeta } from "@/lib/gallery-api";
+import { gapi, galleryToken, localDraft, GalleryError, type GalleryData, type GalleryMeta } from "@/lib/gallery-api";
 import { T, type Dict, type Lang } from "./i18n";
 import { AlbumPreview } from "./AlbumPreview";
 
@@ -44,13 +44,28 @@ export function ClientGallery({ slug }: { slug: string }) {
   const [sent, setSent] = useState<{ selected_count: number; extra_count: number } | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const dirty = useRef(false); // picks changed by the client since load (or restored from this device)
+
   const loadGallery = useCallback(async () => {
     try {
       const d = await gapi.load(slug);
       setData(d);
-      setIds(d.selected_ids);
-      setNotes(d.notes);
-      setMaybe(d.maybe_ids);
+      // Picks made here that never reached the server (tab closed mid-autosave, offline) beat the
+      // server's older draft; once they are synced the server is the truth (another device may be newer).
+      const local = d.preview ? null : localDraft.get(slug);
+      if (d.status !== "completed" && local && local.rev === d.rev && !local.synced) {
+        const known = new Set(d.photos.map((p) => p.file_id));
+        const localIds = local.ids.filter((i) => known.has(i));
+        setIds(localIds);
+        setNotes(Object.fromEntries(Object.entries(local.notes).filter(([i]) => localIds.includes(i))));
+        setMaybe(local.maybe.filter((i) => known.has(i) && !localIds.includes(i)));
+        dirty.current = true; // the autosave sends them on
+      } else {
+        setIds(d.selected_ids);
+        setNotes(d.notes);
+        setMaybe(d.maybe_ids);
+        if (!d.preview) localDraft.clear(slug);
+      }
       if (d.status === "completed") { setSent({ selected_count: d.selected_ids.length, extra_count: 0 }); setStage("sent"); }
       else if (!sessionStorage.getItem(`lw_guide_${slug}`)) setGuide(true);
     } catch (e) {
@@ -81,18 +96,50 @@ export function ClientGallery({ slug }: { slug: string }) {
     if (intro === "out") { const h = setTimeout(() => { setIntro("gone"); sessionStorage.setItem(`lw_intro_${slug}`, "1"); }, 700); return () => clearTimeout(h); }
   }, [intro, slug]);
 
-  // 2. autosave draft (debounced) — not in preview, not when completed
-  const dirty = useRef(false);
+  // 2. autosave draft — not in preview, not when completed. Every change is kept on this device at
+  // once; the server gets it after a short pause, right away when the page is left, and again
+  // when the connection comes back after a failed save.
   const [saveState, setSaveState] = useState<"" | "saving" | "saved" | "offline">("");
+  const pending = useRef<{ file_ids: string[]; notes: Record<string, string>; maybe_ids: string[] } | null>(null);
+  const rev = data?.rev ?? 0;
+  const flush = useCallback((keepalive = false) => {
+    const body = pending.current;
+    if (!body) return;
+    setSaveState("saving");
+    gapi.draft(slug, body, keepalive).then(() => {
+      if (pending.current === body) {
+        pending.current = null;
+        localDraft.set(slug, { rev, ids: body.file_ids, notes: body.notes, maybe: body.maybe_ids, synced: true });
+      }
+      setSaveState("saved");
+    }).catch((e) => {
+      if (e instanceof GalleryError && e.status === 409) { pending.current = null; localDraft.clear(slug); } // already sent
+      setSaveState("offline");
+    });
+  }, [slug, rev]);
+
   useEffect(() => {
     if (!data || data.preview || data.status === "completed" || stage === "sent") return;
     if (!dirty.current) return;
-    const h = setTimeout(() => {
-      setSaveState("saving");
-      gapi.draft(slug, { file_ids: ids, notes, maybe_ids: maybe }).then(() => setSaveState("saved")).catch(() => setSaveState("offline"));
-    }, 800);
+    localDraft.set(slug, { rev: data.rev, ids, notes, maybe, synced: false });
+    pending.current = { file_ids: ids, notes, maybe_ids: maybe };
+    const h = setTimeout(() => flush(), 800);
     return () => clearTimeout(h);
-  }, [ids, notes, maybe, data, slug, stage]);
+  }, [ids, notes, maybe, data, slug, stage, flush]);
+
+  useEffect(() => {
+    const onVisibility = () => flush(document.visibilityState === "hidden");
+    const onLeave = () => flush(true);
+    const onOnline = () => flush();
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", onLeave);
+    window.addEventListener("online", onOnline);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", onLeave);
+      window.removeEventListener("online", onOnline);
+    };
+  }, [flush]);
 
   // derived
   const limit = data?.photo_limit ?? 0;
@@ -131,6 +178,8 @@ export function ClientGallery({ slug }: { slug: string }) {
     try {
       const r = await gapi.submit(slug, { file_ids: ids, notes, extra_ids: extraIds });
       try { navigator.vibrate?.([18, 40, 28]); } catch {}
+      pending.current = null;
+      localDraft.clear(slug);
       setSent(r); setStage("sent");
     } catch (e) { setError(e instanceof Error ? e.message : "Error"); } finally { setBusy(false); }
   };
