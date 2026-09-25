@@ -55,6 +55,7 @@ class SessionCreate(BaseModel):
     pin: str | None = Field(None, min_length=4, max_length=4, pattern=r"^\d{4}$")
     expires_at: datetime | None = None
     client_wa: str | None = Field(None, max_length=25)  # optional; normalised to 62… format
+    lang: str = Field("en", pattern=r"^(en|id)$")
 
     @field_validator("max_limit")
     @classmethod
@@ -74,6 +75,7 @@ class SessionUpdate(BaseModel):
     expires_at: datetime | None = None
     clear_expiry: bool = False
     client_wa: str | None = Field(None, max_length=25)  # "" clears
+    lang: str | None = Field(None, pattern=r"^(en|id)$")
 
 
 class SelectedPhotoOut(BaseModel):
@@ -102,6 +104,7 @@ class SessionOut(BaseModel):
     first_opened_at: datetime | None = None
     last_seen_at: datetime | None = None
     client_wa: str | None = None
+    lang: str = "en"
     is_new: bool = False  # sent by the client but not yet opened by the photographer
     draft_count: int = 0
     preview_urls: list[str] = []
@@ -148,6 +151,7 @@ class GalleryMeta(BaseModel):
     locked: bool
     expired: bool
     preview: bool = False  # opened by the logged-in photographer
+    lang: str = "en"  # the client's language, chosen by the photographer; the gallery opens in it
     branding: Branding
 
 

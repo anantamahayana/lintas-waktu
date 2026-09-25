@@ -115,7 +115,7 @@ export const api = {
 export type SessionStatus = "pending" | "completed";
 export type SessionOut = {
   id: string; slug: string; client_name: string; drive_folder_id: string; photo_limit: number; max_limit: number | null;
-  status: SessionStatus; notes: string | null; has_pin: boolean; pin: string | null; client_wa: string | null; is_new: boolean; expires_at: string | null; created_at: string;
+  status: SessionStatus; notes: string | null; has_pin: boolean; pin: string | null; client_wa: string | null; lang: "en" | "id"; is_new: boolean; expires_at: string | null; created_at: string;
   submitted_at: string | null; first_opened_at: string | null; last_seen_at: string | null; draft_count: number;
   preview_urls: string[]; selected_count: number; extra_count: number; gallery_url: string;
 };
@@ -145,7 +145,7 @@ export type Inquiry = {
 export type SiteSettings = {
   studio_name: string; descriptor_en: string; descriptor_id: string; whatsapp_number: string; whatsapp_display: string;
   email: string; instagram: string; service_area: string; usd_rate: number; default_package_size: number;
-  default_validity_days: number; whatsapp_template: string;
+  default_validity_days: number; whatsapp_template: string; whatsapp_template_id: string;
 };
 
 /**
@@ -161,7 +161,9 @@ export function fillWaTemplate(template: string, v: { name: string; link: string
   const optional = ["pin", "extras", "deadline"];
   return template
     .split("\n")
-    // drop a line whose optional placeholder has no value (no PIN → no "PIN:" line)
+    // an empty optional value inside brackets drops just the brackets: "(up to {extras} with extras)"
+    .map((line) => optional.reduce((l, k) => (map[k] ? l : l.replace(new RegExp(`\\s*\\([^()]*\\{${k}\\}[^()]*\\)`, "g"), "")), line))
+    // otherwise drop the line whose optional placeholder has no value (no PIN → no "PIN:" line)
     .filter((line) => !optional.some((k) => line.includes(`{${k}}`) && !map[k]))
     .map((line) => line.replace(/\{(\w+)\}/g, (_, k) => map[k] ?? `{${k}}`))
     .join("\n");

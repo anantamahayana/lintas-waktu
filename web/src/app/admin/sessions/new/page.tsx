@@ -3,18 +3,24 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ApiError, api, type SessionOut, type SiteSettings } from "@/lib/admin-api";
-import { Btn, Card, Field, Input, PageHeader, Textarea, focusFirstInvalid, toast, useUnsavedChanges, type FieldErrors } from "@/components/admin/ui";
+import { Btn, Card, Field, Input, LangPick, PageHeader, Textarea, focusFirstInvalid, toast, useUnsavedChanges, type FieldErrors } from "@/components/admin/ui";
 
 export default function NewSessionPage() {
   const router = useRouter();
-  const [v, setV] = useState({ client_name: "", notes: "", drive_folder_id: "", photo_limit: 30, max_limit: "", pin: "", expires_at: "", client_wa: "" });
+  const [v, setV] = useState({ client_name: "", notes: "", drive_folder_id: "", photo_limit: 30, max_limit: "", pin: "", expires_at: "", client_wa: "", lang: "en" as "en" | "id" });
+  const [langTouched, setLangTouched] = useState(false);
   const [folder, setFolder] = useState<{ ok: boolean; msg: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [created, setCreated] = useState(false);
   useUnsavedChanges(!created && (v.client_name !== "" || v.drive_folder_id !== ""));
   const [errors, setErrors] = useState<FieldErrors>({});
   const set = (k: keyof typeof v) => (e: { target: { value: string } }) => {
-    setV((s) => ({ ...s, [k]: e.target.value }));
+    setV((s) => {
+      const next = { ...s, [k]: e.target.value };
+      // an Indonesian number suggests Bahasa Indonesia, until the photographer picks a language themselves
+      if (k === "client_wa" && !langTouched) { const d = e.target.value.replace(/\D/g, ""); if (d.length >= 4) next.lang = /^(62|0)/.test(d) ? "id" : "en"; }
+      return next;
+    });
     if (errors[k]) setErrors((x) => ({ ...x, [k]: undefined }));
   };
 
@@ -69,6 +75,7 @@ export default function NewSessionPage() {
         pin: v.pin || null,
         expires_at: v.expires_at ? new Date(v.expires_at + "T23:59:59").toISOString() : null,
         client_wa: v.client_wa || null,
+        lang: v.lang,
       };
       const s = await api.post<SessionOut>("/api/admin/sessions", body);
       setCreated(true);
@@ -91,6 +98,9 @@ export default function NewSessionPage() {
             <Field label="Client name" error={errors.client_name}><Input invalid={!!errors.client_name} value={v.client_name} onChange={set("client_name")} placeholder="Ayu & Marco" /></Field>
             <Field label="Client WhatsApp" hint="optional" error={errors.client_wa}><Input invalid={!!errors.client_wa} inputMode="tel" value={v.client_wa} onChange={set("client_wa")} placeholder="+62 812 3456 7890" /></Field>
           </div>
+          <Field label="Client’s language" hint="gallery and WhatsApp message">
+            <LangPick value={v.lang} onChange={(l) => { setLangTouched(true); setV((x) => ({ ...x, lang: l })); }} />
+          </Field>
           <Field label="Google Drive folder" hint="link or ID" error={errors.drive_folder_id}>
             <div className="flex gap-2">
               <Input invalid={!!errors.drive_folder_id} value={v.drive_folder_id} onChange={set("drive_folder_id")} onBlur={checkFolder} placeholder="https://drive.google.com/drive/folders/…" />

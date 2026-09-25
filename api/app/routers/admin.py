@@ -57,7 +57,7 @@ def _is_new(s: PhotoSession) -> bool:
 
 
 def _out(s: PhotoSession) -> dict:
-    cols = ("id", "slug", "client_name", "drive_folder_id", "photo_limit", "max_limit", "status", "notes", "expires_at", "created_at", "submitted_at", "first_opened_at", "last_seen_at", "client_wa")
+    cols = ("id", "slug", "client_name", "drive_folder_id", "photo_limit", "max_limit", "status", "notes", "expires_at", "created_at", "submitted_at", "first_opened_at", "last_seen_at", "client_wa", "lang")
     return {
         **{c: getattr(s, c) for c in cols},
         "has_pin": bool(s.pin_hash),
@@ -132,6 +132,7 @@ def create_session(body: SessionCreate, background: BackgroundTasks, db: DbSessi
         pin_hash=hash_pin(body.pin) if body.pin else None,
         pin=body.pin or None,
         client_wa=branding.normalize_wa(body.client_wa) or None,
+        lang=body.lang,
         expires_at=body.expires_at,
     )
     db.add(s)
@@ -196,6 +197,8 @@ def update_session(session_id: str, body: SessionUpdate, background: BackgroundT
             s.pin = body.pin
     if body.client_wa is not None:
         s.client_wa = branding.normalize_wa(body.client_wa) or None
+    if body.lang is not None:
+        s.lang = body.lang
     if body.clear_expiry:
         s.expires_at = None
     elif body.expires_at is not None:

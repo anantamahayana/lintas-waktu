@@ -148,7 +148,7 @@ export function ClientGallery({ slug }: { slug: string }) {
   // 1. meta → intro (once per browser session) / pin / gallery. All state is set in callbacks.
   useEffect(() => {
     gapi.meta(slug).then((m) => {
-      if (navigator.language.toLowerCase().startsWith("id")) setLang("id");
+      setLang(m.lang === "id" ? "id" : "en"); // the photographer set the client's language; the EN/ID switch stays
       setMeta(m);
       if (m.expired) { setStage("expired"); return; }
       // the title card plays once per browser session (skipped for reduced motion)

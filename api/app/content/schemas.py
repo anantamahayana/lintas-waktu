@@ -172,6 +172,11 @@ class SiteSettings(BaseModel):
         "Please pick your {package} favourites (up to {extras} with extras), then press Send.\n"
         "The gallery stays open until {deadline}.\n\nThank you — {studio}"
     )
+    whatsapp_template_id: str = (
+        "Halo {name}, foto-foto Anda sudah siap untuk dipilih.\n\n{link}\nPIN: {pin}\n\n"
+        "Silakan pilih {package} foto favorit (hingga {extras} dengan foto tambahan), lalu tekan Kirim.\n"
+        "Galeri terbuka sampai {deadline}.\n\nTerima kasih — {studio}"
+    )
 
 
 class SiteSettingsUpdate(BaseModel):
@@ -187,3 +192,4 @@ class SiteSettingsUpdate(BaseModel):
     default_package_size: int | None = None
     default_validity_days: int | None = None
     whatsapp_template: str | None = None
+    whatsapp_template_id: str | None = None

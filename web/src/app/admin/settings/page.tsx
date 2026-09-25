@@ -112,7 +112,8 @@ export default function SettingsPage() {
               <Field label="Default package size" error={errors.default_package_size}><Input invalid={!!errors.default_package_size} type="number" min={1} value={s.default_package_size} onChange={set("default_package_size")} /></Field>
               <Field label="Default validity (days)" error={errors.default_validity_days}><Input invalid={!!errors.default_validity_days} type="number" min={1} value={s.default_validity_days} onChange={set("default_validity_days")} /></Field>
             </div>
-            <Field label="WhatsApp message template" hint="{name} {link} {pin} {package} {extras} {deadline} {studio} — lines whose value is empty are dropped"><Textarea value={s.whatsapp_template} onChange={set("whatsapp_template")} rows={6} /></Field>
+            <Field label="WhatsApp message · English" hint="{name} {link} {pin} {package} {extras} {deadline} {studio} — lines whose value is empty are dropped"><Textarea value={s.whatsapp_template} onChange={set("whatsapp_template")} rows={6} /></Field>
+            <Field label="WhatsApp message · Bahasa Indonesia" hint="same placeholders — used for sessions whose client language is Indonesian"><Textarea value={s.whatsapp_template_id} onChange={set("whatsapp_template_id")} rows={6} /></Field>
           </Card>
           <InvoiceCard />
           <PasswordCard />

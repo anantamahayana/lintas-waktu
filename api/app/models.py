@@ -51,6 +51,8 @@ class PhotoSession(Base):
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # Client's WhatsApp number (optional), digits only with country code: 6281234567890
     client_wa: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # The client's language: their gallery opens in it and the WhatsApp message uses it (en | id)
+    lang: Mapped[str] = mapped_column(String(2), default="en")
     # When the photographer last opened this session's result; drives the "new" marker on the dashboard.
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

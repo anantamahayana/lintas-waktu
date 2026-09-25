@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { API_URL, ApiError, api, fillWaTemplate, type CacheStatus, type SessionDetail, type SiteSettings } from "@/lib/admin-api";
-import { Btn, Card, Field, Input, PageHeader, Pill, Textarea, confirm, daysLeft, fmtDate, focusFirstInvalid, toast, useUnsavedChanges, type ConfirmOptions, type FieldErrors, LoadError, SkeletonForm } from "@/components/admin/ui";
+import { Btn, Card, Field, Input, LangPick, PageHeader, Pill, Textarea, confirm, daysLeft, fmtDate, focusFirstInvalid, toast, useUnsavedChanges, type ConfirmOptions, type FieldErrors, LoadError, SkeletonForm } from "@/components/admin/ui";
 
 // Chrome/Edge on desktop can write straight into a chosen folder (no zip, no extracting)
 const canPickFolder = typeof window !== "undefined" && "showDirectoryPicker" in window;
@@ -71,10 +71,15 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
   };
   const nPicks = s.selected_count + s.extra_count;
 
-  // Message text comes from Site settings → WhatsApp message template (no code changes needed)
-  const waText = fillWaTemplate(site?.whatsapp_template || "Hi {name}! Your gallery is ready: {link}\nPIN {pin}\nPlease choose {package} photographs by {deadline}.\n— {studio}", {
-    name: s.client_name, link: s.gallery_url, pin: s.has_pin ? (s.pin ?? "[PIN unknown — set a new one]") : null,
-    package: s.photo_limit, extras: s.max_limit, deadline: s.expires_at ? fmtDate(s.expires_at) : null, studio: site?.studio_name || "Lintas Waktu",
+  // Message text comes from Site settings → WhatsApp message templates, one per language; the
+  // session's language picks the template and how the deadline date is written.
+  const isId = s.lang === "id";
+  const template = (isId ? site?.whatsapp_template_id : site?.whatsapp_template)
+    || (isId ? "Halo {name}! Galeri Anda sudah siap: {link}\nPIN {pin}\nSilakan pilih {package} foto sebelum {deadline}.\n— {studio}" : "Hi {name}! Your gallery is ready: {link}\nPIN {pin}\nPlease choose {package} photographs by {deadline}.\n— {studio}");
+  const deadline = s.expires_at ? new Date(s.expires_at).toLocaleDateString(isId ? "id-ID" : "en-GB", { day: "numeric", month: "long", year: "numeric" }) : null;
+  const waText = fillWaTemplate(template, {
+    name: s.client_name, link: s.gallery_url, pin: s.has_pin ? (s.pin ?? (isId ? "[PIN tidak diketahui — buat yang baru]" : "[PIN unknown — set a new one]")) : null,
+    package: s.photo_limit, extras: s.max_limit, deadline, studio: site?.studio_name || "Lintas Waktu",
   });
   const waHref = `https://wa.me/${s.client_wa ?? ""}?text=${encodeURIComponent(waText)}`;
 
@@ -114,7 +119,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
           <>
             <a className="action !py-2.5 !px-4" href={`${s.gallery_url}?preview=1`} target="_blank" rel="noreferrer" title="Opens the gallery as the photographer: no PIN, nothing saved, Send disabled">Preview</a>
             <Btn onClick={copyLink}>Copy link</Btn>
-            <a className="ink-btn !py-2.5 !px-4" href={waHref} target="_blank" rel="noreferrer" onClick={sendWa} title={s.client_wa ? `Opens the chat with +${s.client_wa}` : "No client number saved — WhatsApp will ask you to pick the contact"}>Send via WhatsApp</a>
+            <a className="ink-btn !py-2.5 !px-4" href={waHref} target="_blank" rel="noreferrer" onClick={sendWa} title={`Message in ${isId ? "Bahasa Indonesia" : "English"} · ${s.client_wa ? `opens the chat with +${s.client_wa}` : "no client number saved — WhatsApp will ask you to pick the contact"}`}>Send via WhatsApp · {isId ? "ID" : "EN"}</a>
           </>
         }
       />
@@ -135,6 +140,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
                         : <span key="p" className="text-mute">set before this version — press Edit to set a new one</span>)
                       : <span key="p" className="text-mute">none · anyone with the link can open it</span>],
                     ["WhatsApp", s.client_wa ? <a key="w" href={`https://wa.me/${s.client_wa}`} target="_blank" rel="noreferrer" className="link font-mono">+{s.client_wa}</a> : <span key="w" className="text-mute">not saved · add it via Edit so the button opens their chat</span>],
+                    ["Language", isId ? "Bahasa Indonesia" : "English"],
                     ["Package", `${s.photo_limit} photos${s.max_limit ? ` · up to ${s.max_limit}` : ""}`],
                     ["Deadline", s.expires_at ? `${fmtDate(s.expires_at)} · ${daysLeft(s.expires_at)} days left` : "—"],
                     ["Drive folder", <a key="d" href={`https://drive.google.com/drive/folders/${s.drive_folder_id}`} target="_blank" rel="noreferrer" className="link">open ↗</a>],
@@ -223,7 +229,7 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
 function EditForm({ s, onDone }: { s: SessionDetail; onDone: () => void }) {
   const [v, setV] = useState({
     client_name: s.client_name, drive_folder_id: s.drive_folder_id, photo_limit: s.photo_limit, max_limit: s.max_limit ?? "",
-    pin: "", expires_at: s.expires_at ? s.expires_at.slice(0, 10) : "", notes: s.notes ?? "", client_wa: s.client_wa ?? "",
+    pin: "", expires_at: s.expires_at ? s.expires_at.slice(0, 10) : "", notes: s.notes ?? "", client_wa: s.client_wa ?? "", lang: s.lang ?? "en",
   });
   const [busy, setBusy] = useState(false);
   const [initial] = useState(v);
@@ -255,7 +261,7 @@ function EditForm({ s, onDone }: { s: SessionDetail; onDone: () => void }) {
     try {
       await api.patch(`/api/admin/sessions/${s.id}`, {
         client_name: v.client_name, drive_folder_id: v.drive_folder_id, photo_limit: Number(v.photo_limit),
-        max_limit: v.max_limit === "" ? null : Number(v.max_limit), notes: v.notes || null, client_wa: v.client_wa,
+        max_limit: v.max_limit === "" ? null : Number(v.max_limit), notes: v.notes || null, client_wa: v.client_wa, lang: v.lang,
         ...(v.pin !== "" ? { pin: v.pin } : {}),
         ...(v.expires_at ? { expires_at: new Date(v.expires_at + "T23:59:59").toISOString() } : { clear_expiry: true }),
       });
@@ -269,6 +275,7 @@ function EditForm({ s, onDone }: { s: SessionDetail; onDone: () => void }) {
     <div className="flex flex-col gap-4">
       <Field label="Client name" error={errors.client_name}><Input invalid={!!errors.client_name} value={v.client_name} onChange={set("client_name")} /></Field>
       <Field label="Client WhatsApp" hint="optional · with country code" error={errors.client_wa}><Input invalid={!!errors.client_wa} inputMode="tel" value={v.client_wa} onChange={set("client_wa")} placeholder="+62 812 3456 7890" /></Field>
+      <Field label="Client’s language" hint="gallery and WhatsApp message"><LangPick value={v.lang} onChange={(l) => setV((x) => ({ ...x, lang: l }))} /></Field>
       <Field label="Drive folder" error={errors.drive_folder_id}><Input invalid={!!errors.drive_folder_id} value={v.drive_folder_id} onChange={set("drive_folder_id")} /></Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Package" error={errors.photo_limit}><Input invalid={!!errors.photo_limit} type="number" min={1} value={v.photo_limit} onChange={set("photo_limit")} /></Field>

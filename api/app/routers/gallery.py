@@ -140,6 +140,7 @@ def gallery_meta(slug: str, db: DbSession = Depends(get_db), authorization: str 
         locked=bool(s.pin_hash) and not admin,
         expired=_expired(s) and not admin,
         preview=admin,
+        lang=s.lang or "en",
         branding=branding.get(db),
     )
 

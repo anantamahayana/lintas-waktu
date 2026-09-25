@@ -278,3 +278,15 @@ export function daysLeft(iso: string | null) {
   if (!iso) return null;
   return Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000);
 }
+
+/** The client's language (gallery, WhatsApp message, invoice): two big choices, not a dropdown. */
+export function LangPick({ value, onChange }: { value: string; onChange: (v: "en" | "id") => void }) {
+  return (
+    <div role="radiogroup" className="grid grid-cols-2 gap-2">
+      {([["en", "English"], ["id", "Bahasa Indonesia"]] as const).map(([k, l]) => (
+        <button key={k} type="button" role="radio" aria-checked={value === k} onClick={() => onChange(k)}
+          className={clsx("h-11 px-3 border t-small transition-colors", value === k ? "border-ink text-ink bg-white" : "border-line text-mute hover:border-ink")}>{l}</button>
+      ))}
+    </div>
+  );
+}
