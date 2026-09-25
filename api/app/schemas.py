@@ -161,6 +161,7 @@ class GalleryOut(BaseModel):
     notes: dict[str, str]
     maybe_ids: list[str] = []
     rev: int = 0
+    draft_version: int = 0
     preview: bool = False  # photographer preview: nothing is saved, client's picks untouched
     expires_at: datetime | None = None
     branding: Branding
@@ -170,6 +171,18 @@ class DraftRequest(BaseModel):
     file_ids: list[str] = []
     notes: dict[str, str] = {}
     maybe_ids: list[str] = []
+    # the draft version this device last saw; None = overwrite (older clients)
+    base_version: int | None = None
+
+
+class DraftOut(BaseModel):
+    """The picks as saved on the server — what every device syncs to."""
+    version: int
+    rev: int
+    status: SessionStatus
+    file_ids: list[str]
+    notes: dict[str, str]
+    maybe_ids: list[str]
 
 
 class UnlockRequest(BaseModel):

@@ -243,6 +243,7 @@ def reopen_session(session_id: str, db: DbSession = Depends(get_db)):
     s = _get_or_404(db, session_id)
     s.draft_ids = json.dumps([p.drive_file_id for p in s.selected_photos])
     s.draft_notes = json.dumps({p.drive_file_id: p.note for p in s.selected_photos if p.note})
+    s.draft_version = (s.draft_version or 0) + 1
     s.selected_photos.clear()
     s.status = "pending"
     s.submitted_at = None
@@ -268,6 +269,7 @@ def reset_session(session_id: str, db: DbSession = Depends(get_db)):
     s = _get_or_404(db, session_id)
     s.selected_photos.clear()
     s.draft_ids = s.draft_notes = s.draft_maybe = None
+    s.draft_version = (s.draft_version or 0) + 1
     s.reset_count = (s.reset_count or 0) + 1
     s.status = "pending"
     s.submitted_at = None

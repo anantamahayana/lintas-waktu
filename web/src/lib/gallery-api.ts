@@ -8,7 +8,7 @@ export type GalleryMeta = { client_name: string; locked: boolean; expired: boole
 export type GPhoto = { file_id: string; filename: string; name: string; width: number; height: number; thumb_url: string; full_url: string };
 export type GalleryData = {
   client_name: string; photo_limit: number; max_limit: number; status: "pending" | "completed"; photos: GPhoto[];
-  selected_ids: string[]; notes: Record<string, string>; maybe_ids: string[]; rev: number; preview: boolean;
+  selected_ids: string[]; notes: Record<string, string>; maybe_ids: string[]; rev: number; draft_version: number; preview: boolean;
   expires_at: string | null; branding: Branding;
 };
 
@@ -19,13 +19,17 @@ export const galleryToken = {
   clear: (slug: string) => localStorage.removeItem(tokenKey(slug)),
 };
 
+/** The picks as saved on the server; every device follows this. */
+export type DraftOut = { version: number; rev: number; status: "pending" | "completed"; file_ids: string[]; notes: Record<string, string>; maybe_ids: string[] };
+
 /**
- * The client's picks, kept on this device the moment they change. `synced` turns true once the
- * server confirmed the same picks, so an unsynced copy (tab closed or offline before the autosave
- * landed) wins over the server's older draft on the next visit. `rev` ties it to one round of the
- * gallery: after the photographer resets it, an old copy is ignored.
+ * Picks changed on this device that the server has not confirmed yet (tab closed or offline
+ * before the autosave landed). Kept only until the save succeeds. `base` is the server version
+ * they were made on: on the next visit they are restored only if the server is still at that
+ * version — if any device saved since, the server wins, so nothing stale comes back. `rev` ties
+ * the copy to one round of the gallery (the photographer's reset bumps it).
  */
-export type LocalDraft = { rev: number; ids: string[]; notes: Record<string, string>; maybe: string[]; synced: boolean };
+export type LocalDraft = { rev: number; base: number; ids: string[]; notes: Record<string, string>; maybe: string[] };
 const draftKey = (slug: string) => `lw_draft_${slug}`;
 export const localDraft = {
   get(slug: string): LocalDraft | null {
@@ -40,7 +44,8 @@ export const localDraft = {
 };
 
 export class GalleryError extends Error {
-  constructor(public status: number, message: string) { super(message); }
+  /** `detail` keeps a structured error body, e.g. the current draft with a 412 */
+  constructor(public status: number, message: string, public detail?: unknown) { super(message); }
 }
 
 export function isPreview(): boolean {
@@ -66,8 +71,9 @@ async function req<T>(slug: string, path: string, init: RequestInit = {}): Promi
   const res = await fetch(`${API_URL}/api/gallery/${slug}${path}`, { ...init, headers: headers(slug) });
   if (!res.ok) {
     let msg = res.statusText;
-    try { const j = await res.json(); msg = typeof j.detail === "string" ? j.detail : msg; } catch {}
-    throw new GalleryError(res.status, msg);
+    let detail: unknown;
+    try { const j = await res.json(); detail = j.detail; msg = typeof j.detail === "string" ? j.detail : msg; } catch {}
+    throw new GalleryError(res.status, msg, detail);
   }
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
@@ -77,9 +83,11 @@ export const gapi = {
   meta: (slug: string) => req<GalleryMeta>(slug, "/meta"),
   unlock: (slug: string, pin: string) => req<{ token: string }>(slug, "/unlock", { method: "POST", body: JSON.stringify({ pin }) }),
   load: (slug: string) => req<GalleryData>(slug, ""),
-  draft: (slug: string, body: { file_ids: string[]; notes: Record<string, string>; maybe_ids: string[] }, keepalive = false) =>
+  getDraft: (slug: string) => req<DraftOut>(slug, "/draft"),
+  /** 412 (GalleryError.detail = the current DraftOut) when another device saved after `base_version` */
+  draft: (slug: string, body: { file_ids: string[]; notes: Record<string, string>; maybe_ids: string[]; base_version: number }, keepalive = false) =>
     // keepalive: the request outlives the page (tab closed, app switched away mid-debounce)
-    req<void>(slug, "/draft", { method: "PUT", body: JSON.stringify(body), keepalive }),
+    req<DraftOut>(slug, "/draft", { method: "PUT", body: JSON.stringify(body), keepalive }),
   submit: (slug: string, body: { file_ids: string[]; notes: Record<string, string>; extra_ids: string[] }) =>
     req<{ selected_count: number; extra_count: number; message: string }>(slug, "/submit", { method: "POST", body: JSON.stringify(body) }),
   img: (path: string) => `${API_URL}${path}`,

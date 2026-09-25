@@ -46,6 +46,7 @@ class PhotoSession(Base):
     access_epoch: Mapped[int] = mapped_column(Integer, default=0)  # bump = sign out every unlocked device
     reset_count: Mapped[int] = mapped_column(Integer, default=0)  # bumps so clients drop stale local picks
     draft_maybe: Mapped[str | None] = mapped_column(Text, nullable=True)  # "tandai dulu" shortlist
+    draft_version: Mapped[int] = mapped_column(Integer, default=0)  # +1 per saved draft; devices send the one they built on
     first_opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # Client's WhatsApp number (optional), digits only with country code: 6281234567890

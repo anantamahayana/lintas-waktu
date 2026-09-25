@@ -13,7 +13,7 @@ from ..auth import is_admin_token
 from ..config import get_settings
 from ..database import get_db
 from ..models import PhotoSession, SelectedPhoto, SessionStatus, utcnow
-from ..schemas import Branding, DraftRequest, GalleryMeta, GalleryOut, Photo, SubmitOut, SubmitRequest, UnlockOut, UnlockRequest
+from ..schemas import Branding, DraftOut, DraftRequest, GalleryMeta, GalleryOut, Photo, SubmitOut, SubmitRequest, UnlockOut, UnlockRequest
 from ..services import backup, branding, drive_service, ratelimit
 
 log = logging.getLogger(__name__)
@@ -219,6 +219,7 @@ def get_gallery(slug: str, background: BackgroundTasks, db: DbSession = Depends(
         notes=sel_notes,
         maybe_ids=maybe,
         rev=s.reset_count or 0,
+        draft_version=s.draft_version or 0,
         preview=admin,
         expires_at=s.expires_at,
         branding=branding.get(db),
@@ -239,21 +240,46 @@ async def get_image(slug: str, file_id: str, size: str = "thumb", t: str | None 
     return Response(data, media_type=media_type, headers={"Cache-Control": "private, max-age=604800, immutable"})
 
 
-@router.put("/gallery/{slug}/draft", status_code=204)
-def save_draft(slug: str, body: DraftRequest, db: DbSession = Depends(get_db), x_gallery_token: str | None = Header(None), authorization: str | None = Header(None)):
-    if is_admin_token(authorization):  # preview mode: never overwrite the client's picks
-        return Response(status_code=204)
-    """Autosave of the client's picks so they can continue on another device."""
+def _draft_out(s: PhotoSession) -> DraftOut:
+    if s.status == SessionStatus.completed:
+        ids = [p.drive_file_id for p in s.selected_photos]
+        notes = {p.drive_file_id: p.note for p in s.selected_photos if p.note}
+        maybe: list[str] = []
+    else:
+        ids = json.loads(s.draft_ids or "[]")
+        notes = json.loads(s.draft_notes or "{}")
+        maybe = json.loads(s.draft_maybe or "[]")
+    return DraftOut(version=s.draft_version or 0, rev=s.reset_count or 0, status=s.status, file_ids=ids, notes=notes, maybe_ids=maybe)
+
+
+@router.get("/gallery/{slug}/draft", response_model=DraftOut)
+def get_draft(slug: str, db: DbSession = Depends(get_db), x_gallery_token: str | None = Header(None), authorization: str | None = Header(None)):
+    """The saved picks only (no photo list) — open galleries poll this to follow other devices."""
     s = _session(db, slug)
+    _authorize(s, x_gallery_token, admin=is_admin_token(authorization))
+    return _draft_out(s)
+
+
+@router.put("/gallery/{slug}/draft", response_model=DraftOut)
+def save_draft(slug: str, body: DraftRequest, db: DbSession = Depends(get_db), x_gallery_token: str | None = Header(None), authorization: str | None = Header(None)):
+    """Autosave of the client's picks so they can continue on another device. A device that
+    built on an older version gets 412 with the current draft, merges, and saves again —
+    so a phone left open never overwrites what was picked on the laptop meanwhile."""
+    s = _session(db, slug)
+    if is_admin_token(authorization):  # preview mode: never overwrite the client's picks
+        return _draft_out(s)
     _authorize(s, x_gallery_token)
     if s.status == SessionStatus.completed:
         raise HTTPException(409, "Pilihan sudah dikirim.")
+    if body.base_version is not None and body.base_version != (s.draft_version or 0):
+        raise HTTPException(412, _draft_out(s).model_dump(mode="json"))
     ids = list(dict.fromkeys(body.file_ids))[: s.hard_limit]
     s.draft_ids = json.dumps(ids)
     s.draft_notes = json.dumps(_clean_notes(body.notes, ids))
     s.draft_maybe = json.dumps([i for i in dict.fromkeys(body.maybe_ids) if i not in set(ids)][:2000])
+    s.draft_version = (s.draft_version or 0) + 1
     db.commit()
-    return Response(status_code=204)
+    return _draft_out(s)
 
 
 @router.post("/gallery/{slug}/submit", response_model=SubmitOut)
@@ -286,6 +312,7 @@ def submit(slug: str, body: SubmitRequest, background: BackgroundTasks, db: DbSe
     s.status = SessionStatus.completed
     s.submitted_at = utcnow()
     s.draft_ids = s.draft_notes = s.draft_maybe = None
+    s.draft_version = (s.draft_version or 0) + 1
     db.commit()
     background.add_task(backup.backup_after_submit, s.client_name)  # keep a copy of today's result right away
 

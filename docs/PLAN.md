@@ -40,9 +40,9 @@ Dugaan penyebab dari sesi desktop sudah dicek terhadap kode; hasilnya di kolom "
 2. **1b, 1c**, lalu **3** dan **4**.
 3. **5** setelah domain ada.
 
-## Terkait: pilihan klien tidak boleh hilang — ✅ selesai
-Pilihan sudah disimpan otomatis ke server, tetapi baru 0,8 detik setelah ketukan terakhir; keluar lebih cepat dari itu, aplikasi ditutup iOS, atau koneksi putus membuat pilihan terakhir hilang.
-- Setiap perubahan langsung disimpan juga di perangkat klien (`localDraft`, `web/src/lib/gallery-api.ts`).
-- Saat halaman ditinggalkan / disembunyikan, draf dikirim seketika (`fetch` dengan `keepalive`); saat online kembali, dikirim ulang.
-- Saat membuka lagi: salinan di perangkat yang belum terkirim menang atas draf server; yang sudah terkirim tidak — perangkat lain yang lebih baru tetap dihormati. Salinan lama diabaikan setelah fotografer me-reset galeri.
-- Diuji di Chromium: keluar 0,1 detik setelah memilih, memilih saat offline, dan ganti perangkat — semua pilihan kembali.
+## Terkait: pilihan klien tersimpan dan tersinkron di semua perangkat — ✅ selesai
+- Draf punya nomor versi di server (`draft_version`). Setiap simpan menyebut versi yang jadi dasarnya; kalau perangkat lain sudah menyimpan lebih dulu, server menjawab 412 berisi draf terbaru, lalu galeri menggabungkan: pilihan perangkat lain dipertahankan, perubahan perangkat ini (tambah/hapus pilihan, tanda, catatan) diterapkan di atasnya.
+- Galeri yang sedang terbuka mengambil draf terbaru (`GET /api/gallery/{slug}/draft`) saat tab kembali aktif, saat fokus, dan tiap 12 detik — tanpa reload.
+- Perubahan yang belum terkirim disimpan di perangkat (`localDraft`) dan dipulihkan hanya kalau server masih di versi yang sama; kalau perangkat lain sudah menyimpan, server yang dipakai — pilihan yang sudah dihapus tidak muncul lagi.
+- Dikirim seketika saat halaman ditinggalkan (`keepalive`), dikirim ulang saat online kembali.
+- Diuji: laptop memilih → HP yang tab-nya terbuka ikut berubah dalam ±12 detik; dua perangkat memilih bersamaan → digabung; perangkat ketiga melihat hasil yang sama. Tes API: `api/tests/test_draft_sync.py`.

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import clsx from "clsx";
-import { gapi, galleryToken, localDraft, GalleryError, type GalleryData, type GalleryMeta } from "@/lib/gallery-api";
+import { gapi, galleryToken, localDraft, GalleryError, type DraftOut, type GalleryData, type GalleryMeta } from "@/lib/gallery-api";
 import { T, type Dict, type Lang } from "./i18n";
 import { AlbumPreview } from "./AlbumPreview";
 
@@ -12,6 +12,36 @@ type IntroPhase = "in" | "out" | "gone";
 const INTRO_MS = 2600;
 
 const GOLD = "#c9a84c";
+
+type Picks = { ids: string[]; notes: Record<string, string>; maybe: string[] };
+const PULL_MS = 12000; // an open gallery checks for picks made on other devices this often
+
+const picksKey = (p: Picks) => JSON.stringify([p.ids, Object.entries(p.notes).sort(([a], [b]) => (a < b ? -1 : 1)), p.maybe]);
+
+/**
+ * Three-way merge for picks when another device saved first: start from theirs, then replay
+ * what changed here since the common base (added / removed picks and marks, edited notes).
+ */
+function mergePicks(base: Picks, mine: Picks, theirs: Picks): Picks {
+  const replay = (b: string[], m: string[], t: string[]) => {
+    const inBase = new Set(b), inMine = new Set(m);
+    const out = t.filter((i) => !(inBase.has(i) && !inMine.has(i)));
+    for (const i of m) if (!inBase.has(i) && !out.includes(i)) out.push(i);
+    return out;
+  };
+  const ids = replay(base.ids, mine.ids, theirs.ids);
+  const notes = { ...theirs.notes };
+  for (const k of new Set([...Object.keys(base.notes), ...Object.keys(mine.notes)])) {
+    if (mine.notes[k] === base.notes[k]) continue;
+    if (mine.notes[k]) notes[k] = mine.notes[k]; else delete notes[k];
+  }
+  const sel = new Set(ids);
+  return {
+    ids,
+    notes: Object.fromEntries(Object.entries(notes).filter(([k]) => sel.has(k))),
+    maybe: replay(base.maybe, mine.maybe, theirs.maybe).filter((i) => !sel.has(i)),
+  };
+}
 
 function fmt(iso: string | null, lang: Lang) {
   if (!iso) return null;
@@ -44,28 +74,27 @@ export function ClientGallery({ slug }: { slug: string }) {
   const [sent, setSent] = useState<{ selected_count: number; extra_count: number } | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const dirty = useRef(false); // picks changed by the client since load (or restored from this device)
+  // Picks sync: `base` is the last state the server confirmed (with its version). The screen may
+  // differ from it (changes waiting to be saved); a save names the version it built on, and if
+  // another device saved first the server answers 412 and the two are merged.
+  const base = useRef<(Picks & { version: number }) | null>(null);
 
   const loadGallery = useCallback(async () => {
     try {
       const d = await gapi.load(slug);
       setData(d);
-      // Picks made here that never reached the server (tab closed mid-autosave, offline) beat the
-      // server's older draft; once they are synced the server is the truth (another device may be newer).
-      const local = d.preview ? null : localDraft.get(slug);
-      if (d.status !== "completed" && local && local.rev === d.rev && !local.synced) {
+      base.current = { version: d.draft_version, ids: d.selected_ids, notes: d.notes, maybe: d.maybe_ids };
+      let start: Picks = base.current;
+      // unsaved picks from this device come back only if no device has saved since they were made
+      const local = d.preview || d.status === "completed" ? null : localDraft.get(slug);
+      if (local && local.rev === d.rev && local.base === d.draft_version) {
         const known = new Set(d.photos.map((p) => p.file_id));
-        const localIds = local.ids.filter((i) => known.has(i));
-        setIds(localIds);
-        setNotes(Object.fromEntries(Object.entries(local.notes).filter(([i]) => localIds.includes(i))));
-        setMaybe(local.maybe.filter((i) => known.has(i) && !localIds.includes(i)));
-        dirty.current = true; // the autosave sends them on
-      } else {
-        setIds(d.selected_ids);
-        setNotes(d.notes);
-        setMaybe(d.maybe_ids);
-        if (!d.preview) localDraft.clear(slug);
-      }
+        const ids = local.ids.filter((i) => known.has(i));
+        start = { ids, notes: Object.fromEntries(Object.entries(local.notes).filter(([i]) => ids.includes(i))), maybe: local.maybe.filter((i) => known.has(i) && !ids.includes(i)) };
+      } else if (!d.preview) localDraft.clear(slug);
+      setIds(start.ids);
+      setNotes(start.notes);
+      setMaybe(start.maybe);
       if (d.status === "completed") { setSent({ selected_count: d.selected_ids.length, extra_count: 0 }); setStage("sent"); }
       else if (!sessionStorage.getItem(`lw_guide_${slug}`)) setGuide(true);
     } catch (e) {
@@ -96,50 +125,97 @@ export function ClientGallery({ slug }: { slug: string }) {
     if (intro === "out") { const h = setTimeout(() => { setIntro("gone"); sessionStorage.setItem(`lw_intro_${slug}`, "1"); }, 700); return () => clearTimeout(h); }
   }, [intro, slug]);
 
-  // 2. autosave draft — not in preview, not when completed. Every change is kept on this device at
-  // once; the server gets it after a short pause, right away when the page is left, and again
+  // 2. autosave draft — not in preview, not when completed. Changes are kept on this device at
+  // once; the server gets them after a short pause, right away when the page is left, and again
   // when the connection comes back after a failed save.
   const [saveState, setSaveState] = useState<"" | "saving" | "saved" | "offline">("");
-  const pending = useRef<{ file_ids: string[]; notes: Record<string, string>; maybe_ids: string[] } | null>(null);
-  const rev = data?.rev ?? 0;
+  const pending = useRef<Picks | null>(null);
+  const inflight = useRef(false);
+  const again = useRef(false);
+  const flushRef = useRef<() => void>(() => {});
+  const known = useMemo(() => new Set((data?.photos ?? []).map((p) => p.file_id)), [data]);
+  const hardMax = data?.max_limit ?? Infinity;
+
+  // take the server's picks as they are (another device changed them)
+  const applyServer = useCallback((d: DraftOut) => {
+    const ids = d.file_ids.filter((i) => known.has(i));
+    const picks = { ids, notes: Object.fromEntries(Object.entries(d.notes).filter(([i]) => ids.includes(i))), maybe: d.maybe_ids.filter((i) => known.has(i) && !ids.includes(i)) };
+    base.current = { version: d.version, ...picks };
+    setIds(picks.ids);
+    setNotes(picks.notes);
+    setMaybe(picks.maybe);
+    return picks;
+  }, [known]);
+
   const flush = useCallback((keepalive = false) => {
     const body = pending.current;
-    if (!body) return;
+    if (!body || !base.current) return;
+    if (inflight.current) { again.current = true; return; }
+    inflight.current = true;
     setSaveState("saving");
-    gapi.draft(slug, body, keepalive).then(() => {
-      if (pending.current === body) {
-        pending.current = null;
-        localDraft.set(slug, { rev, ids: body.file_ids, notes: body.notes, maybe: body.maybe_ids, synced: true });
-      }
+    gapi.draft(slug, { file_ids: body.ids, notes: body.notes, maybe_ids: body.maybe, base_version: base.current.version }, keepalive).then((d) => {
+      base.current = { version: d.version, ...body };
+      if (pending.current === body) { pending.current = null; localDraft.clear(slug); }
       setSaveState("saved");
     }).catch((e) => {
-      if (e instanceof GalleryError && e.status === 409) { pending.current = null; localDraft.clear(slug); } // already sent
+      if (e instanceof GalleryError && e.status === 412 && e.detail && base.current) {
+        // another device saved first: keep their picks and replay ours on top; the autosave sends the result
+        const mine = pending.current ?? body;
+        const prev = base.current;
+        const theirs = applyServer(e.detail as DraftOut);
+        const merged = mergePicks(prev, mine, theirs);
+        setIds(merged.ids.slice(0, hardMax));
+        setNotes(merged.notes);
+        setMaybe(merged.maybe);
+        return;
+      }
+      if (e instanceof GalleryError && e.status === 409) { pending.current = null; localDraft.clear(slug); loadGallery(); return; } // sent from another device
       setSaveState("offline");
+    }).finally(() => {
+      inflight.current = false;
+      if (again.current) { again.current = false; flushRef.current(); } // a change came in while saving
     });
-  }, [slug, rev]);
+  }, [slug, applyServer, hardMax, loadGallery]);
+  useEffect(() => { flushRef.current = flush; }, [flush]);
 
   useEffect(() => {
-    if (!data || data.preview || data.status === "completed" || stage === "sent") return;
-    if (!dirty.current) return;
-    localDraft.set(slug, { rev: data.rev, ids, notes, maybe, synced: false });
-    pending.current = { file_ids: ids, notes, maybe_ids: maybe };
+    if (!data || data.preview || data.status === "completed" || stage === "sent" || !base.current) return;
+    const mine = { ids, notes, maybe };
+    if (picksKey(mine) === picksKey(base.current)) { pending.current = null; localDraft.clear(slug); return; }
+    localDraft.set(slug, { rev: data.rev, base: base.current.version, ...mine });
+    pending.current = mine;
     const h = setTimeout(() => flush(), 800);
     return () => clearTimeout(h);
   }, [ids, notes, maybe, data, slug, stage, flush]);
 
+  // follow the other devices: when the tab comes back, on focus, and every PULL_MS while visible
+  const pull = useCallback(async () => {
+    if (!data || stage !== "gallery" || pending.current || inflight.current) return;
+    try {
+      const d = await gapi.getDraft(slug);
+      if (d.rev !== data.rev || d.status === "completed") { loadGallery(); return; } // reset, or sent elsewhere
+      if (base.current && d.version !== base.current.version && !pending.current && !inflight.current) applyServer(d);
+    } catch {} // offline: try again next time
+  }, [data, stage, slug, loadGallery, applyServer]);
+
   useEffect(() => {
-    const onVisibility = () => flush(document.visibilityState === "hidden");
+    const onVisibility = () => { if (document.visibilityState === "hidden") flush(true); else { flush(); pull(); } };
     const onLeave = () => flush(true);
-    const onOnline = () => flush();
+    const onOnline = () => { flush(); pull(); };
+    const onFocus = () => pull();
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("pagehide", onLeave);
     window.addEventListener("online", onOnline);
+    window.addEventListener("focus", onFocus);
+    const h = setInterval(() => { if (document.visibilityState === "visible") pull(); }, PULL_MS);
     return () => {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("pagehide", onLeave);
       window.removeEventListener("online", onOnline);
+      window.removeEventListener("focus", onFocus);
+      clearInterval(h);
     };
-  }, [flush]);
+  }, [flush, pull]);
 
   // derived
   const limit = data?.photo_limit ?? 0;
@@ -157,15 +233,14 @@ export function ClientGallery({ slug }: { slug: string }) {
   }, [data, filter, selectedSet, maybeSet]);
 
   const toggle = (id: string, force?: boolean) => {
-    dirty.current = true;
     if (selectedSet.has(id)) { setIds((s) => s.filter((x) => x !== id)); return; }
     if (full) return;
     if (count >= limit && !force) { setOverPrompt(id); return; }
     setIds((s) => [...s, id]);
     setMaybe((m) => m.filter((x) => x !== id));
   };
-  const toggleMaybe = (id: string) => { dirty.current = true; setMaybe((m) => (m.includes(id) ? m.filter((x) => x !== id) : [...m, id])); };
-  const setNote = (id: string, v: string) => { dirty.current = true; setNotes((n) => { const c = { ...n }; if (v.trim()) c[id] = v; else delete c[id]; return c; }); };
+  const toggleMaybe = (id: string) => { setMaybe((m) => (m.includes(id) ? m.filter((x) => x !== id) : [...m, id])); };
+  const setNote = (id: string, v: string) => { setNotes((n) => { const c = { ...n }; if (v.trim()) c[id] = v; else delete c[id]; return c; }); };
 
   const openConfirm = () => { setExtraIds(ids.slice(limit)); setStage("confirm"); };
   const [finalAsk, setFinalAsk] = useState(false);
