@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session as DbSession
 from ..auth import require_admin
 from ..database import get_db
 from ..services import drive_service
-from . import film as film_links, settings_store, site_cache
+from . import copy_store, film as film_links, settings_store, site_cache
 from .models import Inquiry, InquiryStatus, Project
 from .schemas import (
     InquiryOut,
@@ -296,3 +296,25 @@ def put_site_settings(body: SiteSettingsUpdate, background: BackgroundTasks, db:
     out = settings_store.update(db, body)
     background.add_task(site_cache.invalidate, "site settings updated")
     return out
+
+
+# ---------------------------------------------------------------- site text
+@router.get("/copy")
+def get_copy(db: DbSession = Depends(get_db)):
+    """What the admin changed in the site text, per locale (defaults live in the web app)."""
+    return {loc: copy_store.get(db, loc) for loc in copy_store.LOCALES}
+
+
+@router.put("/copy")
+def put_copy(body: dict, background: BackgroundTasks, db: DbSession = Depends(get_db)):
+    for loc in copy_store.LOCALES:
+        if not isinstance(body.get(loc, {}), dict):
+            raise HTTPException(422, f"'{loc}' must be an object")
+    try:
+        for loc in copy_store.LOCALES:
+            copy_store.put(db, loc, body.get(loc) or {})
+    except ValueError as e:
+        raise HTTPException(413, str(e))
+    db.commit()
+    background.add_task(site_cache.invalidate, "site text edited")
+    return {loc: copy_store.get(db, loc) for loc in copy_store.LOCALES}

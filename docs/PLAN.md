@@ -54,3 +54,10 @@ Dugaan penyebab dari sesi desktop sudah dicek terhadap kode; hasilnya di kolom "
 - Tombol di foto: area sentuh 44 px, tampilan kecil transparan; di desktop muncul saat hover.
 - Lightbox: geser kiri/kanan dengan foto berikutnya ikut masuk, geser ke bawah untuk menutup, ketuk dua kali / cubit untuk zoom (geser untuk melihat sekitar), ketuk sekali untuk menyembunyikan tombol; thumbnail tampil dulu, foto besar menyusul.
 - Umpan balik kecil: centang "pop", angka mengangguk, getar singkat (Android) saat memilih.
+
+## Teks situs bisa diedit di admin (25 Sep 2026) — ✅
+- Admin → **Site text**: semua teks halaman publik (Home, Packages, Services, About, Contact, Work, menu & footer, SEO) dalam EN dan ID berdampingan; daftar (paket, FAQ, nilai, fakta) bisa ditambah, dihapus, diurutkan.
+- Teks bawaan tetap di `web/messages/{en,id}.json`; yang diubah admin disimpan di API (`settings`: `copy.en`, `copy.id`) hanya bagian yang berbeda, lalu digabung saat render (`web/src/lib/copy.ts`, `web/src/i18n/request.ts`). Situs ter-update lewat revalidasi yang sama dengan proyek.
+- Paket & harga pindah dari kode (`Packages.tsx`) ke teks situs; harga teks bebas per mata uang (IDR/USD).
+- 41 teks sisa desain lama yang tidak dipakai halaman mana pun dihapus dari `messages`.
+- Belum: menambah/menyembunyikan bagian halaman (tahap berikutnya kalau perlu).

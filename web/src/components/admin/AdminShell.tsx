@@ -10,7 +10,7 @@ import { confirm, confirmLeave, hasUnsavedChanges } from "@/components/admin/ui"
 const groups: { label: string; items: { href: string; label: string; exact?: boolean }[] }[] = [
   { label: "Proofing", items: [{ href: "/admin", label: "Sessions", exact: true }, { href: "/admin/sessions/new", label: "New session" }] },
   { label: "Business", items: [{ href: "/admin/calendar", label: "Calendar" }, { href: "/admin/invoices", label: "Invoices" }] },
-  { label: "Website", items: [{ href: "/admin/projects", label: "Projects" }, { href: "/admin/site-images", label: "Site images" }, { href: "/admin/inquiries", label: "Inquiries" }] },
+  { label: "Website", items: [{ href: "/admin/projects", label: "Projects" }, { href: "/admin/content", label: "Site text" }, { href: "/admin/site-images", label: "Site images" }, { href: "/admin/inquiries", label: "Inquiries" }] },
   { label: "", items: [{ href: "/admin/settings", label: "Site settings" }] },
 ];
 

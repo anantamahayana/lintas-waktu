@@ -15,16 +15,10 @@
   "cta": {
     "start": "Mulai obrolan",
     "whatsapp": "WhatsApp kami",
-    "inquiry": "Kirim pertanyaan",
-    "viewAll": "Lihat semua karya",
     "about": "Tentang studio"
   },
   "home": {
     "hero": {
-      "eyebrow": "Fotografer wedding & film independen · Bali",
-      "line1": "Momen berlalu.",
-      "line2": "Fotonya tidak.",
-      "lead": "Wedding, pre-wedding, acara, dan cerita personal — difoto dan difilmkan pelan-pelan, dengan intensi, agar bisa dikunjungi kembali lama setelah harinya lewat.",
       "est": "Sejak 2022 · Bali",
       "title1": "Fotografi Wedding",
       "title2": "& Film",
@@ -34,71 +28,13 @@
       "cta1": "Layanan kami",
       "cta2": "Hubungi kami"
     },
-    "work": {
-      "eyebrow": "Karya pilihan",
-      "line1": "Ada hari-hari yang layak",
-      "line2": "dikunjungi lagi."
-    },
-    "services": {
-      "eyebrow": "Yang kami kerjakan",
-      "line1": "Bukan paket. Bukan deliverable.",
-      "line2": "Hari-hari, disimpan dengan hati-hati.",
-      "items": {
-        "wedding": {
-          "title": "Wedding",
-          "desc": "Foto, film, atau keduanya sepanjang hari. Upacara intim, elopement, dan resepsi di seluruh Bali.",
-          "from": "Mulai IDR 12 jt · USD 750"
-        },
-        "prewedding": {
-          "title": "Pre-wedding",
-          "desc": "Sesi santai di tempat yang membuatmu memilih Bali — tebing, sawah, atau pantai sepi saat fajar.",
-          "from": "Mulai IDR 4,5 jt · USD 280"
-        },
-        "event": {
-          "title": "Acara",
-          "desc": "Acara perusahaan, perayaan komunitas, peluncuran. Didokumentasikan, bukan diatur.",
-          "from": "Mulai IDR 3 jt · USD 190"
-        },
-        "personal": {
-          "title": "Personal",
-          "desc": "Personal branding, wisuda, potret keluarga. Satu jam, satu lokasi, kamu.",
-          "from": "Mulai IDR 1,5 jt · USD 95"
-        }
-      }
-    },
     "behind": {
       "eyebrow": "Di balik kamera",
-      "line1": "Tanpa tim. Tanpa meja vendor.",
-      "line2": "Hanya orang yang ada di sana.",
       "body": "Lintas Waktu dijalankan secara independen. Dari obrolan pertama sampai hari kamu menerima file, kamu bekerja langsung dengan fotografernya — orang yang sama yang berdiri di sampingmu hari itu dan ingat rasanya.",
       "title": "Fotografi dengan <em>sentuhan personal</em>",
       "quote": "“Kami tidak sekadar mengambil gambar — kami menyimpan jam-jam yang ingin kamu masuki lagi.”"
     },
-    "process": {
-      "eyebrow": "Cara kerja",
-      "line1": "Tidak ada yang terburu-buru di sini.",
-      "line2": "Termasuk fotonya.",
-      "steps": [
-        {
-          "title": "Obrolan",
-          "desc": "Kita bicara tentang harimu, bukan daftar harga."
-        },
-        {
-          "title": "Hari-H",
-          "desc": "Hadir, tenang, tidak pernah menghalangi."
-        },
-        {
-          "title": "Pilih fotomu",
-          "desc": "Galeri online privat. Pilih yang kamu suka, tinggalkan catatan."
-        },
-        {
-          "title": "Pengiriman",
-          "desc": "Diedit, dicetak jika mau, disimpan bertahun-tahun."
-        }
-      ]
-    },
     "testimonial": {
-      "eyebrow": "Kata mereka",
       "quote": "“Kami hampir tidak menyadari dia seharian. Lalu fotonya datang dan rasanya seperti ada di sana lagi — cahayanya, riuhnya, ibu saya tertawa.”",
       "name": "Ayu & Marco",
       "meta": "Wedding · Uluwatu · 2026"
@@ -107,12 +43,30 @@
       "eyebrow": "Wedding · mulai dari",
       "line1": "Tiga cara menyimpan hari itu.",
       "line2": "Pilih temponya.",
-      "ask": "Tanya tentang ini"
-    },
-    "cta": {
-      "line1": "Ceritakan tentang",
-      "line2": "harimu.",
-      "body": "Tanggal di Bali cepat penuh di musim kemarau (Mei–September). Pesan singkat sudah cukup untuk memulai — kami balas dalam sehari."
+      "ask": "Tanya tentang ini",
+      "items": [
+        {
+          "name": "Essential",
+          "tagline": "Setengah hari, foto saja.",
+          "price_idr": "IDR 12.000.000",
+          "price_usd": "USD 750",
+          "includes": "Liputan 6 jam\n1 fotografer\n300+ foto yang diedit\nGaleri online privat"
+        },
+        {
+          "name": "Signature",
+          "tagline": "Sehari penuh, foto & film.",
+          "price_idr": "IDR 24.000.000",
+          "price_usd": "USD 1,500",
+          "includes": "Liputan 10 jam\nFotografer + videografer\n500+ foto yang diedit\nFilm highlight 4–6 menit\nGaleri online privat"
+        },
+        {
+          "name": "Full Story",
+          "tagline": "Dua hari, setiap babnya.",
+          "price_idr": "IDR 38.000.000",
+          "price_usd": "USD 2,400",
+          "includes": "Hari upacara + resepsi\n2 fotografer + videografer\n800+ foto yang diedit\nFilm highlight + edit upacara lengkap\nAlbum fine-art (30 halaman)"
+        }
+      ]
     },
     "intro": {
       "eyebrow": "Mari lebih dekat",
@@ -142,10 +96,6 @@
   },
   "footer": {
     "tagline": "Fotografi & Film · Bali, Indonesia",
-    "explore": "Jelajahi",
-    "services": "Layanan",
-    "reach": "Hubungi",
-    "privacy": "Privasi",
     "rights": "© {year} Lintas Waktu"
   },
   "categories": {
@@ -165,10 +115,7 @@
     "filterLabel": "Saring menurut kategori"
   },
   "project": {
-    "back": "Semua karya",
     "theDay": "Hari itu",
-    "film": "Film highlight",
-    "next": "Berikutnya",
     "playFilm": "Putar film",
     "more": "Karya lain yang mungkin kamu suka",
     "all": "Semua karya",

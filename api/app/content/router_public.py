@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session as DbSession
 
 from ..database import get_db
 from ..services import drive_service
-from . import settings_store, site_images
+from . import copy_store, settings_store, site_images
 from .models import Inquiry, Project, ProjectCategory
 from .router_admin import cover_url, film_out, photos_out
 from .schemas import Film, InquiryCreate, PublicProjectOut, SiteSettings
@@ -111,3 +111,11 @@ def create_inquiry(body: InquiryCreate, request: Request, db: DbSession = Depend
     db.add(i)
     db.commit()
     return {"ok": True, "id": i.id}
+
+
+@router.get("/copy/{locale}")
+def get_copy(locale: str, db: DbSession = Depends(get_db)):
+    """Site text changed in the admin, merged by the site over its built-in defaults."""
+    if locale not in copy_store.LOCALES:
+        raise HTTPException(404)
+    return copy_store.get(db, locale)

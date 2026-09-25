@@ -15,16 +15,10 @@
   "cta": {
     "start": "Start a conversation",
     "whatsapp": "WhatsApp us",
-    "inquiry": "Send an inquiry",
-    "viewAll": "View all work",
     "about": "About the studio"
   },
   "home": {
     "hero": {
-      "eyebrow": "Independent wedding & film photographer · Bali",
-      "line1": "Moments pass.",
-      "line2": "The photographs don’t.",
-      "lead": "Wedding, pre-wedding, events and personal stories — photographed and filmed slowly, with intention, so they can be revisited long after the day is gone.",
       "est": "Est. 2022 · Bali",
       "title1": "Wedding & Film",
       "title2": "Photography",
@@ -34,71 +28,13 @@
       "cta1": "Our services",
       "cta2": "Inquire now"
     },
-    "work": {
-      "eyebrow": "Selected work",
-      "line1": "Some days are worth",
-      "line2": "returning to."
-    },
-    "services": {
-      "eyebrow": "What we do",
-      "line1": "Not packages. Not deliverables.",
-      "line2": "Days, kept with care.",
-      "items": {
-        "wedding": {
-          "title": "Wedding",
-          "desc": "Full-day photo, film, or both. Intimate ceremonies, elopements and receptions across Bali.",
-          "from": "From IDR 12M · USD 750"
-        },
-        "prewedding": {
-          "title": "Pre-wedding",
-          "desc": "A slow session in the place you chose Bali for — cliffs, rice terraces, or the quiet beach at dawn.",
-          "from": "From IDR 4.5M · USD 280"
-        },
-        "event": {
-          "title": "Event",
-          "desc": "Corporate gatherings, community celebrations, launches. Documented, not staged.",
-          "from": "From IDR 3M · USD 190"
-        },
-        "personal": {
-          "title": "Personal",
-          "desc": "Personal branding, graduation, family portraits. One hour, one location, you.",
-          "from": "From IDR 1.5M · USD 95"
-        }
-      }
-    },
     "behind": {
       "eyebrow": "Behind the camera",
-      "line1": "No team. No vendor desk.",
-      "line2": "Just the person who was there.",
       "body": "Lintas Waktu is run independently. From the first conversation to the day you receive your files, you work directly with the photographer — the same person who stood beside you on the day and remembers how it felt.",
       "title": "Photography with <em>a personal touch</em>",
       "quote": "“We don’t just take pictures — we keep the hours you’ll want to walk back into.”"
     },
-    "process": {
-      "eyebrow": "How it works",
-      "line1": "Nothing here is rushed.",
-      "line2": "Including the photographs.",
-      "steps": [
-        {
-          "title": "Conversation",
-          "desc": "We talk about your day, not a price list."
-        },
-        {
-          "title": "The day",
-          "desc": "Present, quiet, never in the way."
-        },
-        {
-          "title": "Choose your photos",
-          "desc": "A private online gallery. Pick what you love, leave a note."
-        },
-        {
-          "title": "Delivery",
-          "desc": "Edited, printed if you like, kept for years."
-        }
-      ]
-    },
     "testimonial": {
-      "eyebrow": "Kind words",
       "quote": "“We didn’t notice him most of the day. Then the photos came and it was like being there again — the light, the noise, my mother laughing.”",
       "name": "Ayu & Marco",
       "meta": "Wedding · Uluwatu · 2026"
@@ -107,12 +43,30 @@
       "eyebrow": "Wedding · starting from",
       "line1": "Three ways to keep the day.",
       "line2": "Pick the pace.",
-      "ask": "Ask about this"
-    },
-    "cta": {
-      "line1": "Tell us about",
-      "line2": "your day.",
-      "body": "Dates in Bali fill quickly in the dry season (May–September). A short message is enough to start — we’ll reply within a day."
+      "ask": "Ask about this",
+      "items": [
+        {
+          "name": "Essential",
+          "tagline": "Half a day, photographs only.",
+          "price_idr": "IDR 12.000.000",
+          "price_usd": "USD 750",
+          "includes": "6 hours coverage\n1 photographer\n300+ edited photographs\nPrivate online gallery"
+        },
+        {
+          "name": "Signature",
+          "tagline": "The full day, photo & film.",
+          "price_idr": "IDR 24.000.000",
+          "price_usd": "USD 1,500",
+          "includes": "10 hours coverage\nPhotographer + videographer\n500+ edited photographs\n4–6 min highlight film\nPrivate online gallery"
+        },
+        {
+          "name": "Full Story",
+          "tagline": "Two days, every chapter.",
+          "price_idr": "IDR 38.000.000",
+          "price_usd": "USD 2,400",
+          "includes": "Ceremony + reception day\n2 photographers + videographer\n800+ edited photographs\nHighlight film + full ceremony edit\nFine-art album (30 pages)"
+        }
+      ]
     },
     "intro": {
       "eyebrow": "Let’s get closer",
@@ -142,10 +96,6 @@
   },
   "footer": {
     "tagline": "Photography & Film · Bali, Indonesia",
-    "explore": "Explore",
-    "services": "Services",
-    "reach": "Reach",
-    "privacy": "Privacy",
     "rights": "© {year} Lintas Waktu"
   },
   "categories": {
@@ -165,10 +115,7 @@
     "filterLabel": "Filter by category"
   },
   "project": {
-    "back": "All work",
     "theDay": "The day",
-    "film": "Highlight film",
-    "next": "Next",
     "playFilm": "Play film",
     "more": "More work you might like",
     "all": "All work",
