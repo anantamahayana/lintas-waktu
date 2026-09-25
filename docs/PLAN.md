@@ -47,7 +47,7 @@ Dugaan penyebab dari sesi desktop sudah dicek terhadap kode; hasilnya di kolom "
 - Dikirim seketika saat halaman ditinggalkan (`keepalive`), dikirim ulang saat online kembali.
 - Diuji: laptop memilih → HP yang tab-nya terbuka ikut berubah dalam ±12 detik; dua perangkat memilih bersamaan → digabung; perangkat ketiga melihat hasil yang sama. Tes API: `api/tests/test_draft_sync.py`.
 
-## UI galeri klien (26 Sep 2026) — ✅ tahap 1
+## UI galeri klien (25 Sep 2026) — ✅ tahap 1
 - Grid mengikuti bentuk foto: baris rata (justified), portrait sempit, landscape lebar; urutan foto tetap. Bentuk dibaca dari thumbnail yang sudah diputar sesuai EXIF (`display_size`), cadangan dari metadata Drive + `rotation`.
 - Filter (Semua / Pilihan / Ditandai) pindah ke bilah atas yang menempel; tombol album muncul setelah beberapa pilihan.
 - Bilah bawah jadi satu baris ramping (cincin progres, status, Kirim), menyingkir saat scroll ke bawah.
