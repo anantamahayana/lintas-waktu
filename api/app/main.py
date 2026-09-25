@@ -67,6 +67,12 @@ def warn_insecure_defaults() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # A full volume stops SQLite from starting at all: free cache space before touching the DB.
+    try:
+        drive_service.make_room()
+        log.info("storage: %s", drive_service.disk_report())
+    except Exception:
+        log.exception("storage: could not check disk space")
     backup.backup_db()
     warn_insecure_defaults()
     migrate()

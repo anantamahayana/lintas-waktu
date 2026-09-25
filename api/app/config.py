@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     app_env: str = "development"
     cache_dir: str = str(BACKEND_DIR / "cache")
     cache_retention_days: int = 30  # completed sessions older than this lose their image cache
+    # The image cache never eats into this much free space on its disk (the Railway volume also
+    # holds the database): below it, large images are evicted oldest-first or simply not cached.
+    cache_min_free_mb: int = 150
 
     @property
     def service_account_path(self) -> Path:

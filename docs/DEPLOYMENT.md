@@ -28,6 +28,8 @@ Catatan: plan Hobby resminya untuk non-komersial — pertimbangkan Pro.
 | Env | `PORT=8080` · `DATABASE_URL=sqlite:////data/photo_platform.db` · `CACHE_DIR`, `UPLOAD_DIR` di bawah `/data` (? path persisnya) · `FRONTEND_URL` (? pastikan = https://www.lintaswaktuvisual.com — dipakai untuk link galeri/invoice) · `GOOGLE_SERVICE_ACCOUNT_JSON` · `ADMIN_PASSWORD` · `REVALIDATE_SECRET` · `SECRET_KEY` (?) |
 | `ADMIN_PASSWORD_RESET` | sudah dihapus. Hanya untuk lupa password panel: set `1` + `ADMIN_PASSWORD` baru, deploy, login, hapus lagi. |
 
+Ruang disk: volume menyimpan database **dan** cache foto. Cache tidak pernah memakan sisa ruang di bawah `CACHE_MIN_FREE_MB` (default 150): foto besar lama dihapus lebih dulu atau tidak di-cache. Saat start, API membersihkan cache kalau disk hampir penuh dan menulis satu baris `storage: disk …` di log (isi volume: cache, db, backups, uploads). Kejadian 25 Sep 2026: volume penuh → SQLite gagal → API crash berulang.
+
 Database: SQLite di volume. Tanpa Alembic — `migrate()` jalan saat start. Data produksi diisi lewat /admin.
 Revalidasi: API memanggil `/api/revalidate` di Vercel dengan `REVALIDATE_SECRET`.
 

@@ -26,8 +26,12 @@ def backup_db(keep: int = 14) -> None:
     folder.mkdir(exist_ok=True)
     target = folder / f"{db.stem}-{date.today():%Y-%m-%d}.db"
     if not target.exists():
-        shutil.copy2(db, target)
-        log.info("database backup: %s", target.name)
+        try:
+            shutil.copy2(db, target)
+            log.info("database backup: %s", target.name)
+        except OSError:  # a full disk must not keep the API from starting
+            target.unlink(missing_ok=True)
+            log.exception("database backup failed")
     for old in sorted(folder.glob(f"{db.stem}-????-??-??.db"))[:-keep]:
         old.unlink(missing_ok=True)
 

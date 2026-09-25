@@ -231,6 +231,68 @@ def _cache_path(folder_id: str, file_id: str, size: str) -> Path:
     return d / f"{hashlib.sha1(file_id.encode()).hexdigest()}.jpg"
 
 
+# ---------------------------------------------------------------- disk space
+_room_lock = threading.Lock()
+
+
+def _free_mb(path: Path) -> float:
+    import shutil
+
+    while not path.exists():
+        path = path.parent
+    return shutil.disk_usage(path).free / 1e6
+
+
+def disk_ok() -> bool:
+    return _free_mb(Path(get_settings().cache_dir)) >= get_settings().cache_min_free_mb
+
+
+def make_room(tiers: tuple[str, ...] = ("full", "hq", "thumb"), headroom_mb: int = 100) -> int:
+    """Delete cached images, oldest first, tier by tier, until the disk has the reserve plus
+    `headroom_mb` free. Everything here is rebuilt from Drive on demand. Returns files removed."""
+    root = Path(get_settings().cache_dir)
+    target = get_settings().cache_min_free_mb + headroom_mb
+    removed = 0
+    with _room_lock:
+        if not root.exists() or _free_mb(root) >= target:
+            return 0
+        for tier in tiers:
+            files = sorted(root.glob(f"*/{tier}/*"), key=lambda f: f.stat().st_mtime)
+            for n, f in enumerate(files):
+                f.unlink(missing_ok=True)
+                removed += 1
+                if n % 25 == 24 and _free_mb(root) >= target:
+                    break
+            if _free_mb(root) >= target:
+                break
+    if removed:
+        log.warning("cache: disk low — removed %d cached image(s), %.0f MB free now", removed, _free_mb(root))
+    return removed
+
+
+def disk_report() -> str:
+    """One line for the startup log: what fills the volume."""
+    def size(p: Path) -> float:
+        if p.is_file():
+            return p.stat().st_size / 1e6
+        return sum(f.stat().st_size for f in p.rglob("*") if f.is_file()) / 1e6 if p.exists() else 0.0
+
+    import shutil
+
+    s = get_settings()
+    cache = Path(s.cache_dir)
+    parts = [f"cache {size(cache):.0f} MB"]
+    if s.database_url.startswith("sqlite:///"):
+        db = Path(s.database_url.removeprefix("sqlite:///"))
+        parts += [f"db {size(db):.0f} MB", f"backups {size(db.parent / 'backups'):.0f} MB"]
+    parts.append(f"uploads {size(Path(s.upload_dir)):.0f} MB")
+    probe = cache
+    while not probe.exists():
+        probe = probe.parent
+    u = shutil.disk_usage(probe)
+    return f"disk {u.used / 1e6:.0f}/{u.total / 1e6:.0f} MB used, {u.free / 1e6:.0f} MB free · " + " · ".join(parts)
+
+
 def _write_atomic(path: Path, data: bytes) -> None:
     tmp = path.with_suffix(".tmp")
     tmp.write_bytes(data)
@@ -288,7 +350,14 @@ def get_image(folder_id: str, file_id: str, size: str) -> tuple[bytes, str]:
         raw = _download_drive_thumb(photo, int(px * DRIVE_OVERSAMPLE))
         data = _resize(raw, px) if raw else _resize(_download_real(photo), px)
 
-    _write_atomic(cached, data)
+    # never fill the disk: a thumbnail may push out old large images; otherwise serve uncached
+    if not disk_ok() and size == "thumb":
+        make_room(tiers=("full", "hq"))
+    if disk_ok():
+        try:
+            _write_atomic(cached, data)
+        except OSError:
+            log.warning("cache: could not write %s (disk full?)", cached.name)
     return data, "image/jpeg"
 
 
@@ -350,6 +419,8 @@ def warm_cache(folder_id: str, workers: int = 6, hq: bool = False) -> None:
         def fetch(args):
             p, size = args
             if _cache_path(folder_id, p.file_id, size).exists():  # resumed run: skip what is on disk
+                return
+            if size != "thumb" and not disk_ok():  # large images only while there is room
                 return
             try:
                 get_image(folder_id, p.file_id, size)
