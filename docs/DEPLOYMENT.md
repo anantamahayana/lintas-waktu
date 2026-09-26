@@ -37,7 +37,8 @@ Revalidasi: API memanggil `/api/revalidate` di Vercel dengan `REVALIDATE_SECRET`
 
 ## Domain — lintaswaktuvisual.com
 - Registrar **Hostinger**, berakhir 2027-09-23 (? auto-renew aktif).
-- Nameserver `ns1/ns2.anjas.id` → DNS dan email diatur di **cPanel anjas.id** (Zone Editor). Hosting anjas tidak bisa menjalankan Node/Python — hanya DNS + email.
+- **DNS di Cloudflare** (plan Free, akun komangant25) sejak 27 Sep 2026 — nameserver dipindah dari `ns1/ns2.anjas.id` karena nameserver anjas hilang-timbul (SERVFAIL dari Google DNS & DNS kampus ISI, 26 Sep; DNSViz bersih, tanpa DNSSEC). Record Vercel sebaiknya **DNS only** (awan abu-abu); kalau diproksikan, SSL/TLS harus **Full (strict)**.
+- Email tetap di hosting **anjas.id** (cPanel) — hanya DNS yang pindah; record mail/MX/SPF/DKIM disalin ke Cloudflare. Hosting anjas tidak bisa menjalankan Node/Python.
 - Record: `A @ 216.198.79.1` (Vercel) · `CNAME www → e8ec0a7edf72d52f.vercel-dns-017.com` · `MX → mail.lintaswaktuvisual.com` · `A mail → 194.15.36.113` · SPF `v=spf1 +a +mx +ip4:194.15.36.113 ~all`.
 - Email klien (iPhone): host **wh.anjas.id** (sertifikatnya untuk nama itu) — IMAP 993 SSL, SMTP 465 SSL.
 - Tanpa Cloudflare.
