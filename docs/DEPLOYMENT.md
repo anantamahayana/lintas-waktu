@@ -41,7 +41,7 @@ Revalidasi: API memanggil `/api/revalidate` di Vercel dengan `REVALIDATE_SECRET`
 - Email tetap di hosting **anjas.id** (cPanel) — hanya DNS yang pindah; record mail/MX/SPF/DKIM disalin ke Cloudflare. Hosting anjas tidak bisa menjalankan Node/Python.
 - Record: `A @ 216.198.79.1` (Vercel) · `CNAME www → e8ec0a7edf72d52f.vercel-dns-017.com` · `MX → mail.lintaswaktuvisual.com` · `A mail → 194.15.36.113` · SPF `v=spf1 +a +mx +ip4:194.15.36.113 ~all`.
 - Email klien (iPhone): host **wh.anjas.id** (sertifikatnya untuk nama itu) — IMAP 993 SSL, SMTP 465 SSL.
-- Tanpa Cloudflare.
+
 
 ## Google Drive
 Mode service account (`GOOGLE_SERVICE_ACCOUNT_JSON` di produksi; lokal `api/service_account.json`, di-gitignore).

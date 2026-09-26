@@ -4,9 +4,9 @@ import { pageMeta } from "@/lib/seo";
 import { Photo } from "@/components/ui/Photo";
 import { Reveal } from "@/components/ui/Reveal";
 import { ContactForm } from "@/components/contact/ContactForm";
-import { waLink } from "@/lib/site";
 import { getSite, getSiteFrames, getSiteImages } from "@/lib/content";
 import { boxStyle } from "@/lib/frame";
+import { SocialIcon, socialLinks } from "@/components/site/Social";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -28,11 +28,7 @@ export default async function ContactPage({
   const t = await getTranslations("contact");
   const site = await getSite();
 
-  const channels = [
-    { k: "whatsapp", v: site.whatsapp.display, href: waLink(undefined, site.whatsapp.number) },
-    { k: "email", v: site.email, href: `mailto:${site.email}` },
-    { k: "instagram", v: `@${site.instagram}`, href: `https://instagram.com/${site.instagram}` },
-  ] as const;
+  const channels = socialLinks(site);
 
   return (
     <div>
@@ -43,8 +39,9 @@ export default async function ContactPage({
         <Reveal delay={240} as="ul" className="flex flex-wrap justify-center gap-x-10 gap-y-4 pt-4">
           {channels.map((ch) => (
             <li key={ch.k} className="flex flex-col items-center gap-1">
+              <SocialIcon k={ch.k} className="h-6 w-6 text-mute" />
               <span className="t-mono text-faint">{t(`channels.${ch.k}`)}</span>
-              <a href={ch.href} className="link t-caption">{ch.v}</a>
+              <a href={ch.href} {...(ch.external ? { target: "_blank", rel: "noreferrer" } : {})} className="link t-caption">{ch.label}</a>
               <span className="t-small text-mute">{t(`channels.${ch.k}Note`)}</span>
             </li>
           ))}

@@ -23,7 +23,7 @@ type ApiProject = {
 };
 type ApiSettings = {
   studio_name: string; descriptor_en: string; descriptor_id: string; whatsapp_number: string; whatsapp_display: string;
-  email: string; instagram: string; service_area: string; usd_rate: number;
+  email: string; instagram: string; youtube?: string; service_area: string; usd_rate: number;
 };
 
 async function get<T>(path: string): Promise<T | null> {
@@ -89,6 +89,7 @@ export type SiteInfo = {
   whatsapp: { number: string; display: string };
   email: string;
   instagram: string;
+  youtube: string;
   usdRate: number;
 };
 
@@ -102,6 +103,7 @@ export async function getSite(): Promise<SiteInfo> {
     },
     email: s?.email || defaults.email,
     instagram: s?.instagram || defaults.instagram,
+    youtube: s?.youtube || "",
     usdRate: s?.usd_rate || 16000,
   };
 }

@@ -261,7 +261,9 @@
       "email": "Email",
       "emailNote": "Untuk brief yang detail",
       "instagram": "Instagram",
-      "instagramNote": "Karya terbaru, cerita"
+      "instagramNote": "Karya terbaru, cerita",
+      "youtube": "YouTube",
+      "youtubeNote": "Film dan di balik layar"
     },
     "form": {
       "title": "Atau kirim pertanyaan",

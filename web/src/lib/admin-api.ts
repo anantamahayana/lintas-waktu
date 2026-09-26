@@ -145,7 +145,7 @@ export type Inquiry = {
 };
 export type SiteSettings = {
   studio_name: string; descriptor_en: string; descriptor_id: string; whatsapp_number: string; whatsapp_display: string;
-  email: string; instagram: string; service_area: string; usd_rate: number; default_package_size: number;
+  email: string; instagram: string; youtube: string; service_area: string; usd_rate: number; default_package_size: number;
   default_validity_days: number; whatsapp_template: string; whatsapp_template_id: string;
 };
 

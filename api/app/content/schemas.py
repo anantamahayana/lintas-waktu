@@ -177,6 +177,7 @@ class SiteSettings(BaseModel):
     whatsapp_display: str = ""
     email: str = ""
     instagram: str = ""
+    youtube: str = ""  # channel link or @handle
     service_area: str = "Bali"
     usd_rate: int = 16000
     default_package_size: int = 30
@@ -201,6 +202,7 @@ class SiteSettingsUpdate(BaseModel):
     whatsapp_display: str | None = None
     email: str | None = None
     instagram: str | None = None
+    youtube: str | None = None
     service_area: str | None = None
     usd_rate: int | None = None
     default_package_size: int | None = None

@@ -98,6 +98,7 @@ export default function SettingsPage() {
               <Field label="WhatsApp (as shown)"><Input value={s.whatsapp_display} onChange={set("whatsapp_display")} placeholder="+62 812 3456 7890" /></Field>
               <Field label="Email" error={errors.email}><Input invalid={!!errors.email} type="email" value={s.email} onChange={set("email")} placeholder="hello@lintaswaktu.com" /></Field>
               <Field label="Instagram" hint="without @" error={errors.instagram}><Input invalid={!!errors.instagram} value={s.instagram} onChange={set("instagram")} placeholder="lintaswaktu" /></Field>
+              <Field label="YouTube" hint="channel link or @handle · optional"><Input value={s.youtube ?? ""} onChange={set("youtube")} placeholder="https://youtube.com/@lintaswaktu" /></Field>
             </div>
             <Field label="Service area"><Input value={s.service_area} onChange={set("service_area")} placeholder="Bali · beyond on request" /></Field>
           </Card>

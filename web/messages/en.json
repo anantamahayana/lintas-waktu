@@ -261,7 +261,9 @@
       "email": "Email",
       "emailNote": "For detailed briefs",
       "instagram": "Instagram",
-      "instagramNote": "Recent work, stories"
+      "instagramNote": "Recent work, stories",
+      "youtube": "YouTube",
+      "youtubeNote": "Films and behind the scenes"
     },
     "form": {
       "title": "Or send an inquiry",

@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { waLink } from "@/lib/site";
+import { SocialIcon, socialLinks } from "./Social";
 import { getSite } from "@/lib/content";
 
 /** Centred, symmetrical, like the end of a printed programme. */
@@ -20,11 +20,16 @@ export async function SiteFooter() {
             <Link key={k} href={href} className="link t-mono text-mute hover:text-ink">{t(`nav.${k}`)}</Link>
           ))}
         </nav>
-        <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 t-small text-mute">
-          <a className="link" href={waLink(undefined, site.whatsapp.number)}>WhatsApp {site.whatsapp.display}</a>
-          <a className="link" href={`mailto:${site.email}`}>{site.email}</a>
-          <a className="link" href={`https://instagram.com/${site.instagram}`}>@{site.instagram}</a>
-        </div>
+        <ul className="flex flex-wrap justify-center gap-x-7 gap-y-3 t-small text-mute">
+          {socialLinks(site).map((s) => (
+            <li key={s.k}>
+              <a href={s.href} {...(s.external ? { target: "_blank", rel: "noreferrer" } : {})} aria-label={`${s.k} ${s.label}`} className="group inline-flex items-center gap-2 hover:text-ink transition-colors">
+                <SocialIcon k={s.k} className="h-[18px] w-[18px] shrink-0 transition-transform duration-300 group-hover:-translate-y-0.5" />
+                <span className="link">{s.label}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
         <span className="t-small text-faint">{t("footer.rights", { year: new Date().getFullYear() })}</span>
       </div>
     </footer>
