@@ -1,17 +1,18 @@
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { Photo } from "@/components/ui/Photo";
+import type { Frame } from "@/lib/frame";
 
 /**
  * Full-width photograph with the title set in the centre, framed by two
  * small side notes — the composition of the references. Still image:
  * calm beats clever here.
  */
-export function Hero({ cover }: { cover?: string }) {
+export function Hero({ cover, frame }: { cover?: string; frame?: Frame | null }) {
   const t = useTranslations("home.hero");
   return (
     <section className="relative h-[78vh] min-h-[520px] lg:h-[84vh] w-full overflow-hidden">
-      <Photo src={cover} seed="hero-2" priority sizes="100vw" className="absolute inset-0 h-full w-full" />
+      <Photo src={cover} seed="hero-2" frame={frame && { ...frame, fit: "cover" }} priority sizes="100vw" className="absolute inset-0 h-full w-full" />
       <div className="absolute inset-0 bg-dark/35" />
 
       <div className="absolute inset-0 flex items-center justify-center text-on-dark text-center">

@@ -1,16 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import clsx from "clsx";
 import { Photo } from "@/components/ui/Photo";
 import { Reveal } from "@/components/ui/Reveal";
 
 /**
- * Project gallery. Frames sit on the white page; tapping one turns the
- * lights off — a full-screen darkroom viewer with keyboard/swipe nav.
- * The viewer is plain CSS transitions; images stay next/image.
+ * Project gallery. Every photograph is shown whole, in its own shape: each row's photos share
+ * one height and fill the width (flex-grow = aspect ratio), so nothing is cropped. Tapping one
+ * turns the lights off — a full-screen darkroom viewer with keyboard/swipe nav.
  */
-export function Gallery({ seeds, srcs, title }: { seeds: string[]; srcs?: string[]; title: string }) {
+export function Gallery({ seeds, srcs, ratios, title }: { seeds: string[]; srcs?: string[]; ratios?: number[]; title: string }) {
   const [open, setOpen] = useState<number | null>(null);
   const [dragX, setDragX] = useState<number | null>(null);
 
@@ -29,9 +29,14 @@ export function Gallery({ seeds, srcs, title }: { seeds: string[]; srcs?: string
     return () => { document.documentElement.style.overflow = ""; window.removeEventListener("keydown", onKey); };
   }, [open, close, step]);
 
-  // rhythm: 2 · 3 · 1 · 2 …
+  // rhythm: 2 · 3 · 1 · 2 … (phones: 2 · 1 · 2, so a row never gets too small to see)
+  const phone = useSyncExternalStore(
+    (cb) => { const m = matchMedia("(max-width: 639px)"); m.addEventListener("change", cb); return () => m.removeEventListener("change", cb); },
+    () => matchMedia("(max-width: 639px)").matches,
+    () => false,
+  );
   const rows: number[][] = [];
-  const ROWS = [2, 3, 1, 2];
+  const ROWS = phone ? [2, 1, 2] : [2, 3, 1, 2];
   for (let i = 0, r = 0; i < seeds.length; r++) {
     const n = ROWS[r % ROWS.length];
     rows.push(Array.from({ length: Math.min(n, seeds.length - i) }, (_, k) => i + k));
@@ -42,19 +47,23 @@ export function Gallery({ seeds, srcs, title }: { seeds: string[]; srcs?: string
     <>
       <div className="wrap gutter flex flex-col gap-3 lg:gap-5">
         {rows.map((row, ri) => (
-          <div key={ri} className={clsx("grid gap-3 lg:gap-5", row.length === 1 ? "grid-cols-1" : row.length === 2 ? "grid-cols-2" : "grid-cols-2 lg:grid-cols-3")}>
-            {row.map((idx, k) => (
-              <Reveal key={seeds[idx]} delay={k * 70} className={clsx(row.length === 3 && k === 2 && "col-span-2 lg:col-span-1")}>
+          <div key={ri} className="flex gap-3 lg:gap-5">
+            {row.map((idx, k) => {
+              const r = ratios?.[idx] ?? (row.length === 1 ? 3 / 2 : 4 / 5);
+              return (
+              <Reveal key={seeds[idx]} delay={k * 70} className="min-w-0" style={{ flex: `${r} 1 0%` }}>
                 <button
                   type="button"
                   onClick={() => setOpen(idx)}
                   aria-label={`${title} — ${idx + 1}/${seeds.length}`}
-                  className={clsx("block w-full text-left cursor-zoom-in", row.length === 1 ? "aspect-[3/2]" : "aspect-[4/5]")}
+                  className="block w-full text-left cursor-zoom-in"
+                  style={{ aspectRatio: String(r) }}
                 >
                   <Photo src={srcs?.[idx]} seed={seeds[idx]} sizes={row.length === 1 ? "100vw" : row.length === 2 ? "50vw" : "(min-width:1024px) 33vw, 50vw"} className="h-full w-full" />
                 </button>
               </Reveal>
-            ))}
+              );
+            })}
           </div>
         ))}
       </div>

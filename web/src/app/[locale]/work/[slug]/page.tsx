@@ -52,7 +52,7 @@ export default async function ProjectPage({ params }: { params: Params }) {
       ) : (
         <ViewTransition name={`photo-${p.slug}`} share="morph" default="none">
           <div className="h-[70vh] lg:h-[84vh] w-full">
-            <Photo src={p.coverSrc} seed={p.cover} alt={p.title} priority sizes="100vw" className="h-full w-full" />
+            <Photo src={p.coverSrc} seed={p.cover} frame={p.coverFrame && { ...p.coverFrame, fit: "cover" }} alt={p.title} priority sizes="100vw" className="h-full w-full" />
           </div>
         </ViewTransition>
       )}
@@ -87,7 +87,7 @@ export default async function ProjectPage({ params }: { params: Params }) {
               <Reveal><span className="t-mono text-mute">{t("project.stills")}</span></Reveal>
             </div>
           )}
-          <Gallery seeds={p.gallery} srcs={p.gallerySrcs} title={p.title} />
+          <Gallery seeds={p.gallery} srcs={p.gallerySrcs} ratios={p.galleryRatios} title={p.title} />
         </>
       )}
 
@@ -108,7 +108,7 @@ export default async function ProjectPage({ params }: { params: Params }) {
                 <Link href={`/work/${r.slug}`} className="group flex flex-col items-center text-center gap-4">
                   <ViewTransition name={`photo-${r.slug}`} share="morph" default="none">
                     <div className="relative w-full aspect-[4/5]">
-                      <Photo src={r.coverSrc} seed={r.cover} alt={r.title} sizes="(min-width:640px) 30vw, 100vw" className="h-full w-full" />
+                      <Photo src={r.coverSrc} seed={r.cover} frame={r.coverFrame && { ...r.coverFrame, fit: "cover" }} alt={r.title} sizes="(min-width:640px) 30vw, 100vw" className="h-full w-full" />
                       {r.film && <FilmBadge duration={r.film.duration} />}
                     </div>
                   </ViewTransition>

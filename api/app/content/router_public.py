@@ -39,6 +39,7 @@ def _public(p: Project, locale: str, with_photos: bool) -> PublicProjectOut:
         facts=json.loads(p.facts or "[]"),
         film=film,
         featured=p.featured,
+        cover_frame=json.loads(p.cover_frame) if p.cover_frame else None,
         photos=photos,
     )
 
@@ -89,6 +90,12 @@ async def get_image(folder_id: str, file_id: str, size: str = "thumb", db: DbSes
 def get_site_images(db: DbSession = Depends(get_db)):
     """slot → image URL for the pages' own photographs (hero, About, Services, …)."""
     return site_images.public_urls(db)
+
+
+@router.get("/site-images/frames")
+def get_site_image_frames(db: DbSession = Depends(get_db)):
+    """slot → framing chosen in the admin (focus point, zoom, whole/cover)."""
+    return site_images.frame_map(db)
 
 
 @router.get("/settings", response_model=SiteSettings)

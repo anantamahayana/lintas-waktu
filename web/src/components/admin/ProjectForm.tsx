@@ -5,12 +5,13 @@ import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { ApiError, api, type Fact, type Project, type ProjectPhoto } from "@/lib/admin-api";
 import { Btn, Card, Field, Input, Select, Textarea, confirm, focusFirstInvalid, toast, useUnsavedChanges, type FieldErrors } from "@/components/admin/ui";
+import { FrameEditor } from "@/components/admin/FrameEditor";
 
 type Values = Omit<Project, "id" | "cover_url" | "photo_count" | "created_at" | "updated_at" | "photos" | "sort_order">;
 
 const empty: Values = {
   slug: "", title: "", category: "wedding", kind: "photo", location: "", date_label: "", month: null, drive_folder_id: "", cover_file_id: null, placeholder_urls: [],
-  pull_en: "", pull_id: "", body_en: "", body_id: "", facts: [], film_title: null, film_duration: null, film_url: null, featured: false, published: false,
+  pull_en: "", pull_id: "", body_en: "", body_id: "", facts: [], film_title: null, film_duration: null, film_url: null, featured: false, published: false, cover_frame: null,
 };
 
 const slugify = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
@@ -21,6 +22,7 @@ export function ProjectForm({ project }: { project?: Project }) {
   const [v, setV] = useState<Values>(project ? { ...empty, ...project } : empty);
   const [photos, setPhotos] = useState<ProjectPhoto[]>(project?.photos ?? []);
   const [busy, setBusy] = useState(false);
+  const [framing, setFraming] = useState(false);
   const [tab, setTab] = useState<"en" | "id">("en");
   const [saved, setSaved] = useState<Values>(project ? { ...empty, ...project } : empty);
   const dirty = JSON.stringify(v) !== JSON.stringify(saved);
@@ -199,7 +201,7 @@ export function ProjectForm({ project }: { project?: Project }) {
                 <li key={p.file_id}>
                   <button
                     type="button"
-                    onClick={() => setV((s) => ({ ...s, cover_file_id: p.file_id }))}
+                    onClick={() => setV((s) => (s.cover_file_id === p.file_id ? s : { ...s, cover_file_id: p.file_id, cover_frame: null }))}
                     className={clsx("block w-full aspect-square bg-line overflow-hidden border-2 transition-colors", v.cover_file_id === p.file_id ? "border-ink" : "border-transparent hover:border-line")}
                     title={p.filename}
                   >
@@ -209,6 +211,28 @@ export function ProjectForm({ project }: { project?: Project }) {
               ))}
             </ul>
           )}
+          {(() => {
+            const cover = photos.find((p) => p.file_id === v.cover_file_id) ?? (v.cover_file_id ? undefined : photos[0]);
+            if (!cover) return null;
+            return (
+              <>
+                <div className="flex items-center justify-between gap-3 border-t border-line pt-3">
+                  <span className="t-small text-mute">{v.cover_frame ? `Framing set · focus ${Math.round(v.cover_frame.x)}% / ${Math.round(v.cover_frame.y)}%${v.cover_frame.zoom > 1 ? ` · ${Math.round(v.cover_frame.zoom * 100)}%` : ""}` : "Cover is centred in its frame"}</span>
+                  <Btn type="button" onClick={() => setFraming(true)}>Adjust framing</Btn>
+                </div>
+                {framing && (
+                  <FrameEditor
+                    src={api.img(cover.full_url)}
+                    title={`${v.title || "Project"} · cover`}
+                    value={v.cover_frame}
+                    previews={[{ label: "Work grid", ratio: 4 / 5 }, { label: "Project page · computer", ratio: 1.9 }, { label: "Project page · phone", ratio: 0.66 }]}
+                    onSave={(f) => { setV((s) => ({ ...s, cover_frame: f })); setFraming(false); toast("Framing set — press Save to publish it"); }}
+                    onClose={() => setFraming(false)}
+                  />
+                )}
+              </>
+            );
+          })()}
         </Card>
       </div>
     </form>

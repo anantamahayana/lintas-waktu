@@ -4,8 +4,31 @@ import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
 import { api, type ProjectPhoto } from "@/lib/admin-api";
 import { Btn, Card, Field, Input, LoadError, PageHeader, SkeletonCards, confirm, toast } from "@/components/admin/ui";
+import { FrameEditor, type FramePreview } from "@/components/admin/FrameEditor";
+import type { Frame } from "@/lib/frame";
 
-type Slot = { slot: string; page: string; description: string; file_id: string | null };
+type Slot = { slot: string; page: string; description: string; file_id: string | null; frame: Frame | null };
+
+/** The real shapes each slot is shown in (computer / phone), and whether its layout can show a whole photo. */
+const SHAPES: Record<string, { previews: FramePreview[]; whole?: boolean }> = {
+  hero: { previews: [{ label: "Computer", ratio: 1.9 }, { label: "Phone", ratio: 0.6 }] },
+  "card-wedding": { previews: [{ label: "Card", ratio: 3 / 4 }], whole: true },
+  "card-prewedding": { previews: [{ label: "Card", ratio: 3 / 4 }], whole: true },
+  "card-personal": { previews: [{ label: "Card", ratio: 3 / 4 }], whole: true },
+  "behind-main": { previews: [{ label: "Computer", ratio: 1.1 }, { label: "Phone", ratio: 0.93 }], whole: true },
+  cta: { previews: [{ label: "Wide", ratio: 21 / 9 }], whole: true },
+  "about-portrait": { previews: [{ label: "Portrait", ratio: 4 / 5 }], whole: true },
+  "about-1": { previews: [{ label: "Strip", ratio: 3 / 4 }], whole: true },
+  "about-2": { previews: [{ label: "Strip", ratio: 3 / 4 }], whole: true },
+  "about-3": { previews: [{ label: "Strip", ratio: 3 / 4 }], whole: true },
+  "about-4": { previews: [{ label: "Strip", ratio: 3 / 4 }], whole: true },
+  "service-banner": { previews: [{ label: "Computer", ratio: 3.5 }, { label: "Phone", ratio: 1 }] },
+  "service-wedding": { previews: [{ label: "Computer", ratio: 5 / 6 }, { label: "Phone", ratio: 4 / 5 }], whole: true },
+  "service-prewedding": { previews: [{ label: "Computer", ratio: 5 / 6 }, { label: "Phone", ratio: 4 / 5 }], whole: true },
+  "service-event": { previews: [{ label: "Computer", ratio: 5 / 6 }, { label: "Phone", ratio: 4 / 5 }], whole: true },
+  "service-personal": { previews: [{ label: "Computer", ratio: 5 / 6 }, { label: "Phone", ratio: 4 / 5 }], whole: true },
+  "contact-1": { previews: [{ label: "Computer", ratio: 4 / 5 }], whole: true },
+};
 type Data = { folder_id: string; photos: ProjectPhoto[]; slots: Slot[]; folder_error: string | null };
 
 /**
@@ -18,6 +41,7 @@ export default function SiteImagesPage() {
   const [folder, setFolder] = useState("");
   const [busy, setBusy] = useState(false);
   const [picking, setPicking] = useState<Slot | null>(null);
+  const [framing, setFraming] = useState<Slot | null>(null);
 
   const load = () => api.get<Data>("/api/admin/site-images").then((d) => { setData(d); setFolder(d.folder_id); setErr(null); }).catch((e) => setErr(e instanceof Error ? e.message : "Failed"));
   useEffect(() => { load(); }, []);
@@ -36,6 +60,10 @@ export default function SiteImagesPage() {
   }
   async function assign(slot: string, file_id: string | null) {
     try { const d = await api.put<Data>("/api/admin/site-images", { slots: { [slot]: file_id } }); setData(d); setPicking(null); toast(file_id ? "Photo set — live on the site in a moment" : "Back to placeholder"); }
+    catch (e) { toast(e instanceof Error ? e.message : "Failed", true); }
+  }
+  async function saveFrame(slot: string, frame: Frame | null) {
+    try { const d = await api.put<Data>("/api/admin/site-images", { frames: { [slot]: frame } }); setData(d); setFraming(null); toast("Framing saved — live on the site in a moment"); }
     catch (e) { toast(e instanceof Error ? e.message : "Failed", true); }
   }
   async function sync() {
@@ -67,11 +95,16 @@ export default function SiteImagesPage() {
                   return (
                     <li key={s.slot} className="flex flex-col gap-2">
                       <button type="button" disabled={!data.folder_id} onClick={() => setPicking(s)} className={clsx("relative aspect-[4/3] overflow-hidden border transition-colors text-left", p ? "border-line hover:border-ink" : "border-dashed border-line hover:border-ink bg-[#f6f5f1]")} title={data.folder_id ? "Choose a photograph" : "Set the folder first"}>
-                        {p ? <img src={api.img(p.thumb_url)} alt="" className="w-full h-full object-cover" loading="lazy" /> : <span className="absolute inset-0 flex items-center justify-center t-mono text-faint">placeholder</span>}
+                        {p ? <img src={api.img(p.thumb_url)} alt="" className="w-full h-full object-cover" loading="lazy" style={s.frame ? { objectPosition: `${s.frame.x}% ${s.frame.y}%` } : undefined} /> : <span className="absolute inset-0 flex items-center justify-center t-mono text-faint">placeholder</span>}
                       </button>
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex flex-col"><span className="t-small">{s.description}</span><span className="t-mono text-faint">{s.slot}</span></div>
-                        {p && <button type="button" onClick={() => assign(s.slot, null)} className="link t-mono text-mute shrink-0">clear</button>}
+                        {p && (
+                          <span className="flex gap-3 shrink-0">
+                            <button type="button" onClick={() => setFraming(s)} className="link t-mono text-ink">framing{s.frame ? " ✓" : ""}</button>
+                            <button type="button" onClick={() => assign(s.slot, null)} className="link t-mono text-mute">clear</button>
+                          </span>
+                        )}
                       </div>
                     </li>
                   );
@@ -80,6 +113,18 @@ export default function SiteImagesPage() {
             </Card>
           ))}
         </div>
+      )}
+
+      {framing && data && framing.file_id && byId[framing.file_id] && (
+        <FrameEditor
+          src={api.img(byId[framing.file_id].full_url)}
+          title={`${framing.page} · ${framing.description}`}
+          value={framing.frame}
+          previews={SHAPES[framing.slot]?.previews ?? [{ label: "Frame", ratio: 4 / 5 }]}
+          allowWhole={SHAPES[framing.slot]?.whole}
+          onSave={(f) => saveFrame(framing.slot, f)}
+          onClose={() => setFraming(null)}
+        />
       )}
 
       {picking && data && (

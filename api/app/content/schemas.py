@@ -20,6 +20,17 @@ class Film(BaseModel):
     poster_url: str | None = None  # still shown before play (derived from url)
 
 
+class Frame(BaseModel):
+    """How a photograph sits in its frame on the site: the point that must stay visible
+    (percent of width/height), a zoom, and — where the layout allows — "whole" to show
+    the entire photo in a box of its own shape (ratio = width / height)."""
+    x: float = Field(50, ge=0, le=100)
+    y: float = Field(50, ge=0, le=100)
+    zoom: float = Field(1, ge=1, le=3)
+    fit: str = Field("cover", pattern=r"^(cover|whole)$")
+    ratio: float | None = Field(None, gt=0.1, lt=10)
+
+
 class ProjectBase(BaseModel):
     slug: str = Field(min_length=2, max_length=80, pattern=SLUG)
     title: str = Field(min_length=1, max_length=160)
@@ -42,6 +53,7 @@ class ProjectBase(BaseModel):
     featured: bool = False
     published: bool = False
     sort_order: int = 0
+    cover_frame: Frame | None = None
 
 
 class ProjectCreate(ProjectBase):
@@ -72,6 +84,7 @@ class ProjectUpdate(BaseModel):
     featured: bool | None = None
     published: bool | None = None
     sort_order: int | None = None
+    cover_frame: Frame | None = None
 
 
 class ProjectPhotoOut(BaseModel):
@@ -112,6 +125,7 @@ class PublicProjectOut(BaseModel):
     facts: list[Fact]
     film: Film | None = None
     featured: bool
+    cover_frame: Frame | None = None
     photos: list[ProjectPhotoOut] = []
 
 

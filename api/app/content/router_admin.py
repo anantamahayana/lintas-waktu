@@ -100,8 +100,9 @@ def photos_out(p: Project, refresh: bool = True) -> list[ProjectPhotoOut]:
 def project_out(p: Project, with_photos: bool = False) -> dict:
     photos = photos_out(p, refresh=with_photos)
     data = {
-        **{c.name: getattr(p, c.name) for c in Project.__table__.columns if c.name not in ("facts", "placeholder_urls")},
+        **{c.name: getattr(p, c.name) for c in Project.__table__.columns if c.name not in ("facts", "placeholder_urls", "cover_frame")},
         "facts": json.loads(p.facts or "[]"),
+        "cover_frame": json.loads(p.cover_frame) if p.cover_frame else None,
         "placeholder_urls": placeholder_urls(p),
         "cover_url": cover_url(p),
         "film": film_out(p),
@@ -127,6 +128,8 @@ def _apply(p: Project, data: dict) -> None:
             v = _folder_id(v or "")
         if k == "placeholder_urls":
             v = json.dumps(list(v))
+        if k == "cover_frame":
+            v = json.dumps(v if isinstance(v, dict) else v.model_dump()) if v else None
         if k == "kind" and hasattr(v, "value"):
             v = v.value
         setattr(p, k, v)

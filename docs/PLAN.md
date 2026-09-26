@@ -61,3 +61,8 @@ Dugaan penyebab dari sesi desktop sudah dicek terhadap kode; hasilnya di kolom "
 - Paket & harga pindah dari kode (`Packages.tsx`) ke teks situs; harga teks bebas per mata uang (IDR/USD).
 - 41 teks sisa desain lama yang tidak dipakai halaman mana pun dihapus dari `messages`.
 - Belum: menambah/menyembunyikan bagian halaman (tahap berikutnya kalau perlu).
+
+## Bingkai foto situs (27 Sep 2026) — ✅
+- Galeri proyek (Work → proyek): setiap foto tampil utuh sesuai bentuk aslinya; baris rata (flex-grow = rasio), HP maks 2 per baris.
+- Admin → Site images → "framing" per slot, dan Project → Cover → "Adjust framing": titik fokus (ketuk/geser), zoom 100–250%, pratinjau bentuk kotak nyata (komputer/HP); "Show whole photo" untuk slot yang tata letaknya mengizinkan (kartu Home, Behind, CTA, About, Services, Contact). Hero & banner selalu mengisi bingkai.
+- Disimpan: `site.images_frames` (settings) dan `projects.cover_frame`; ganti foto di slot = bingkai kembali ke tengah.

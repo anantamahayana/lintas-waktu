@@ -8,6 +8,7 @@
 import "server-only";
 import { type Category, type Kind, type Project } from "./projects";
 import { site as defaults } from "./site";
+import type { Frame } from "./frame";
 
 const API = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const REVALIDATE = 60; // seconds — and the API flushes the "content" tag on every admin edit (app/api/revalidate)
@@ -18,7 +19,7 @@ type ApiProject = {
   slug: string; title: string; category: Category; kind: Kind; location: string; date_label: string; month: string | null;
   cover_url: string | null; pull: string; body: string; facts: ApiFact[];
   film: { title?: string | null; duration?: string | null; url?: string | null; embed_url?: string | null; poster_url?: string | null } | null;
-  featured: boolean; photos: ApiPhoto[];
+  featured: boolean; cover_frame?: Frame | null; photos: ApiPhoto[];
 };
 type ApiSettings = {
   studio_name: string; descriptor_en: string; descriptor_id: string; whatsapp_number: string; whatsapp_display: string;
@@ -39,7 +40,7 @@ async function get<T>(path: string): Promise<T | null> {
 const abs = (p: string | null | undefined) => (p ? (/^https?:\/\//.test(p) ? p : `${API}${p}`) : undefined);
 
 /** Project shape used by the pages: placeholder-compatible, plus real image URLs when present. */
-export type SiteProject = Project & { coverSrc?: string; gallerySrcs?: string[] };
+export type SiteProject = Project & { coverSrc?: string; gallerySrcs?: string[]; galleryRatios?: number[]; coverFrame?: Frame | null };
 
 function fromApi(p: ApiProject): SiteProject {
   return {
@@ -53,6 +54,8 @@ function fromApi(p: ApiProject): SiteProject {
     coverSrc: abs(p.cover_url),
     gallery: p.photos.map((ph) => ph.file_id),
     gallerySrcs: p.photos.map((ph) => abs(ph.full_url)!),
+    galleryRatios: p.photos.map((ph) => (ph.width > 0 && ph.height > 0 ? ph.width / ph.height : 1.5)),
+    coverFrame: p.cover_frame ?? null,
     facts: p.facts,
     pull: p.pull,
     body: p.body,
@@ -104,6 +107,11 @@ export async function getSite(): Promise<SiteInfo> {
 }
 
 export const apiBase = API;
+
+/** slot → framing chosen in /admin/site-images (focus point, zoom, whole/cover). */
+export async function getSiteFrames(): Promise<Record<string, Frame>> {
+  return (await get<Record<string, Frame>>("/api/public/site-images/frames")) ?? {};
+}
 
 /** The pages' own photographs (hero, About, Services, …) chosen in /admin/site-images: slot → URL.
  *  Slots without a photo fall back to the placeholder keyed by the same seed (see <Photo/>). */

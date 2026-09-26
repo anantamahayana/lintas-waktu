@@ -4,15 +4,16 @@ import { Photo } from "@/components/ui/Photo";
 import { Reveal } from "@/components/ui/Reveal";
 import { waLink } from "@/lib/site";
 import type { SiteInfo } from "@/lib/content";
+import type { Frame } from "@/lib/frame";
 
 /** Closing invitation: a wide photograph, then the ask, centred. */
-export function Invite({ site, src }: { site: SiteInfo; src?: string }) {
+export function Invite({ site, src, frame }: { site: SiteInfo; src?: string; frame?: Frame | null }) {
   const t = useTranslations("home.invite");
   const c = useTranslations("cta");
   return (
     <section className="flex flex-col">
       <Reveal className="wrap gutter">
-        <Photo src={src} seed="cta" sizes="100vw" className="w-full aspect-[21/9]" />
+        <Photo src={src} seed="cta" frame={frame} sizes="100vw" className="w-full aspect-[21/9]" />
       </Reveal>
       <div className="wrap gutter py-16 lg:py-24 flex flex-col items-center text-center gap-6">
         <Reveal><span className="t-mono text-mute">{t("eyebrow")}</span></Reveal>

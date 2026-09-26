@@ -23,7 +23,7 @@ export function RecentWork({ projects }: { projects: SiteProject[] }) {
             <Link href={`/work/${p.slug}`} className="group flex flex-col gap-4">
               <ViewTransition name={`photo-${p.slug}`} share="morph" default="none">
                 <div className="relative aspect-[4/5]">
-                  <Photo src={p.coverSrc} seed={p.cover} alt={p.title} sizes="(min-width:640px) 30vw, 100vw" className="h-full w-full" />
+                  <Photo src={p.coverSrc} seed={p.cover} frame={p.coverFrame && { ...p.coverFrame, fit: "cover" }} alt={p.title} sizes="(min-width:640px) 30vw, 100vw" className="h-full w-full" />
                   {p.film && <FilmBadge duration={p.film.duration} />}
                 </div>
               </ViewTransition>

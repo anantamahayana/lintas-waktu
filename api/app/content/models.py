@@ -47,6 +47,7 @@ class Project(Base):
     body_en: Mapped[str] = mapped_column(Text, default="")
     body_id: Mapped[str] = mapped_column(Text, default="")
     facts: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON [{label, value}]
+    cover_frame: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON Frame: how the cover sits in its box
     film_title: Mapped[str | None] = mapped_column(String(120), nullable=True)
     film_duration: Mapped[str | None] = mapped_column(String(12), nullable=True)
     film_url: Mapped[str | None] = mapped_column(String(500), nullable=True)

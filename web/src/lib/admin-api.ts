@@ -134,6 +134,7 @@ export type Project = {
   drive_folder_id: string; cover_file_id: string | null; placeholder_urls: string[]; pull_en: string; pull_id: string; body_en: string; body_id: string;
   facts: Fact[]; film_title: string | null; film_duration: string | null; film_url: string | null; film_poster_url?: string | null; featured: boolean;
   published: boolean; sort_order: number; cover_url: string | null; photo_count: number; created_at: string; updated_at: string;
+  cover_frame?: import("./frame").Frame | null;
   photos?: ProjectPhoto[];
 };
 export type InquiryStatus = "new" | "replied" | "booked" | "closed";

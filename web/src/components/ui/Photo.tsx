@@ -1,6 +1,7 @@
 import Image from "next/image";
 import clsx from "clsx";
 import { dummyPhoto } from "@/lib/dummy-photos";
+import { boxStyle, type Frame } from "@/lib/frame";
 
 /**
  * Photograph slot.
@@ -22,6 +23,7 @@ export function Photo({
   priority = false,
   eager = false,
   quality = 85,
+  frame,
 }: {
   src?: string;
   seed?: string;
@@ -37,23 +39,29 @@ export function Photo({
   eager?: boolean;
   /** next/image quality; must be one of next.config images.qualities */
   quality?: 75 | 85;
+  /** focus point / zoom / whole, chosen in the admin (Site images, project cover) */
+  frame?: Frame | null;
 }) {
   const url = src ?? dummyPhoto(seed);
   return (
     <div
       className={clsx("relative overflow-hidden photo-hover bg-line", rounded, className)}
-      style={ratio ? { aspectRatio: ratio } : undefined}
+      style={{ ...(ratio ? { aspectRatio: ratio } : {}), ...boxStyle(frame) }}
     >
-      <Image
-        src={url}
-        alt={alt}
-        fill
-        sizes={sizes}
-        quality={quality}
-        priority={priority}
-        loading={eager ? "eager" : undefined}
-        className="object-cover"
-      />
+      {/* the zoom lives on a wrapper so the hover motion on the image itself still works */}
+      <div className="absolute inset-0" style={frame && frame.zoom > 1 && frame.fit !== "whole" ? { transform: `scale(${frame.zoom})`, transformOrigin: `${frame.x}% ${frame.y}%` } : undefined}>
+        <Image
+          src={url}
+          alt={alt}
+          fill
+          sizes={sizes}
+          quality={quality}
+          priority={priority}
+          loading={eager ? "eager" : undefined}
+          className="object-cover"
+          style={frame ? { objectPosition: `${frame.x}% ${frame.y}%` } : undefined}
+        />
+      </div>
     </div>
   );
 }

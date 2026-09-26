@@ -13,7 +13,7 @@ from ..database import get_db
 from ..models import Setting
 from ..services import drive_service
 from . import site_cache
-from .schemas import ProjectPhotoOut
+from .schemas import Frame, ProjectPhotoOut
 
 # Every slot the site renders, with where it appears — the admin shows this list.
 SLOTS: list[tuple[str, str, str]] = [  # (slot, page, description)
@@ -38,6 +38,7 @@ SLOTS: list[tuple[str, str, str]] = [  # (slot, page, description)
 SLOT_IDS = {s[0] for s in SLOTS}
 KEY_FOLDER = "site.images_folder"
 KEY_MAP = "site.images"
+KEY_FRAMES = "site.images_frames"  # slot → Frame (how the photo sits in the slot)
 
 
 def _get(db: DbSession, key: str) -> str | None:
@@ -65,6 +66,14 @@ def slot_map(db: DbSession) -> dict[str, str]:
     return {k: v for k, v in raw.items() if k in SLOT_IDS and isinstance(v, str) and v}
 
 
+def frame_map(db: DbSession) -> dict[str, dict]:
+    try:
+        raw = json.loads(_get(db, KEY_FRAMES) or "{}")
+    except ValueError:
+        raw = {}
+    return {k: v for k, v in raw.items() if k in SLOT_IDS and isinstance(v, dict)}
+
+
 def public_urls(db: DbSession) -> dict[str, str]:
     """slot → proxy URL, for the site. Only slots with a file set."""
     folder = folder_id(db)
@@ -79,6 +88,7 @@ class SlotOut(BaseModel):
     page: str
     description: str
     file_id: str | None
+    frame: Frame | None = None
 
 
 class SiteImagesOut(BaseModel):
@@ -91,6 +101,7 @@ class SiteImagesOut(BaseModel):
 class SiteImagesIn(BaseModel):
     folder_id: str | None = None  # link or id; "" clears
     slots: dict[str, str | None] | None = None  # slot → file_id ("" / null clears one slot)
+    frames: dict[str, Frame | None] | None = None  # slot → framing (null = centred, the default)
 
 
 router = APIRouter(prefix="/api/admin", tags=["site-images"], dependencies=[Depends(require_admin)])
@@ -108,10 +119,11 @@ def _out(db: DbSession, refresh: bool = False) -> SiteImagesOut:
             error = str(e)
     known = {p.file_id for p in photos}
     m = slot_map(db)
+    fr = frame_map(db)
     return SiteImagesOut(
         folder_id=folder,
         photos=photos,
-        slots=[SlotOut(slot=s, page=pg, description=d, file_id=m.get(s) if m.get(s) in known or not photos else None) for s, pg, d in SLOTS],
+        slots=[SlotOut(slot=s, page=pg, description=d, file_id=m.get(s) if m.get(s) in known or not photos else None, frame=fr.get(s)) for s, pg, d in SLOTS],
         folder_error=error,
     )
 
@@ -136,16 +148,28 @@ def put_site_images(body: SiteImagesIn, background: BackgroundTasks, db: DbSessi
             _put(db, KEY_MAP, "{}")  # files from the old folder no longer apply
             background.add_task(drive_service.warm_cache, fid, 4, True)
         _put(db, KEY_FOLDER, fid)
+    frames = frame_map(db)
     if body.slots is not None:
         current = slot_map(db)
         for slot, fid in body.slots.items():
             if slot not in SLOT_IDS:
                 continue
+            if (fid or None) != current.get(slot):
+                frames.pop(slot, None)  # a different photo: its framing starts centred again
             if fid:
                 current[slot] = fid
             else:
                 current.pop(slot, None)
         _put(db, KEY_MAP, json.dumps(current))
+    if body.frames is not None:
+        for slot, f in body.frames.items():
+            if slot not in SLOT_IDS:
+                continue
+            if f is None:
+                frames.pop(slot, None)
+            else:
+                frames[slot] = f.model_dump()
+    _put(db, KEY_FRAMES, json.dumps(frames))
     db.commit()
     background.add_task(site_cache.invalidate, "site images updated")
     return _out(db)
