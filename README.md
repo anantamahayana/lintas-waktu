@@ -6,8 +6,10 @@ photo-selection-platform) with admin and client proofing.
 ```
 web/   Next.js 16 · public site (EN at /, ID at /id) · /admin
 api/   FastAPI · sessions & client gallery · projects · inquiries · settings
-docs/  BRIEF.md (plan) · BRAND.md (design system)
+docs/  CONTEXT.md (start here) · CHANGELOG.md · DEPLOYMENT.md · PLAN.md · BRAND.md · BRIEF.md
 ```
+
+Working rules (commits, branches, changelog): `CLAUDE.md`. New to the project: `docs/CONTEXT.md`.
 
 ## Run locally
 
@@ -17,7 +19,7 @@ cd api && .venv/Scripts/python -m uvicorn app.main:app --reload --port 8000
 ```
 
 ```bash
-# Web (first time: npm install; copy .env.example .env.local)
+# Web (first time: npm install; no .env.local needed locally — the API defaults to http://localhost:8000)
 cd web && npm run dev
 ```
 

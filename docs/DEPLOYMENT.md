@@ -49,7 +49,7 @@ Folder Drive harus di-share ke email service account.
 
 ## Masalah yang diketahui
 - **Link galeri klien pernah HTTP 500** (preview fotografer normal). Pencatatan kunjungan kini dibungkus try/except (commit `147a0cc`) dan endpoint kembali 200. Akar masalah belum diketahui — cari log `could not record gallery visit` di Railway.
-- **Galeri besar (±784 foto) berat di Safari** — lihat `docs/PLAN.md` (grid virtual, penyimpanan pilihan, warm-up; di branch `main-83krjd`, belum di `main`).
+- **Galeri besar (±784 foto) berat di Safari** — lihat `docs/PLAN.md` (grid virtual, penyimpanan pilihan, warm-up; sudah di `main`).
 - **Sebagian pengguna Biznet/XL tidak bisa membuka situs tanpa VPN.** Dugaan: DNS ISP (cache negatif sejak sebelum domain terdaftar / filter DNS) atau blokir IP. Tes: DNS 1.1.1.1 / 8.8.8.8; kalau tetap gagal, pertimbangkan Cloudflare sebagai proxy. Hasil tes: ?
 
 ## Jangan di-commit
