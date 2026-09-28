@@ -6,6 +6,9 @@ dan **langkah manual** kalau ada. Detail teknis lengkap ada di pesan commit (`gi
 
 ---
 
+### 2026-09-28 · Yukti
+- Galeri klien: intro (tagline), judul pratinjau link (WhatsApp) dan bahasa halaman kini mengikuti bahasa klien yang dipilih di sesi; sebelumnya tetap Inggris.
+
 ### 2026-09-28 · NantaPakeAI
 - Repo siap dikerjakan bersama: `docs/CONTEXT.md` (konteks lengkap untuk kolaborator dan Claude-nya), catatan perubahan ini, aturan commit & branch di `CLAUDE.md`, template pull request.
 

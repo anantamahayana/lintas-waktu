@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session as DbSession
 
 from ..auth import is_admin_token
+from ..content import settings_store
 from ..config import get_settings
 from ..database import get_db
 from ..models import PhotoSession, SelectedPhoto, SessionStatus, utcnow
@@ -135,13 +136,17 @@ def branding_logo():
 def gallery_meta(slug: str, db: DbSession = Depends(get_db), authorization: str | None = Header(None)):
     s = _session(db, slug)
     admin = is_admin_token(authorization)
+    lang = s.lang or "en"
+    b = branding.get(db)
+    if lang == "id":  # the tagline mirrors the site descriptor, which has an Indonesian version
+        b.tagline = settings_store.get(db).descriptor_id or b.tagline
     return GalleryMeta(
         client_name=s.client_name,
         locked=bool(s.pin_hash) and not admin,
         expired=_expired(s) and not admin,
         preview=admin,
-        lang=s.lang or "en",
-        branding=branding.get(db),
+        lang=lang,
+        branding=b,
     )
 
 

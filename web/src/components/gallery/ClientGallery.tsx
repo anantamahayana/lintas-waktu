@@ -94,6 +94,7 @@ function fmt(iso: string | null, lang: Lang) {
 export function ClientGallery({ slug }: { slug: string }) {
   const [lang, setLang] = useState<Lang>("en");
   const t = T[lang];
+  useEffect(() => { document.documentElement.lang = lang; }, [lang]); // browsers stop offering to "translate from English"
   const [meta, setMeta] = useState<GalleryMeta | null>(null);
   const [data, setData] = useState<GalleryData | null>(null);
   const [stage, setStage] = useState<Stage>("loading");
