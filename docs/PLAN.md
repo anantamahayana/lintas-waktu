@@ -67,7 +67,7 @@ Dugaan penyebab dari sesi desktop sudah dicek terhadap kode; hasilnya di kolom "
 - Admin → Site images → "framing" per slot, dan Project → Cover → "Adjust framing": titik fokus (ketuk/geser), zoom 100–250%, pratinjau bentuk kotak nyata (komputer/HP); "Show whole photo" untuk slot yang tata letaknya mengizinkan (kartu Home, Behind, CTA, About, Services, Contact). Hero & banner selalu mengisi bingkai.
 - Disimpan: `site.images_frames` (settings) dan `projects.cover_frame`; ganti foto di slot = bingkai kembali ke tengah.
 
-## Detail visual (29 Sep 2026) — tahap 1 ✅ · tahap 2 ✅
+## Detail visual (29 Sep 2026) — tahap 1 ✅ · tahap 2 ✅ · tahap 3 ditunda (belum penting, kata pemilik)
 Detail kecil yang bercerita soal waktu, cahaya, dan cetakan, dengan syarat performa di `CLAUDE.md` ("Performa dulu").
 
 | Tahap | Isi |
