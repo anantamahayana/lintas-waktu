@@ -50,21 +50,27 @@
           "tagline": "Enam jam, foto saja.",
           "price_idr": "IDR 2.500.000",
           "price_usd": "USD 155",
-          "includes": "Liputan 6 jam\n1 fotografer\n150+ foto yang diedit\nGaleri online privat"
+          "includes": "Liputan 6 jam\n1 fotografer\n150+ foto yang diedit\nGaleri online privat",
+          "badge": "",
+          "note": ""
         },
         {
           "name": "Duo",
           "tagline": "Kami berdua, foto & film.",
           "price_idr": "IDR 4.000.000",
           "price_usd": "USD 250",
-          "includes": "Liputan 8 jam\nFotografer + videografer\n250+ foto yang diedit\nTeaser 1 menit + film highlight 3–4 menit\nGaleri online privat"
+          "includes": "Liputan 8 jam\nFotografer + videografer\n250+ foto yang diedit\nTeaser 1 menit + film highlight 3–4 menit\nGaleri online privat",
+          "badge": "Rekomendasi kami",
+          "note": "Hemat IDR 2 jt / USD 120 dibanding foto + film dipesan terpisah"
         },
         {
           "name": "Full Story",
-          "tagline": "Duo, ditambah hari-hari di sekitarnya.",
+          "tagline": "Duo, ditambah satu pagi sebelum harinya.",
           "price_idr": "IDR 5.000.000",
           "price_usd": "USD 310",
-          "includes": "Semua isi paket Duo\nSesi pre-wedding 2 jam\nFilm upacara utuh\nGaleri online privat"
+          "includes": "Semua isi paket Duo\nSesi pre-wedding 2 jam\n40+ foto pre-wedding",
+          "badge": "",
+          "note": ""
         }
       ]
     },
@@ -169,7 +175,7 @@
     },
     "packages": {
       "eyebrow": "Paket wedding · mulai dari",
-      "note": "Transport di luar Denpasar dan Badung dihitung terpisah. Film saja: reel 1 menit IDR 1.000.000 · highlight 3–5 menit IDR 2.500.000. Cakupan khusus selalu bisa — ceritakan yang penting, kami bentuk."
+      "note": "Kami menerima paling banyak delapan wedding per bulan, supaya setiap hari mendapat perhatian penuh. DP 30% mengunci tanggalmu; pelunasan H-7. Transport di luar Denpasar dan Badung dihitung terpisah. Film saja: reel 1 menit IDR 1.000.000 · highlight 3–5 menit IDR 2.500.000 · film upacara utuh IDR 750.000. Cakupan khusus selalu bisa — ceritakan yang penting, kami bentuk."
     },
     "faq": {
       "eyebrow": "Pertanyaan",
@@ -178,6 +184,10 @@
         {
           "q": "Seberapa jauh sebelumnya kami harus memesan?",
           "a": "Untuk wedding di musim kemarau (Mei–September), 6–10 bulan. Sesi dan acara sering bisa diatur dalam beberapa minggu."
+        },
+        {
+          "q": "Bagaimana cara mengunci tanggal kami?",
+          "a": "Dengan DP 30% — sebelum DP masuk, tanggalnya masih terbuka untuk orang lain. Pelunasan H-7 sebelum hari-H."
         },
         {
           "q": "Apakah kalian bepergian ke luar Bali?",

@@ -7,7 +7,8 @@ import { Link } from "@/i18n/navigation";
 import { Reveal } from "@/components/ui/Reveal";
 
 // Packages and prices are site text (editable in the admin → Site text); prices are free text per currency.
-type Pkg = { name: string; tagline: string; price_idr: string; price_usd: string; includes: string };
+// `badge` marks the package we point people to (empty = none); `note` is one line under its price.
+type Pkg = { name: string; tagline: string; price_idr: string; price_usd: string; includes: string; badge?: string; note?: string };
 
 /** Three centred columns divided by hairlines — an investment page, not a pricing table. */
 export function Packages({ eyebrow, note }: { eyebrow?: string; note?: string } = {}) {
@@ -29,14 +30,16 @@ export function Packages({ eyebrow, note }: { eyebrow?: string; note?: string } 
 
       <div className="grid grid-cols-1 sm:grid-cols-3 w-full max-w-[1000px] divide-y sm:divide-y-0 sm:divide-x divide-line border-y border-line">
         {packages.map((p, i) => (
-          <Reveal key={`${i}-${p.name}`} delay={i * 100} className="flex flex-col items-center gap-5 py-10 px-6 lg:px-10">
+          <Reveal key={`${i}-${p.name}`} delay={i * 100} className={clsx("relative flex flex-col items-center gap-5 py-10 px-6 lg:px-10", p.badge && "bg-[color-mix(in_oklab,var(--color-white)_35%,white)]")}>
+            {p.badge && <span className="t-mono !text-[10px] text-ink border border-ink px-2.5 py-1.5 -mb-1">{p.badge}</span>}
             <span className="t-caption">{p.name}</span>
             <span className="t-small text-mute">{p.tagline}</span>
             <span className="font-serif text-[26px] leading-none">{(cur === "IDR" ? p.price_idr : p.price_usd) || p.price_idr || p.price_usd}</span>
+            {p.note && <span className="font-serif italic text-[15px] text-ink -mt-1 max-w-[26ch]">{p.note}</span>}
             <ul className="t-small text-mute leading-[2]">
               {p.includes.split("\n").filter((x) => x.trim()).map((x) => <li key={x}>{x}</li>)}
             </ul>
-            <Link href="/contact" className="action mt-2">{t("ask")}</Link>
+            <Link href="/contact?kind=wedding" className={clsx("action mt-auto", p.badge && "bg-ink !text-white hover:bg-dark")}>{t("ask")}</Link>
           </Reveal>
         ))}
       </div>

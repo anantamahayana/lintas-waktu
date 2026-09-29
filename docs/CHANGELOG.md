@@ -12,6 +12,7 @@ dan **langkah manual** kalau ada. Detail teknis lengkap ada di pesan commit (`gi
   **Manual:** kalau teks About/Services pernah diedit di Admin → Site text, versi admin yang tampil. Cek dan sesuaikan di sana. Pilih foto untuk slot Editorial di Admin → Site images.
 - Harga baru (tingkat freelancer pemula): paket wedding Essential Rp 2,5 jt · **Duo** (dulu Signature) Rp 4 jt · Full Story Rp 5 jt; layanan mulai Rp 500 rb (Personal), 750 rb (Editorial), 1,5 jt (Pre-wedding, Acara), 2,5 jt (Wedding); film saja di catatan paket. Pilihan budget di form Contact jadi < 1 jt · 1–3 jt · 3–5 jt · > 5 jt (inquiry lama tetap terbaca). "Pajak 11%" dihapus dari catatan harga.
   **Manual:** kalau paket/harga pernah diedit di Admin → Site text, versi admin yang tampil. Kosongkan atau samakan di sana.
+- Paket: **Duo** diberi label "Rekomendasi kami", baris "Hemat Rp 2 jt dibanding foto + film terpisah", latar sedikit terang, dan tombol terisi. Full Story dirampingkan (Duo + pre-wedding 2 jam); film upacara utuh jadi tambahan Rp 750 rb. Catatan harga + FAQ baru: maksimal 8 wedding per bulan, DP 30% mengunci tanggal, pelunasan H-7. Label dan baris hemat bisa diubah atau dikosongkan per paket di Admin → Site text (kolom Badge, Note).
 
 ### 2026-09-28 · Yukti
 - Galeri klien: intro (tagline), judul pratinjau link (WhatsApp) dan bahasa halaman kini mengikuti bahasa klien yang dipilih di sesi; sebelumnya tetap Inggris.

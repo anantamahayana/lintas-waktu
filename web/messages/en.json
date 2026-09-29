@@ -50,21 +50,27 @@
           "tagline": "Six hours, photographs only.",
           "price_idr": "IDR 2.500.000",
           "price_usd": "USD 155",
-          "includes": "6 hours coverage\n1 photographer\n150+ edited photographs\nPrivate online gallery"
+          "includes": "6 hours coverage\n1 photographer\n150+ edited photographs\nPrivate online gallery",
+          "badge": "",
+          "note": ""
         },
         {
           "name": "Duo",
           "tagline": "The two of us, photo & film.",
           "price_idr": "IDR 4.000.000",
           "price_usd": "USD 250",
-          "includes": "8 hours coverage\nPhotographer + videographer\n250+ edited photographs\n1-min teaser + 3–4 min highlight film\nPrivate online gallery"
+          "includes": "8 hours coverage\nPhotographer + videographer\n250+ edited photographs\n1-min teaser + 3–4 min highlight film\nPrivate online gallery",
+          "badge": "Our pick",
+          "note": "IDR 2M / USD 120 less than photo + film booked separately"
         },
         {
           "name": "Full Story",
-          "tagline": "Duo, plus the days around it.",
+          "tagline": "Duo, plus a morning before the day.",
           "price_idr": "IDR 5.000.000",
           "price_usd": "USD 310",
-          "includes": "Everything in Duo\n2-hour pre-wedding session\nFull ceremony film\nPrivate online gallery"
+          "includes": "Everything in Duo\n2-hour pre-wedding session\n40+ pre-wedding photographs",
+          "badge": "",
+          "note": ""
         }
       ]
     },
@@ -169,7 +175,7 @@
     },
     "packages": {
       "eyebrow": "Wedding packages · starting from",
-      "note": "Travel outside Denpasar and Badung is quoted separately. Film only: 1-minute reel IDR 1.000.000 · 3–5 minute highlight IDR 2.500.000. Custom coverage is always possible — tell us what matters and we will shape it."
+      "note": "We take at most eight weddings a month, so each one gets our full attention. A 30% deposit secures your date; the rest is due seven days before. Travel outside Denpasar and Badung is quoted separately. Film only: 1-minute reel IDR 1.000.000 · 3–5 minute highlight IDR 2.500.000 · full ceremony film IDR 750.000. Custom coverage is always possible — tell us what matters and we will shape it."
     },
     "faq": {
       "eyebrow": "Questions",
@@ -178,6 +184,10 @@
         {
           "q": "How far in advance should we book?",
           "a": "For weddings in the dry season (May–September), 6–10 months. Sessions and events can often be arranged within a few weeks."
+        },
+        {
+          "q": "How do we secure our date?",
+          "a": "With a 30% deposit — until it arrives the date is still open to others. The rest is due seven days before the day."
         },
         {
           "q": "Do you travel outside Bali?",
