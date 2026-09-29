@@ -34,7 +34,8 @@ export async function pageMeta(
   const url = localeUrl(locale, path);
   const image = opts.image ?? `${SITE_URL}/opengraph-image`;
   return {
-    title,
+    // no page title (home) → the full site title; `undefined` here would leave the page without a <title>
+    title: title ?? { absolute: t("title") },
     description,
     alternates: { canonical: url, languages: alternates(path).languages },
     openGraph: {
