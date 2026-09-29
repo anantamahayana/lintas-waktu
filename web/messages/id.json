@@ -47,24 +47,24 @@
       "items": [
         {
           "name": "Essential",
-          "tagline": "Setengah hari, foto saja.",
-          "price_idr": "IDR 12.000.000",
-          "price_usd": "USD 750",
-          "includes": "Liputan 6 jam\n1 fotografer\n300+ foto yang diedit\nGaleri online privat"
+          "tagline": "Enam jam, foto saja.",
+          "price_idr": "IDR 2.500.000",
+          "price_usd": "USD 155",
+          "includes": "Liputan 6 jam\n1 fotografer\n150+ foto yang diedit\nGaleri online privat"
         },
         {
-          "name": "Signature",
-          "tagline": "Sehari penuh, foto & film.",
-          "price_idr": "IDR 24.000.000",
-          "price_usd": "USD 1,500",
-          "includes": "Liputan 10 jam\nFotografer + videografer\n500+ foto yang diedit\nFilm highlight 4–6 menit\nGaleri online privat"
+          "name": "Duo",
+          "tagline": "Kami berdua, foto & film.",
+          "price_idr": "IDR 4.000.000",
+          "price_usd": "USD 250",
+          "includes": "Liputan 8 jam\nFotografer + videografer\n250+ foto yang diedit\nTeaser 1 menit + film highlight 3–4 menit\nGaleri online privat"
         },
         {
           "name": "Full Story",
-          "tagline": "Dua hari, setiap babnya.",
-          "price_idr": "IDR 38.000.000",
-          "price_usd": "USD 2,400",
-          "includes": "Hari upacara + resepsi\n2 fotografer + videografer\n800+ foto yang diedit\nFilm highlight + edit upacara lengkap\nAlbum fine-art (30 halaman)"
+          "tagline": "Duo, ditambah hari-hari di sekitarnya.",
+          "price_idr": "IDR 5.000.000",
+          "price_usd": "USD 310",
+          "includes": "Semua isi paket Duo\nSesi pre-wedding 2 jam\nFilm upacara utuh\nGaleri online privat"
         }
       ]
     },
@@ -136,40 +136,40 @@
         "sub": "Seharian penuh, disimpan dengan jujur.",
         "body": "Dari persiapan sampai dansa terakhir. Kami bekerja tenang, tanpa daftar pose, dan memfilmkan ikrar secara utuh jika kamu mau. Upacara intim dan elopement sangat disambut — enam puluh tamu atau enam.",
         "includes": "Foto · Film · Foto + Film",
-        "from": "Mulai IDR 12.000.000 / USD 750"
+        "from": "Mulai IDR 2.500.000 / USD 155"
       },
       "prewedding": {
         "title": "Pre-wedding",
         "sub": "Pagi yang pelan di tempat yang membuatmu memilih Bali.",
         "body": "Dua sampai tiga jam, satu atau dua lokasi — tebing Uluwatu, sawah Sidemen, atau pantai sebelum orang bangun. Tanpa properti, tanpa pose paksaan; kita jalan dan mengobrol.",
-        "includes": "2–3 jam · 1–2 lokasi · 80+ foto",
-        "from": "Mulai IDR 4.500.000 / USD 280"
+        "includes": "2–3 jam · 1–2 lokasi · 40+ foto",
+        "from": "Mulai IDR 1.500.000 / USD 95"
       },
       "editorial": {
         "title": "Editorial & Model",
         "sub": "Satu konsep, satu wajah, ruang untuk bermain.",
         "body": "Portofolio dan comp card untuk model, lookbook untuk desainer dan label, cerita editorial dari sebuah moodboard. Konsepnya kita susun bersama — cahaya, lokasi, styling — lalu dipotret pelan agar sempat bernapas. Reel singkat untuk media sosial bisa ditambahkan.",
-        "includes": "2–3 jam · Konsep & moodboard · Foto, reel, atau keduanya",
-        "from": "Harga sesuai konsep — tanya kami"
+        "includes": "2–3 jam · Konsep & moodboard · 25+ foto",
+        "from": "Mulai IDR 750.000 / USD 45"
       },
       "event": {
         "title": "Acara",
         "sub": "Didokumentasikan, bukan diatur.",
         "body": "Acara perusahaan, peluncuran, festival, dan perayaan komunitas. Kami meliput ruangan, pembicara, dan momen di antaranya — dikirim dalam 72 jam bila kamu butuh cepat.",
-        "includes": "Setengah atau sehari penuh · Opsi edit hari-H",
-        "from": "Mulai IDR 3.000.000 / USD 190"
+        "includes": "4 jam · 100+ foto · Opsi edit hari-H",
+        "from": "Mulai IDR 1.500.000 / USD 95"
       },
       "personal": {
         "title": "Personal",
         "sub": "Satu jam. Satu lokasi. Kamu.",
         "body": "Personal branding, wisuda, potret keluarga. Sesi santai yang berakhir dengan foto yang benar-benar kamu pakai — di profil, di dinding, atau di kulkas ibumu.",
-        "includes": "60 menit · 30+ foto · Siap web + cetak",
-        "from": "Mulai IDR 1.500.000 / USD 95"
+        "includes": "60 menit · 20+ foto · Siap web + cetak",
+        "from": "Mulai IDR 500.000 / USD 30"
       }
     },
     "packages": {
       "eyebrow": "Paket wedding · mulai dari",
-      "note": "Harga belum termasuk perjalanan ke luar Bali dan pajak 11%. Cakupan khusus selalu bisa — ceritakan yang penting, kami bentuk."
+      "note": "Transport di luar Denpasar dan Badung dihitung terpisah. Film saja: reel 1 menit IDR 1.000.000 · highlight 3–5 menit IDR 2.500.000. Cakupan khusus selalu bisa — ceritakan yang penting, kami bentuk."
     },
     "faq": {
       "eyebrow": "Pertanyaan",
@@ -303,10 +303,10 @@
         "other": "Belum yakin"
       },
       "budgets": {
-        "b1": "Di bawah IDR 5 jt / USD 300",
-        "b2": "IDR 5–15 jt / USD 300–950",
-        "b3": "IDR 15–30 jt / USD 950–1,9 rb",
-        "b4": "Di atas IDR 30 jt / USD 1,9 rb",
+        "r1": "Di bawah IDR 1 jt / USD 65",
+        "r2": "IDR 1–3 jt / USD 65–190",
+        "r3": "IDR 3–5 jt / USD 190–310",
+        "r4": "Di atas IDR 5 jt / USD 310",
         "b5": "Kita bicarakan"
       },
       "ph": {

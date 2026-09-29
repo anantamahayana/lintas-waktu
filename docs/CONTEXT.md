@@ -69,6 +69,7 @@ Untuk perubahan tampilan, buka halamannya dan lihat sendiri (lebar HP ±390 px d
 ## Keputusan yang sudah diambil (jangan diubah tanpa tanya pemilik)
 - **Desain**: acuannya kode di `web/` + `docs/BRAND.md` (classic editorial, tanpa warna aksen, Instrument Serif). Figma usang. Animasi elegan tapi ringan.
 - **Brand**: sebutan mengikuti `docs/BRAND.md`: duo independen, bukan "studio"; nama di situs "Lintas Waktu". Editorial & Model adalah kategori resmi (29 Sep 2026).
+- **Harga** (29 Sep 2026): tingkat freelancer pemula, Rp 500 rb – 5 jt, untuk membangun portofolio dulu. Paket wedding Essential 2,5 jt · Duo 4 jt · Full Story 5 jt; layanan mulai 500 rb (Personal) s.d. 2,5 jt (Wedding). Promo peluncuran (reel 1 menit Rp 500 rb untuk klien foto, kuota 5, s.d. 31 Des 2026) **tidak** dipajang di situs, hanya ditawarkan lewat WhatsApp. Harga dinaikkan bertahap setelah 3–5 proyek masuk portofolio.
 - **Bahasa**: situs EN utama, ID kedua. Semua yang dibaca klien (galeri, pesan WhatsApp, invoice) mengikuti bahasa klien (`lang` per sesi/invoice). Admin berbahasa Inggris.
 - **Kalender hanya untuk admin**: tidak ada ketersediaan publik.
 - **Teks & harga situs diedit dari admin** (*Site text*), bukan di kode. Harga teks bebas.

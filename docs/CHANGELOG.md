@@ -10,6 +10,8 @@ dan **langkah manual** kalau ada. Detail teknis lengkap ada di pesan commit (`gi
 - Kategori baru **Editorial & Model**: filter di Work, kartu di Services, pilihan di form Contact, kategori proyek/kalender di admin, slot foto "Services · Editorial & Model" di Site images.
 - Teks situs sebagai duo (fotografer + videografer), bukan satu orang atau "studio": About, "Di balik kamera", pengantar Services, menu "Tentang kami". `docs/BRAND.md` diperbarui (nama, skala duo, spesialisasi).
   **Manual:** kalau teks About/Services pernah diedit di Admin → Site text, versi admin yang tampil. Cek dan sesuaikan di sana. Pilih foto untuk slot Editorial di Admin → Site images.
+- Harga baru (tingkat freelancer pemula): paket wedding Essential Rp 2,5 jt · **Duo** (dulu Signature) Rp 4 jt · Full Story Rp 5 jt; layanan mulai Rp 500 rb (Personal), 750 rb (Editorial), 1,5 jt (Pre-wedding, Acara), 2,5 jt (Wedding); film saja di catatan paket. Pilihan budget di form Contact jadi < 1 jt · 1–3 jt · 3–5 jt · > 5 jt (inquiry lama tetap terbaca). "Pajak 11%" dihapus dari catatan harga.
+  **Manual:** kalau paket/harga pernah diedit di Admin → Site text, versi admin yang tampil. Kosongkan atau samakan di sana.
 
 ### 2026-09-28 · Yukti
 - Galeri klien: intro (tagline), judul pratinjau link (WhatsApp) dan bahasa halaman kini mengikuti bahasa klien yang dipilih di sesi; sebelumnya tetap Inggris.

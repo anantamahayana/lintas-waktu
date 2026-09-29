@@ -8,7 +8,8 @@ import { Btn, Card, Field, PageHeader, Pill, Stat, Textarea, confirm, fmtDate, t
 const STATUSES: InquiryStatus[] = ["new", "replied", "booked", "closed"];
 const TONE: Record<InquiryStatus, "new" | "warn" | "ok" | "mute"> = { new: "new", replied: "warn", booked: "ok", closed: "mute" };
 const KIND: Record<string, string> = { wedding: "Wedding", prewedding: "Pre-wedding", editorial: "Editorial / Model", event: "Event", personal: "Personal", other: "Not sure yet" };
-const BUDGET: Record<string, string> = { b1: "< IDR 5M / USD 300", b2: "IDR 5–15M / USD 300–950", b3: "IDR 15–30M / USD 950–1.9k", b4: "> IDR 30M / USD 1.9k", b5: "Let’s talk" };
+const BUDGET: Record<string, string> = { b1: "< IDR 5M / USD 300", b2: "IDR 5–15M / USD 300–950", b3: "IDR 15–30M / USD 950–1.9k", b4: "> IDR 30M / USD 1.9k", b5: "Let’s talk",
+  r1: "< IDR 1M / USD 65", r2: "IDR 1–3M / USD 65–190", r3: "IDR 3–5M / USD 190–310", r4: "> IDR 5M / USD 310" }; // b1–b4: ranges before the Sep 2026 prices
 
 export default function InquiriesPage() {
   const [rows, setRows] = useState<Inquiry[] | null>(null);

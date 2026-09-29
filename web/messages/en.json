@@ -47,24 +47,24 @@
       "items": [
         {
           "name": "Essential",
-          "tagline": "Half a day, photographs only.",
-          "price_idr": "IDR 12.000.000",
-          "price_usd": "USD 750",
-          "includes": "6 hours coverage\n1 photographer\n300+ edited photographs\nPrivate online gallery"
+          "tagline": "Six hours, photographs only.",
+          "price_idr": "IDR 2.500.000",
+          "price_usd": "USD 155",
+          "includes": "6 hours coverage\n1 photographer\n150+ edited photographs\nPrivate online gallery"
         },
         {
-          "name": "Signature",
-          "tagline": "The full day, photo & film.",
-          "price_idr": "IDR 24.000.000",
-          "price_usd": "USD 1,500",
-          "includes": "10 hours coverage\nPhotographer + videographer\n500+ edited photographs\n4–6 min highlight film\nPrivate online gallery"
+          "name": "Duo",
+          "tagline": "The two of us, photo & film.",
+          "price_idr": "IDR 4.000.000",
+          "price_usd": "USD 250",
+          "includes": "8 hours coverage\nPhotographer + videographer\n250+ edited photographs\n1-min teaser + 3–4 min highlight film\nPrivate online gallery"
         },
         {
           "name": "Full Story",
-          "tagline": "Two days, every chapter.",
-          "price_idr": "IDR 38.000.000",
-          "price_usd": "USD 2,400",
-          "includes": "Ceremony + reception day\n2 photographers + videographer\n800+ edited photographs\nHighlight film + full ceremony edit\nFine-art album (30 pages)"
+          "tagline": "Duo, plus the days around it.",
+          "price_idr": "IDR 5.000.000",
+          "price_usd": "USD 310",
+          "includes": "Everything in Duo\n2-hour pre-wedding session\nFull ceremony film\nPrivate online gallery"
         }
       ]
     },
@@ -136,40 +136,40 @@
         "sub": "The whole day, kept honestly.",
         "body": "From preparations to the last dance. We work quietly, without posing lists, and film the vows in full if you wish. Intimate ceremonies and elopements are welcome — sixty guests or six.",
         "includes": "Photo · Film · Photo + Film",
-        "from": "From IDR 12.000.000 / USD 750"
+        "from": "From IDR 2.500.000 / USD 155"
       },
       "prewedding": {
         "title": "Pre-wedding",
         "sub": "A slow morning in the place you chose Bali for.",
         "body": "Two to three hours, one or two locations — cliffs at Uluwatu, rice terraces in Sidemen, or the beach before anyone is awake. No props, no forced poses; we walk and talk.",
-        "includes": "2–3 hours · 1–2 locations · 80+ photographs",
-        "from": "From IDR 4.500.000 / USD 280"
+        "includes": "2–3 hours · 1–2 locations · 40+ photographs",
+        "from": "From IDR 1.500.000 / USD 95"
       },
       "editorial": {
         "title": "Editorial & Model",
         "sub": "A concept, a face, and room to play.",
         "body": "Portfolios and comp cards for models, lookbooks for designers and labels, editorial stories built from a moodboard. We plan the concept with you — light, location, styling — then shoot slowly enough to let it breathe. A short reel for social media on request.",
-        "includes": "2–3 hours · Concept & moodboard · Photo, reel, or both",
-        "from": "Priced to the concept — ask us"
+        "includes": "2–3 hours · Concept & moodboard · 25+ photographs",
+        "from": "From IDR 750.000 / USD 45"
       },
       "event": {
         "title": "Event",
         "sub": "Documented, not staged.",
         "body": "Corporate gatherings, launches, festivals and community celebrations. We cover the room, the speakers, and the moments between — delivered within 72 hours when you need them fast.",
-        "includes": "Half-day or full-day · Optional same-day edit",
-        "from": "From IDR 3.000.000 / USD 190"
+        "includes": "4 hours · 100+ photographs · Optional same-day edit",
+        "from": "From IDR 1.500.000 / USD 95"
       },
       "personal": {
         "title": "Personal",
         "sub": "One hour. One location. You.",
         "body": "Personal branding, graduation, family portraits. A relaxed session that ends with photographs you will actually use — on your profile, your wall, or your mother’s fridge.",
-        "includes": "60 minutes · 30+ photographs · Web-ready + print",
-        "from": "From IDR 1.500.000 / USD 95"
+        "includes": "60 minutes · 20+ photographs · Web-ready + print",
+        "from": "From IDR 500.000 / USD 30"
       }
     },
     "packages": {
       "eyebrow": "Wedding packages · starting from",
-      "note": "Prices exclude travel outside Bali and 11% tax. Custom coverage is always possible — tell us what matters and we will shape it."
+      "note": "Travel outside Denpasar and Badung is quoted separately. Film only: 1-minute reel IDR 1.000.000 · 3–5 minute highlight IDR 2.500.000. Custom coverage is always possible — tell us what matters and we will shape it."
     },
     "faq": {
       "eyebrow": "Questions",
@@ -303,10 +303,10 @@
         "other": "Not sure yet"
       },
       "budgets": {
-        "b1": "Under IDR 5M / USD 300",
-        "b2": "IDR 5–15M / USD 300–950",
-        "b3": "IDR 15–30M / USD 950–1.9k",
-        "b4": "Over IDR 30M / USD 1.9k",
+        "r1": "Under IDR 1M / USD 65",
+        "r2": "IDR 1–3M / USD 65–190",
+        "r3": "IDR 3–5M / USD 190–310",
+        "r4": "Over IDR 5M / USD 310",
         "b5": "Let’s talk"
       },
       "ph": {

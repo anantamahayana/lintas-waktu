@@ -6,7 +6,7 @@ import clsx from "clsx";
 import { waLink } from "@/lib/site";
 
 const KINDS = ["wedding", "prewedding", "editorial", "event", "personal", "other"] as const;
-const BUDGETS = ["b1", "b2", "b3", "b4", "b5"] as const;
+const BUDGETS = ["r1", "r2", "r3", "r4", "b5"] as const; // r*: ranges since Sep 2026 prices; b1–b4 were the old ones
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type Values = {
