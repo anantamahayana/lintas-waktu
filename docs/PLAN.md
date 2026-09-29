@@ -67,7 +67,7 @@ Dugaan penyebab dari sesi desktop sudah dicek terhadap kode; hasilnya di kolom "
 - Admin → Site images → "framing" per slot, dan Project → Cover → "Adjust framing": titik fokus (ketuk/geser), zoom 100–250%, pratinjau bentuk kotak nyata (komputer/HP); "Show whole photo" untuk slot yang tata letaknya mengizinkan (kartu Home, Behind, CTA, About, Services, Contact). Hero & banner selalu mengisi bingkai.
 - Disimpan: `site.images_frames` (settings) dan `projects.cover_frame`; ganti foto di slot = bingkai kembali ke tengah.
 
-## Detail visual (29 Sep 2026) — tahap 1 ✅
+## Detail visual (29 Sep 2026) — tahap 1 ✅ · tahap 2 ✅
 Detail kecil yang bercerita soal waktu, cahaya, dan cetakan, dengan syarat performa di `CLAUDE.md` ("Performa dulu").
 
 | Tahap | Isi |
@@ -107,3 +107,13 @@ jadi angka LCP lokal lebih rendah dari aslinya; yang dibandingkan terutama skor,
 
 Tambahan JS ±1 KB (jam Bali, tombol ke atas). Pergeseran kecil di Contact (CLS 0,006) sempat muncul lalu diperbaiki:
 blok jam dirender tak terlihat dengan ukuran akhirnya sejak awal.
+
+### Tahap 2 (dengan 12 proyek contoh di database lokal, jadi angka beranda tidak bisa dibandingkan dengan tabel di atas)
+| Halaman | Sebelum tahap 2 | Sesudah | CLS | JS |
+|---|---|---|---|---|
+| /id | 74*–89, TBT 200–400 ms | 91–96, TBT 120–170 ms | 0 | 189 KB (sama) |
+| /id/work/ayu-marco | 83–89, TBT 150–380 ms | 93–94, TBT 140 ms | 0 | 198 KB (sama) |
+| /id/contact | 93–97, TBT 80–120 ms | 93–94, TBT 60–100 ms | 0 | 197 KB (sama) |
+
+\* run pertama setelah server menyala. Semua efek tahap 2 CSS/SVG; garis progres baca memakai scroll timeline bawaan browser (tanpa JS).
+Halaman 404 tidak bisa diukur Lighthouse (status 404), dicek visual.

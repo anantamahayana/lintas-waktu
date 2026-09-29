@@ -337,7 +337,8 @@
         "date": "Juni 2027",
         "location": "Uluwatu, atau belum tahu"
       },
-      "errorGeneric": "Terjadi kesalahan — coba lewat WhatsApp atau email."
+      "errorGeneric": "Terjadi kesalahan — coba lewat WhatsApp atau email.",
+      "stamp": "Diterima"
     }
   },
   "notFound": {
@@ -345,7 +346,8 @@
     "title": "Momen ini sudah berlalu. <em>Halamannya tidak ada.</em>",
     "body": "Tautannya mungkin lama, atau galeri yang dituju sudah kedaluwarsa. Kalau kamu dikirimi tautan galeri, minta yang baru kepada kami.",
     "home": "Kembali ke beranda",
-    "whatsapp": "WhatsApp kami"
+    "whatsapp": "WhatsApp kami",
+    "work": "Lihat karya kami"
   },
   "meta": {
     "title": "Lintas Waktu — Fotografer Wedding & Film, Bali",

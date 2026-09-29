@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import clsx from "clsx";
 import { waLink } from "@/lib/site";
+import { Postmark } from "./Postmark";
 
 const KINDS = ["wedding", "prewedding", "editorial", "event", "personal", "other"] as const;
 const BUDGETS = ["r1", "r2", "r3", "r4", "b5"] as const; // r*: ranges since Sep 2026 prices; b1–b4 were the old ones
@@ -58,8 +59,10 @@ export function ContactForm({ initialKind = "", whatsapp }: { initialKind?: stri
   if (status === "sent") {
     const wa = waLink(`Hi Lintas Waktu — ${v.name} here. I just sent an inquiry about a ${v.kind} (${v.date || "date TBC"}).`, whatsapp);
     return (
-      <div className="flex flex-col gap-6 py-6">
-        <p className="t-statement max-w-[24ch]">{t("sentTitle", { name: v.name.split(" ")[0] })}</p>
+      <div className="relative flex flex-col gap-6 py-6">
+        <Postmark label={t("stamp")} date={new Date().toLocaleDateString(locale === "id" ? "id-ID" : "en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Makassar" })}
+          className="stamp-in absolute -top-2 right-0 h-24 w-24 sm:h-28 sm:w-28 text-ink/80" />
+        <p className="t-statement max-w-[24ch] pr-24 sm:pr-28">{t("sentTitle", { name: v.name.split(" ")[0] })}</p>
         <p className="t-body text-mute max-w-[48ch]">{t("sentBody")}</p>
         <a href={wa} className="action">{t("sentWhatsapp")}</a>
       </div>

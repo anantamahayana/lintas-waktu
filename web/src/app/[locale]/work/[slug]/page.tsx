@@ -42,6 +42,7 @@ export default async function ProjectPage({ params }: { params: Params }) {
 
   return (
     <article>
+      <div aria-hidden className="read-progress" />
       {/* Hero — a photograph, or for a film project the film itself (click to play) */}
       {isFilm && p.film ? (
         <ViewTransition name={`photo-${p.slug}`} share="morph" default="none">
@@ -93,7 +94,9 @@ export default async function ProjectPage({ params }: { params: Params }) {
 
       <section className="wrap gutter py-16 lg:py-24 flex flex-col items-center text-center gap-5">
         <Reveal><span className="t-mono text-mute">{t("project.theDay")}</span></Reveal>
-        <Reveal delay={80}><p className="t-body max-w-[60ch]">{p.body}</p></Reveal>
+        <Reveal delay={80} className="story t-body max-w-[60ch] text-left flex flex-col gap-4">
+          {p.body.split(/\n\s*\n/).filter((x) => x.trim()).map((para, i) => <p key={i} className="whitespace-pre-line">{para.trim()}</p>)}
+        </Reveal>
       </section>
 
       {/* More work — three related projects to choose from */}

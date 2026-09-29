@@ -337,7 +337,8 @@
         "date": "June 2027",
         "location": "Uluwatu, or not sure yet"
       },
-      "errorGeneric": "Something went wrong — please try WhatsApp or email."
+      "errorGeneric": "Something went wrong — please try WhatsApp or email.",
+      "stamp": "Received"
     }
   },
   "notFound": {
@@ -345,7 +346,8 @@
     "title": "This moment has passed. <em>The page didn’t.</em>",
     "body": "The link may be old, or the gallery it pointed to has expired. If you were sent a gallery link, ask us for a fresh one.",
     "home": "Back to home",
-    "whatsapp": "WhatsApp us"
+    "whatsapp": "WhatsApp us",
+    "work": "See our work"
   },
   "meta": {
     "title": "Lintas Waktu — Wedding & Film Photographer, Bali",
