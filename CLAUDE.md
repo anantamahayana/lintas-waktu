@@ -37,6 +37,13 @@ Tujuannya: siapa pun (dan Claude siapa pun) bisa tahu apa yang berubah hanya dar
 - Tanya dulu sebelum perubahan besar. Kalau diminta "jangan lakukan apa-apa", cukup jawab.
 - Jangan menulis rahasia (password, key, token, PIN) di repo atau chat.
 - Desain: kode di `web/` adalah acuan (lihat `docs/BRAND.md`); Figma sudah usang. Animasi elegan tapi ringan.
+- **Performa dulu, hiasan kemudian** (pengunjung banyak memakai HP biasa):
+  - Tanpa library baru untuk efek visual. CSS dulu; JS hanya untuk pulau kecil (`"use client"` sekecil mungkin, ±2 KB per fitur).
+  - Animasi hanya `transform` dan `opacity`. Jangan menganimasikan `filter`/blur, bayangan, atau ukuran/posisi layout.
+  - Tanpa loop terus-menerus (`requestAnimationFrame`, `setInterval` per detik). Timer paling sering sekali per menit dan berhenti saat tab tersembunyi.
+  - Konten di atas lipatan (hero, judul, foto `priority`) tidak boleh ditunda animasi. Ruang disiapkan sebelum isi muncul (tanpa pergeseran/CLS).
+  - Hormati `prefers-reduced-motion`.
+  - Ukur sebelum dan sesudah dengan Lighthouse mobile di build produksi (cara dan angka patokan: `docs/PLAN.md` → "Detail visual"). Jangan push kalau skor turun atau TBT/CLS naik berarti.
 - Konten untuk klien (galeri, invoice) dalam bahasa klien, EN/ID. Kalender hanya untuk admin.
 - Next.js 16: baca `web/AGENTS.md` sebelum mengubah kode khusus Next.
 - Keputusan besar yang baru → catat di `docs/CONTEXT.md` (bagian "Keputusan yang sudah diambil").
