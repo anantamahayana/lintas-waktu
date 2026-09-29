@@ -314,6 +314,8 @@
       "sentTitle": "Terima kasih, {name}. Sudah kami terima.",
       "sentBody": "Kami balas dalam sehari, biasanya lebih cepat. Kalau mendesak, WhatsApp paling cepat.",
       "sentWhatsapp": "Lanjutkan di WhatsApp",
+      "sentWhatsappText": "Halo Lintas Waktu, saya {name}. Saya baru mengirim pesan soal {kind} ({date}).",
+      "dateTbc": "tanggal belum pasti",
       "kinds": {
         "wedding": "Wedding",
         "prewedding": "Pre-wedding",

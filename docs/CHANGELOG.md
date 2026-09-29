@@ -1,7 +1,11 @@
 # Catatan perubahan
 
 Yang terbaru di atas. Setiap perubahan yang di-push menambah satu entri di sini (aturannya di `CLAUDE.md`).
-Format: `### YYYY-MM-DD · nama` lalu poin singkat. Isinya: apa yang berubah bagi pengguna, file/area utama,
+Format: `### 2026-09-29 · Yukti
+- Form Contact: pesan tidak lagi hilang diam-diam (kalau API gagal, pengunjung diarahkan ke WhatsApp/email, bukan "terkirim"); batas 5 pesan/10 menit kini per pengunjung, bukan untuk seluruh situs; tombol "Lanjutkan di WhatsApp" menyiapkan pesan dalam bahasa pengunjung.
+  **Manual:** pastikan `REVALIDATE_SECRET` terisi sama di Vercel dan Railway (sudah dipakai untuk revalidasi).
+
+### YYYY-MM-DD · nama` lalu poin singkat. Isinya: apa yang berubah bagi pengguna, file/area utama,
 dan **langkah manual** kalau ada. Detail teknis lengkap ada di pesan commit (`git log`).
 
 ---

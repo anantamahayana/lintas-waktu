@@ -314,6 +314,8 @@
       "sentTitle": "Thank you, {name}. We’ve got it.",
       "sentBody": "We reply within a day, usually sooner. If it’s urgent, WhatsApp is fastest.",
       "sentWhatsapp": "Continue on WhatsApp",
+      "sentWhatsappText": "Hi Lintas Waktu, {name} here. I just sent an inquiry about {kind} ({date}).",
+      "dateTbc": "date to be confirmed",
       "kinds": {
         "wedding": "Wedding",
         "prewedding": "Pre-wedding",

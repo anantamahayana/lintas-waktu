@@ -44,25 +44,30 @@ export async function POST(req: Request) {
   const payload = { ...body, receivedAt: new Date().toISOString() };
 
   // 1) the backend, when configured (stores it for /admin/inquiries)
-  const api = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL;
+  const api = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+  const hook = process.env.INQUIRY_WEBHOOK_URL;
   if (api) {
     try {
-      const res = await fetch(`${api}/api/public/inquiries`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      // This call comes from the server, so the API would see one address for every visitor and its
+      // per-visitor limit would become a site-wide one. Pass the visitor's address, vouched for by the
+      // shared REVALIDATE_SECRET (the API ignores the header without it).
+      const headers: Record<string, string> = { "content-type": "application/json" };
+      const ip = req.headers.get("x-real-ip") ?? req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+      const secret = process.env.REVALIDATE_SECRET;
+      if (ip && secret) Object.assign(headers, { "x-visitor-ip": ip, "x-visitor-key": secret });
+      const res = await fetch(`${api}/api/public/inquiries`, { method: "POST", headers, body: JSON.stringify(body) });
       if (res.status === 429) return NextResponse.json({ ok: false, error: "rate_limited" }, { status: 429 });
       if (!res.ok) throw new Error(`api ${res.status}`);
       return NextResponse.json({ ok: true });
     } catch (e) {
       console.error("[inquiry] api forward failed", e);
-      // fall through to webhook / log so the message is never silently lost
+      // without a webhook to fall back on, say so: the form then points the visitor to WhatsApp/email
+      // instead of thanking them for a message nobody will read
+      if (!hook) return NextResponse.json({ ok: false, error: "forward_failed" }, { status: 502 });
     }
   }
 
   // 2) optional webhook
-  const hook = process.env.INQUIRY_WEBHOOK_URL;
   if (hook) {
     try {
       const res = await fetch(hook, {

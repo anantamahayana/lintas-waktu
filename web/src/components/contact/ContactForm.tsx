@@ -57,7 +57,7 @@ export function ContactForm({ initialKind = "", whatsapp }: { initialKind?: stri
   }
 
   if (status === "sent") {
-    const wa = waLink(`Hi Lintas Waktu — ${v.name} here. I just sent an inquiry about a ${v.kind} (${v.date || "date TBC"}).`, whatsapp);
+    const wa = waLink(t("sentWhatsappText", { name: v.name.trim(), kind: t(`kinds.${v.kind}`), date: v.date.trim() || t("dateTbc") }), whatsapp);
     return (
       <div className="relative flex flex-col gap-6 py-6">
         <Postmark label={t("stamp")} date={new Date().toLocaleDateString(locale === "id" ? "id-ID" : "en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Makassar" })}

@@ -1,4 +1,5 @@
 """Public endpoints consumed by the Next.js site. No auth; read-only except inquiries."""
+import hmac
 import json
 import time
 from collections import defaultdict
@@ -7,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session as DbSession
 
+from ..config import get_settings as app_settings
 from ..database import get_db
 from ..services import drive_service
 from . import copy_store, settings_store, site_images
@@ -103,11 +105,21 @@ def get_settings(db: DbSession = Depends(get_db)):
     return settings_store.get(db)
 
 
+def _visitor_ip(request: Request) -> str:
+    """The site's server forwards the form, so the connection address is the same for every visitor.
+    It passes the visitor's address along with the shared secret; without that secret the header is ignored."""
+    secret = app_settings().revalidate_secret
+    claimed, key = request.headers.get("x-visitor-ip"), request.headers.get("x-visitor-key", "")
+    if claimed and secret and hmac.compare_digest(key.encode(), secret.encode()):
+        return claimed[:64]
+    return request.client.host if request.client else "?"
+
+
 @router.post("/inquiries", status_code=201)
 def create_inquiry(body: InquiryCreate, request: Request, db: DbSession = Depends(get_db)):
     if body.website:  # honeypot filled → pretend success
         return {"ok": True}
-    ip = request.client.host if request.client else "?"
+    ip = _visitor_ip(request)
     now = time.time()
     hits = [t for t in _inquiry_hits[ip] if now - t < 600]
     if len(hits) >= 5:
