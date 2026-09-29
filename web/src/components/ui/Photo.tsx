@@ -45,7 +45,9 @@ export function Photo({
   const url = src ?? dummyPhoto(seed);
   return (
     <div
-      className={clsx("relative overflow-hidden photo-hover bg-line", rounded, className)}
+      // photo-dev: fades up from warm paper once loaded ("developing"); never for above-the-fold
+      // (priority) photos or hidden crossfade layers (eager), so nothing important waits on it
+      className={clsx("relative overflow-hidden photo-hover", priority || eager ? "bg-line" : "photo-dev", rounded, className)}
       style={{ ...(ratio ? { aspectRatio: ratio } : {}), ...boxStyle(frame) }}
     >
       {/* the zoom lives on a wrapper so the hover motion on the image itself still works */}

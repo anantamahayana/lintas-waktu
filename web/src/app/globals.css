@@ -59,6 +59,9 @@
   }
   .t-caption { @apply font-serif text-[18px] lg:text-[20px] leading-[1.3]; }
   .t-body { @apply text-[14px] lg:text-[15px] leading-[1.75] text-mute; }
+  /* no lone last words in paragraphs, balanced headings (browsers without support ignore it) */
+  .t-body, .t-statement, .t-small { text-wrap: pretty; }
+  .t-display, .t-display-sm, .t-caption { text-wrap: balance; }
   .t-small { @apply text-[12px] leading-[1.6]; }
 
   /* Wordmark: serif italic, like a signature */
@@ -135,6 +138,14 @@
 
   .photo-hover img { transition: transform 1200ms var(--ease-out-soft); }
   .photo-hover:hover img { transform: scale(1.03); }
+
+  /* "Developing": a photo rises out of warm paper once it has loaded (class set by the
+     pre-hydration script in Reveal.tsx). Opacity + transform only — no filters, nothing
+     animates before the image is there, and without JS the photo simply shows. */
+  .photo-dev { background-color: color-mix(in oklab, var(--color-line) 70%, #d8c6a6); }
+  .js .photo-dev img { opacity: 0; transition: opacity 900ms var(--ease-out-soft), transform 1200ms var(--ease-out-soft); }
+  .js .photo-dev:not(.is-dev) img { transform: scale(1.02); }
+  .js .photo-dev.is-dev img { opacity: 1; }
 
   .fade-layer { transition: opacity 1400ms var(--ease-in-out-soft); }
 

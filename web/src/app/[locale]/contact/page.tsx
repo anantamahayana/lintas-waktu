@@ -7,6 +7,7 @@ import { ContactForm } from "@/components/contact/ContactForm";
 import { getSite, getSiteFrames, getSiteImages } from "@/lib/content";
 import { boxStyle } from "@/lib/frame";
 import { SocialIcon, socialLinks } from "@/components/site/Social";
+import { BaliTime } from "@/components/site/BaliTime";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -46,6 +47,7 @@ export default async function ContactPage({
             </li>
           ))}
         </Reveal>
+        <Reveal delay={320} className="pt-4 w-full"><BaliTime /></Reveal>
       </section>
 
       <section className="wrap gutter pb-20 lg:pb-28 grid lg:grid-cols-12 gap-12 lg:gap-16 items-start">

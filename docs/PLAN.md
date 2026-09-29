@@ -66,3 +66,44 @@ Dugaan penyebab dari sesi desktop sudah dicek terhadap kode; hasilnya di kolom "
 - Galeri proyek (Work → proyek): setiap foto tampil utuh sesuai bentuk aslinya; baris rata (flex-grow = rasio), HP maks 2 per baris.
 - Admin → Site images → "framing" per slot, dan Project → Cover → "Adjust framing": titik fokus (ketuk/geser), zoom 100–250%, pratinjau bentuk kotak nyata (komputer/HP); "Show whole photo" untuk slot yang tata letaknya mengizinkan (kartu Home, Behind, CTA, About, Services, Contact). Hero & banner selalu mengisi bingkai.
 - Disimpan: `site.images_frames` (settings) dan `projects.cover_frame`; ganti foto di slot = bingkai kembali ke tengah.
+
+## Detail visual (29 Sep 2026) — tahap 1 ✅
+Detail kecil yang bercerita soal waktu, cahaya, dan cetakan, dengan syarat performa di `CLAUDE.md` ("Performa dulu").
+
+| Tahap | Isi |
+|---|---|
+| 1 | Jam Bali + golden hour hari ini (footer, Contact) · foto "dicetak" saat muncul · baris teks rapi (tanpa kata yatim, judul seimbang) · penanda waktu (garis + titik) · penutup footer "Dibuat pelan-pelan di Bali" + "Kembali ke awal" |
+| 2 | Cap pos saat form Contact terkirim · halaman 404 "Momen ini sudah lewat" · huruf awal besar & kutipan besar di cerita proyek · hero bergerak sangat pelan · garis progres baca |
+| 3 | Data kamera (lensa, f, rana, ISO) dari Drive di foto proyek · kursor "Lihat" di desktop · butiran & bingkai sinema di kartu film · nomor bingkai ala lembar kontak di Work |
+
+Garis bawah link yang tergambar dari kiri sudah ada (`.link`).
+
+### Cara mengukur
+```bash
+cd web && npx next build && npx next start -p 3000        # API lokal di :8000
+CHROME_PATH=<chromium> npx -y lighthouse@12 http://localhost:3000/id \
+  --only-categories=performance --form-factor=mobile --chrome-flags="--headless=new" --output=json
+```
+Jalankan 2–3 kali per halaman (run pertama setelah start selalu lebih lambat). Foto contoh tidak termuat di lingkungan tes,
+jadi angka LCP lokal lebih rendah dari aslinya; yang dibandingkan terutama skor, TBT, CLS, dan ukuran JS.
+
+### Patokan sebelum tahap 1 (Lighthouse mobile, build produksi lokal)
+| Halaman | Skor | TBT | CLS | JS |
+|---|---|---|---|---|
+| /id | 91–98 | 60–140 ms | 0 | 188 KB |
+| /id/about | 94–97 | 50–70 ms | 0 | 188 KB |
+| /id/services | 93–97 | 70–120 ms | 0 | 188 KB |
+| /id/work | 90–95 | 50–230 ms | 0 | 188 KB |
+| /id/contact | 94–98 | 60–70 ms | 0 | 196 KB |
+
+### Setelah tahap 1
+| Halaman | Skor | TBT | CLS | JS |
+|---|---|---|---|---|
+| /id | 93–94 | 60–90 ms | 0 | 189 KB |
+| /id/about | 95 | 50 ms | 0 | 189 KB |
+| /id/services | 93–96 | 120 ms | 0 | 189 KB |
+| /id/work | 94–95 | 50–60 ms | 0 | 189 KB |
+| /id/contact | 93 | 80 ms | 0 | 197 KB |
+
+Tambahan JS ±1 KB (jam Bali, tombol ke atas). Pergeseran kecil di Contact (CLS 0,006) sempat muncul lalu diperbaiki:
+blok jam dirender tak terlihat dengan ukuran akhirnya sejak awal.

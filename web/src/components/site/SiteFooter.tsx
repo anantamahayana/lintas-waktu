@@ -1,6 +1,9 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { SocialIcon, socialLinks } from "./Social";
+import { BaliTime } from "./BaliTime";
+import { BackToTop } from "./BackToTop";
+import { Mark } from "@/components/ui/Mark";
 import { getSite } from "@/lib/content";
 
 /** Centred, symmetrical, like the end of a printed programme. */
@@ -11,6 +14,7 @@ export async function SiteFooter() {
   return (
     <footer className="border-t border-line">
       <div className="wrap gutter py-14 lg:py-20 flex flex-col items-center text-center gap-8">
+        <Mark />
         <div className="flex flex-col items-center gap-2">
           <span className="t-wordmark text-[28px]">{t("brand.name")}</span>
           <span className="t-mono text-faint">{t("footer.tagline")}</span>
@@ -30,7 +34,11 @@ export async function SiteFooter() {
             </li>
           ))}
         </ul>
-        <span className="t-small text-faint">{t("footer.rights", { year: new Date().getFullYear() })}</span>
+        <BaliTime />
+        <div className="flex flex-col items-center gap-3 pt-2">
+          <BackToTop label={t("footer.top")} />
+          <span className="t-small text-faint">{t("footer.rights", { year: new Date().getFullYear() })} · <em className="font-serif text-[14px]">{t("footer.made")}</em></span>
+        </div>
       </div>
     </footer>
   );

@@ -8,6 +8,7 @@ import { boxStyle } from "@/lib/frame";
 import { Photo } from "@/components/ui/Photo";
 import { Reveal } from "@/components/ui/Reveal";
 import { Faq } from "@/components/ui/Faq";
+import { Mark } from "@/components/ui/Mark";
 import { Packages } from "@/components/home/Packages";
 
 const keys = ["wedding", "prewedding", "editorial", "event", "personal"] as const;
@@ -38,6 +39,7 @@ export default async function ServicesPage({ params }: { params: Promise<{ local
       </section>
 
       <div className="wrap gutter pt-14 lg:pt-20 flex flex-col items-center text-center gap-5">
+        <Reveal><Mark className="mb-2" /></Reveal>
         <Reveal><p className="t-body max-w-[60ch]">{t("lead")}</p></Reveal>
         <Reveal delay={80} as="ol" className="flex flex-wrap justify-center gap-x-8 gap-y-2 t-mono pt-2">
           {keys.map((k, i) => (

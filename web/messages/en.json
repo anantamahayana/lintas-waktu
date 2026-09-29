@@ -102,7 +102,17 @@
   },
   "footer": {
     "tagline": "Photography & Film · Bali, Indonesia",
-    "rights": "© {year} Lintas Waktu"
+    "rights": "© {year} Lintas Waktu",
+    "made": "Made slowly, in Bali",
+    "top": "Back to the beginning"
+  },
+  "time": {
+    "clock": "Bali · {time} WITA",
+    "golden": "Golden hour {when} {from}–{to}",
+    "goldenNow": "Golden hour now — until {to}",
+    "morning": "this morning",
+    "evening": "this evening",
+    "tomorrow": "tomorrow morning"
   },
   "categories": {
     "all": "All",
