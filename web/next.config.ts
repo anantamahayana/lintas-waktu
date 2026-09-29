@@ -29,6 +29,26 @@ const nextConfig: NextConfig = {
       afterFiles: ["gallery", "admin", "public"].map((p) => ({ source: `/api/${p}/:path*`, destination: `${API_INTERNAL}/api/${p}/:path*` })),
     };
   },
+  // Security headers, as in photo-selection-platform: no framing by other sites, no MIME sniffing,
+  // and the private pages (client gallery, invoice, admin) never leak their address to other sites
+  // (e.g. through a WhatsApp or Instagram link) and stay out of search engines.
+  async headers() {
+    const privatePage = [
+      { key: "Referrer-Policy", value: "same-origin" },
+      { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive, noimageindex" },
+    ];
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        ],
+      },
+      ...["/g/:path*", "/i/:path*", "/admin/:path*", "/admin"].map((source) => ({ source, headers: privatePage })),
+    ];
+  },
   images: {
     // Local dev: the API is on 127.0.0.1 and next/image refuses private IPs by default
     ...(process.env.NODE_ENV !== "production" && isLoopback ? { dangerouslyAllowLocalIP: true } : {}),

@@ -2,6 +2,7 @@
 
 Yang terbaru di atas. Setiap perubahan yang di-push menambah satu entri di sini (aturannya di `CLAUDE.md`).
 Format: `### 2026-09-29 · Yukti
+- Header keamanan (seperti photo-selection-platform): situs tidak bisa dibingkai situs lain; galeri klien, invoice, dan admin tidak diindeks mesin pencari dan alamatnya tidak bocor ke situs lain lewat referrer.
 - Form Contact: pesan tidak lagi hilang diam-diam (kalau API gagal, pengunjung diarahkan ke WhatsApp/email, bukan "terkirim"); batas 5 pesan/10 menit kini per pengunjung, bukan untuk seluruh situs; tombol "Lanjutkan di WhatsApp" menyiapkan pesan dalam bahasa pengunjung.
   **Manual:** pastikan `REVALIDATE_SECRET` terisi sama di Vercel dan Railway (sudah dipakai untuk revalidasi).
 
