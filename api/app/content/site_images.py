@@ -31,6 +31,7 @@ SLOTS: list[tuple[str, str, str]] = [  # (slot, page, description)
     ("service-banner", "Services", "Banner across the top"),
     ("service-wedding", "Services", "Wedding"),
     ("service-prewedding", "Services", "Pre-wedding"),
+    ("service-editorial", "Services", "Editorial & Model"),
     ("service-event", "Services", "Event"),
     ("service-personal", "Services", "Personal"),
     ("contact-1", "Contact", "Photograph beside the form"),

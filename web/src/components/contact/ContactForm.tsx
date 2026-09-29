@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import clsx from "clsx";
 import { waLink } from "@/lib/site";
 
-const KINDS = ["wedding", "prewedding", "event", "personal", "other"] as const;
+const KINDS = ["wedding", "prewedding", "editorial", "event", "personal", "other"] as const;
 const BUDGETS = ["b1", "b2", "b3", "b4", "b5"] as const;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

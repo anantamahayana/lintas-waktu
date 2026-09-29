@@ -6,6 +6,11 @@ dan **langkah manual** kalau ada. Detail teknis lengkap ada di pesan commit (`gi
 
 ---
 
+### 2026-09-29 · NantaPakeAI
+- Kategori baru **Editorial & Model**: filter di Work, kartu di Services, pilihan di form Contact, kategori proyek/kalender di admin, slot foto "Services · Editorial & Model" di Site images.
+- Teks situs sebagai duo (fotografer + videografer), bukan satu orang atau "studio": About, "Di balik kamera", pengantar Services, menu "Tentang kami". `docs/BRAND.md` diperbarui (nama, skala duo, spesialisasi).
+  **Manual:** kalau teks About/Services pernah diedit di Admin → Site text, versi admin yang tampil. Cek dan sesuaikan di sana. Pilih foto untuk slot Editorial di Admin → Site images.
+
 ### 2026-09-28 · Yukti
 - Galeri klien: intro (tagline), judul pratinjau link (WhatsApp) dan bahasa halaman kini mengikuti bahasa klien yang dipilih di sesi; sebelumnya tetap Inggris.
 

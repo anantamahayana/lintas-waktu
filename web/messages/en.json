@@ -15,7 +15,7 @@
   "cta": {
     "start": "Start a conversation",
     "whatsapp": "WhatsApp us",
-    "about": "About the studio"
+    "about": "About us"
   },
   "home": {
     "hero": {
@@ -30,7 +30,7 @@
     },
     "behind": {
       "eyebrow": "Behind the camera",
-      "body": "Lintas Waktu is run independently. From the first conversation to the day you receive your files, you work directly with the photographer — the same person who stood beside you on the day and remembers how it felt.",
+      "body": "Lintas Waktu is run independently by two people — one photographer, one filmmaker. From the first conversation to the day you receive your files, you work directly with us: the same two who stood beside you on the day and remember how it felt.",
       "title": "Photography with <em>a personal touch</em>",
       "quote": "“We don’t just take pictures — we keep the hours you’ll want to walk back into.”"
     },
@@ -102,6 +102,7 @@
     "all": "All",
     "wedding": "Wedding",
     "prewedding": "Pre-wedding",
+    "editorial": "Editorial",
     "event": "Event",
     "personal": "Personal",
     "film": "Film"
@@ -125,9 +126,9 @@
   },
   "services": {
     "eyebrow": "Services",
-    "line1": "Four kinds of days.",
+    "line1": "Five kinds of days.",
     "line2": "One way of working.",
-    "lead": "Photo, film, or both — every service below is shot by the same person, edited by hand, and delivered through a private gallery where you choose your favourites.",
+    "lead": "Photo, film, or both — every service below is shot by the same two of us, edited by hand, and delivered through a private gallery where you choose your favourites.",
     "ask": "Ask about {name}",
     "items": {
       "wedding": {
@@ -143,6 +144,13 @@
         "body": "Two to three hours, one or two locations — cliffs at Uluwatu, rice terraces in Sidemen, or the beach before anyone is awake. No props, no forced poses; we walk and talk.",
         "includes": "2–3 hours · 1–2 locations · 80+ photographs",
         "from": "From IDR 4.500.000 / USD 280"
+      },
+      "editorial": {
+        "title": "Editorial & Model",
+        "sub": "A concept, a face, and room to play.",
+        "body": "Portfolios and comp cards for models, lookbooks for designers and labels, editorial stories built from a moodboard. We plan the concept with you — light, location, styling — then shoot slowly enough to let it breathe. A short reel for social media on request.",
+        "includes": "2–3 hours · Concept & moodboard · Photo, reel, or both",
+        "from": "Priced to the concept — ask us"
       },
       "event": {
         "title": "Event",
@@ -195,7 +203,7 @@
     "line1": "Lintas Waktu means",
     "line2": "across time.",
     "lead": "It is the reason this exists: not to make a beautiful picture of a day, but to make a day you can walk back into — ten years on, on a bad afternoon, with the people who were there and the ones who no longer are.",
-    "body": "I photograph and film independently from Bali. There is no team behind the name yet; when you write to Lintas Waktu, you write to me, and I am the one who shows up. That is a limitation on how many days I can take in a year, and it is the point.",
+    "body": "The two of us — one photographer, one filmmaker — work independently from Bali. There is no big team behind the name; when you write to Lintas Waktu, you write to us, and we are the ones who show up. That is a limitation on how many days we can take in a year, and it is the point.",
     "values": {
       "eyebrow": "How we work",
       "line1": "Three things we hold to.",
@@ -289,6 +297,7 @@
       "kinds": {
         "wedding": "Wedding",
         "prewedding": "Pre-wedding",
+        "editorial": "Editorial / Model",
         "event": "Event",
         "personal": "Personal",
         "other": "Not sure yet"

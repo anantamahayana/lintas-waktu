@@ -15,7 +15,7 @@
   "cta": {
     "start": "Mulai obrolan",
     "whatsapp": "WhatsApp kami",
-    "about": "Tentang studio"
+    "about": "Tentang kami"
   },
   "home": {
     "hero": {
@@ -30,7 +30,7 @@
     },
     "behind": {
       "eyebrow": "Di balik kamera",
-      "body": "Lintas Waktu dijalankan secara independen. Dari obrolan pertama sampai hari kamu menerima file, kamu bekerja langsung dengan fotografernya — orang yang sama yang berdiri di sampingmu hari itu dan ingat rasanya.",
+      "body": "Lintas Waktu dijalankan secara independen oleh dua orang — satu fotografer, satu videografer. Dari obrolan pertama sampai hari kamu menerima file, kamu bekerja langsung dengan kami: dua orang yang sama yang berdiri di sampingmu hari itu dan ingat rasanya.",
       "title": "Fotografi dengan <em>sentuhan personal</em>",
       "quote": "“Kami tidak sekadar mengambil gambar — kami menyimpan jam-jam yang ingin kamu masuki lagi.”"
     },
@@ -102,6 +102,7 @@
     "all": "Semua",
     "wedding": "Wedding",
     "prewedding": "Pre-wedding",
+    "editorial": "Editorial",
     "event": "Acara",
     "personal": "Personal",
     "film": "Film"
@@ -125,9 +126,9 @@
   },
   "services": {
     "eyebrow": "Layanan",
-    "line1": "Empat jenis hari.",
+    "line1": "Lima jenis hari.",
     "line2": "Satu cara bekerja.",
-    "lead": "Foto, film, atau keduanya — setiap layanan di bawah dikerjakan oleh orang yang sama, diedit satu per satu, dan diserahkan lewat galeri privat tempat kamu memilih favoritmu.",
+    "lead": "Foto, film, atau keduanya — setiap layanan di bawah dikerjakan oleh kami berdua, diedit satu per satu, dan diserahkan lewat galeri privat tempat kamu memilih favoritmu.",
     "ask": "Tanya tentang {name}",
     "items": {
       "wedding": {
@@ -143,6 +144,13 @@
         "body": "Dua sampai tiga jam, satu atau dua lokasi — tebing Uluwatu, sawah Sidemen, atau pantai sebelum orang bangun. Tanpa properti, tanpa pose paksaan; kita jalan dan mengobrol.",
         "includes": "2–3 jam · 1–2 lokasi · 80+ foto",
         "from": "Mulai IDR 4.500.000 / USD 280"
+      },
+      "editorial": {
+        "title": "Editorial & Model",
+        "sub": "Satu konsep, satu wajah, ruang untuk bermain.",
+        "body": "Portofolio dan comp card untuk model, lookbook untuk desainer dan label, cerita editorial dari sebuah moodboard. Konsepnya kita susun bersama — cahaya, lokasi, styling — lalu dipotret pelan agar sempat bernapas. Reel singkat untuk media sosial bisa ditambahkan.",
+        "includes": "2–3 jam · Konsep & moodboard · Foto, reel, atau keduanya",
+        "from": "Harga sesuai konsep — tanya kami"
       },
       "event": {
         "title": "Acara",
@@ -195,7 +203,7 @@
     "line1": "Lintas Waktu berarti",
     "line2": "melintasi waktu.",
     "lead": "Itulah alasan semua ini ada: bukan untuk membuat gambar yang indah dari sebuah hari, tapi membuat hari yang bisa kamu masuki lagi — sepuluh tahun kemudian, di sore yang buruk, bersama orang-orang yang ada di sana dan yang sudah tidak ada.",
-    "body": "Saya memotret dan memfilmkan secara independen dari Bali. Belum ada tim di balik nama ini; saat kamu menulis ke Lintas Waktu, kamu menulis ke saya, dan sayalah yang datang. Itu membatasi berapa hari yang bisa saya ambil dalam setahun — dan memang itu intinya.",
+    "body": "Kami berdua — satu fotografer, satu videografer — bekerja secara independen dari Bali. Belum ada tim besar di balik nama ini; saat kamu menulis ke Lintas Waktu, kamu menulis ke kami, dan kamilah yang datang. Itu membatasi berapa hari yang bisa kami ambil dalam setahun — dan memang itu intinya.",
     "values": {
       "eyebrow": "Cara kami bekerja",
       "line1": "Tiga hal yang kami pegang.",
@@ -289,6 +297,7 @@
       "kinds": {
         "wedding": "Wedding",
         "prewedding": "Pre-wedding",
+        "editorial": "Editorial / Model",
         "event": "Acara",
         "personal": "Personal",
         "other": "Belum yakin"

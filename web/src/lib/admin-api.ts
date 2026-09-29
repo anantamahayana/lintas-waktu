@@ -126,7 +126,7 @@ export type SessionDetail = SessionOut & {
 };
 export type CacheStatus = { total: number; thumb: number; full: number; warming: boolean; ready: boolean };
 
-export type Category = "wedding" | "prewedding" | "event" | "personal";
+export type Category = "wedding" | "prewedding" | "editorial" | "event" | "personal";
 export type Fact = { label: string; value: string };
 export type ProjectPhoto = { file_id: string; filename: string; width: number; height: number; thumb_url: string; full_url: string };
 export type Project = {

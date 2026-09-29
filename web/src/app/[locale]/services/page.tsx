@@ -10,7 +10,7 @@ import { Reveal } from "@/components/ui/Reveal";
 import { Faq } from "@/components/ui/Faq";
 import { Packages } from "@/components/home/Packages";
 
-const keys = ["wedding", "prewedding", "event", "personal"] as const;
+const keys = ["wedding", "prewedding", "editorial", "event", "personal"] as const;
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -46,7 +46,7 @@ export default async function ServicesPage({ params }: { params: Promise<{ local
         </Reveal>
       </div>
 
-      {/* Four services, alternating */}
+      {/* The services, alternating */}
       <div className="wrap gutter py-8 lg:py-12">
         {keys.map((k, i) => (
           <section

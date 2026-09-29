@@ -11,11 +11,11 @@ Sumber kebenaran: **kode di `web/`** (`src/app/globals.css`, komponen). File Fig
 
 | | |
 |---|---|
-| Nama | **Lintas Waktu** (tanpa suffix; *Studio* / *Creative* adalah visi masa depan) |
+| Nama | **Lintas Waktu** di situs dan wordmark. **Lintas Waktu Visual** boleh untuk domain (`lintaswaktuvisual.com`), handle (`@lintaswaktuvisual`), dokumen resmi, dan saat perlu dibedakan dari nama lain. *Studio* / *Creative* adalah visi masa depan: jangan menyebut diri "studio" |
 | Deskriptor | *Photography & Film · Bali* (ID: *Fotografi & Film · Bali*) |
 | Makna | "melintasi waktu" — momen yang bisa dikunjungi kembali, bukan sekadar disimpan |
-| Skala | Fotografer & videografer freelance independen; ini bagian dari cerita, bukan kekurangan |
-| Spesialisasi | Wedding · Pre-wedding · Event · Personal (personal branding, graduation, keluarga) |
+| Skala | **Duo** independen: satu fotografer + satu videografer (belum studio, belum tim). Di teks: "kami berdua", "two of us". Klien berhadapan langsung dengan dua orang yang datang di hari-H; ini bagian dari cerita, bukan kekurangan |
+| Spesialisasi | Wedding · Pre-wedding · **Editorial & Model** (portofolio model, lookbook, konsep editorial) · Event · Personal (personal branding, graduation, keluarga) |
 | Target | Lokal (Bali/Indonesia) + internasional (destination wedding & pre-wedding di Bali) |
 | Bahasa | Inggris utama, Indonesia kedua (`/id/*`) |
 | Nada | Tenang, editorial, hangat, tidak berlebihan. Kalimat pendek. Satu frasa dihighlight italic. |

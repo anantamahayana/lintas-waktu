@@ -6,8 +6,8 @@ import clsx from "clsx";
 import { api, type Category, type Project } from "@/lib/admin-api";
 import { Btn, PageHeader, Pill, toast, Empty, LoadError, SkeletonCards } from "@/components/admin/ui";
 
-const CATS: (Category | "all" | "draft")[] = ["all", "wedding", "prewedding", "event", "personal", "draft"];
-const LABEL: Record<string, string> = { all: "All", wedding: "Wedding", prewedding: "Pre-wedding", event: "Event", personal: "Personal", draft: "Drafts" };
+const CATS: (Category | "all" | "draft")[] = ["all", "wedding", "prewedding", "editorial", "event", "personal", "draft"];
+const LABEL: Record<string, string> = { all: "All", wedding: "Wedding", prewedding: "Pre-wedding", editorial: "Editorial", event: "Event", personal: "Personal", draft: "Drafts" };
 
 export default function ProjectsPage() {
   const [rows, setRows] = useState<Project[] | null>(null);

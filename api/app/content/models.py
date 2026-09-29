@@ -12,6 +12,7 @@ from ..models import utcnow
 class ProjectCategory(str, enum.Enum):
     wedding = "wedding"
     prewedding = "prewedding"
+    editorial = "editorial"  # editorial / model / fashion
     event = "event"
     personal = "personal"
 

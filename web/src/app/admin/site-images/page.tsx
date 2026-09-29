@@ -24,6 +24,7 @@ const SHAPES: Record<string, { previews: FramePreview[]; whole?: boolean }> = {
   "about-4": { previews: [{ label: "Strip", ratio: 3 / 4 }], whole: true },
   "service-banner": { previews: [{ label: "Computer", ratio: 3.5 }, { label: "Phone", ratio: 1 }] },
   "service-wedding": { previews: [{ label: "Computer", ratio: 5 / 6 }, { label: "Phone", ratio: 4 / 5 }], whole: true },
+  "service-editorial": { previews: [{ label: "Computer", ratio: 5 / 6 }, { label: "Phone", ratio: 4 / 5 }], whole: true },
   "service-prewedding": { previews: [{ label: "Computer", ratio: 5 / 6 }, { label: "Phone", ratio: 4 / 5 }], whole: true },
   "service-event": { previews: [{ label: "Computer", ratio: 5 / 6 }, { label: "Phone", ratio: 4 / 5 }], whole: true },
   "service-personal": { previews: [{ label: "Computer", ratio: 5 / 6 }, { label: "Phone", ratio: 4 / 5 }], whole: true },

@@ -39,7 +39,7 @@ class Booking(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     title: Mapped[str] = mapped_column(String(160))
-    kind: Mapped[str] = mapped_column(String(16), default="wedding")  # wedding | prewedding | event | personal | block
+    kind: Mapped[str] = mapped_column(String(16), default="wedding")  # wedding | prewedding | editorial | event | personal | block
     status: Mapped[BookingStatus] = mapped_column(Enum(BookingStatus), default=BookingStatus.tentative)
     start_date: Mapped[date] = mapped_column(Date, index=True)
     end_date: Mapped[date] = mapped_column(Date, index=True)  # inclusive
@@ -58,7 +58,7 @@ class Booking(Base):
 # ---------------------------------------------------------------- schemas
 class BookingIn(BaseModel):
     title: str = Field(min_length=1, max_length=160)
-    kind: str = Field("wedding", pattern=r"^(wedding|prewedding|event|personal|block)$")
+    kind: str = Field("wedding", pattern=r"^(wedding|prewedding|editorial|event|personal|block)$")
     status: BookingStatus = BookingStatus.tentative
     start_date: date
     end_date: date | None = None
@@ -84,7 +84,7 @@ class BookingIn(BaseModel):
 
 class BookingUpdate(BookingIn):
     title: str | None = Field(None, min_length=1, max_length=160)  # type: ignore[assignment]
-    kind: str | None = Field(None, pattern=r"^(wedding|prewedding|event|personal|block)$")  # type: ignore[assignment]
+    kind: str | None = Field(None, pattern=r"^(wedding|prewedding|editorial|event|personal|block)$")  # type: ignore[assignment]
     status: BookingStatus | None = None  # type: ignore[assignment]
     start_date: date | None = None  # type: ignore[assignment]
     public: bool | None = None  # type: ignore[assignment]

@@ -2,7 +2,7 @@
  * Portfolio project shape as the pages consume it. The data comes from the
  * API (lib/content.ts) — there is no local copy of the portfolio.
  */
-export type Category = "wedding" | "prewedding" | "event" | "personal";
+export type Category = "wedding" | "prewedding" | "editorial" | "event" | "personal";
 /** photo = photographs only · film = a film (+ optional stills) · both */
 export type Kind = "photo" | "film" | "both";
 
@@ -24,4 +24,4 @@ export type Project = {
   featured?: boolean;
 };
 
-export const categories: Category[] = ["wedding", "prewedding", "event", "personal"];
+export const categories: Category[] = ["wedding", "prewedding", "editorial", "event", "personal"];

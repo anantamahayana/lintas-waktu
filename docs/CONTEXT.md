@@ -4,7 +4,8 @@ Untuk siapa pun (dan Claude siapa pun) yang baru ikut mengerjakan repo ini. Per 
 Aturan kerja ada di `CLAUDE.md`; apa yang berubah belakangan ada di `docs/CHANGELOG.md`.
 
 ## Apa ini
-**Lintas Waktu**: fotografer & videografer freelance di Bali (wedding, pre-wedding, event, personal).
+**Lintas Waktu** (domain/handle: Lintas Waktu Visual): duo independen di Bali, satu fotografer + satu videografer, bukan studio.
+Layanan: wedding, pre-wedding, editorial & model, event, personal.
 Satu website dengan tiga sisi:
 
 | Sisi | Alamat | Untuk |
@@ -67,6 +68,7 @@ Untuk perubahan tampilan, buka halamannya dan lihat sendiri (lebar HP ±390 px d
 
 ## Keputusan yang sudah diambil (jangan diubah tanpa tanya pemilik)
 - **Desain**: acuannya kode di `web/` + `docs/BRAND.md` (classic editorial, tanpa warna aksen, Instrument Serif). Figma usang. Animasi elegan tapi ringan.
+- **Brand**: sebutan mengikuti `docs/BRAND.md`: duo independen, bukan "studio"; nama di situs "Lintas Waktu". Editorial & Model adalah kategori resmi (29 Sep 2026).
 - **Bahasa**: situs EN utama, ID kedua. Semua yang dibaca klien (galeri, pesan WhatsApp, invoice) mengikuti bahasa klien (`lang` per sesi/invoice). Admin berbahasa Inggris.
 - **Kalender hanya untuk admin**: tidak ada ketersediaan publik.
 - **Teks & harga situs diedit dari admin** (*Site text*), bukan di kode. Harga teks bebas.

@@ -108,7 +108,7 @@ export function ProjectForm({ project }: { project?: Project }) {
             <Field label="Slug" hint="/work/…" error={errors.slug}><Input invalid={!!errors.slug} value={v.slug} onChange={set("slug")} /></Field>
             <Field label="Category">
               <Select value={v.category} onChange={set("category")}>
-                <option value="wedding">Wedding</option><option value="prewedding">Pre-wedding</option><option value="event">Event</option><option value="personal">Personal</option>
+                <option value="wedding">Wedding</option><option value="prewedding">Pre-wedding</option><option value="editorial">Editorial / Model</option><option value="event">Event</option><option value="personal">Personal</option>
               </Select>
             </Field>
             <Field label="Kind" hint="what this project is made of">

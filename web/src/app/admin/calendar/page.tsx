@@ -21,7 +21,7 @@ const STATUS: Record<BookingStatus, { label: string; chip: string; dot: string }
   done: { label: "Done", chip: "bg-[#5f7a4a] text-white", dot: "bg-[#5f7a4a]" },
   cancelled: { label: "Cancelled", chip: "line-through text-faint border border-line", dot: "bg-white border border-line" },
 };
-const KINDS = [["wedding", "Wedding"], ["prewedding", "Pre-wedding"], ["event", "Event"], ["personal", "Personal"], ["block", "Block (personal / travel)"]] as const;
+const KINDS = [["wedding", "Wedding"], ["prewedding", "Pre-wedding"], ["editorial", "Editorial"], ["event", "Event"], ["personal", "Personal"], ["block", "Block (personal / travel)"]] as const;
 
 export default function CalendarPage() {
   const today = iso(new Date());
