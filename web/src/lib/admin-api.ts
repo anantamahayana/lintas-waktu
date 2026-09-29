@@ -37,6 +37,7 @@ const EN: Record<string, string> = {
   "Sesi tidak ditemukan": "Session not found",
   "Password lama salah.": "That isn’t the current password",
   "Slug already in use": "Another project already uses this slug — change it to publish at a different address",
+  "Password salah": "Wrong password",
   "Terlalu banyak percobaan login. Coba lagi dalam 15 menit.": "Too many login attempts — try again in 15 minutes",
   "Google Drive API belum di-enable di project Google Cloud Anda.": "The Google Drive API is not enabled for this Google Cloud project",
 };

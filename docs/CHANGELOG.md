@@ -7,6 +7,7 @@ dan **langkah manual** kalau ada. Detail teknis lengkap ada di pesan commit (`gi
 ---
 
 ### 2026-09-29 · Yukti
+- Admin → sesi: peringatan merah kalau paket lebih besar dari jumlah foto di folder (klien tidak akan pernah bisa memenuhinya). Login admin salah password kini "Wrong password" (admin berbahasa Inggris).
 - Galeri klien (ID): sapaan seragam "kamu" (sebelumnya campur "Anda" di dialog kirim dan pratinjau album).
 - Beranda (EN & ID) kembali punya judul halaman (tab browser, Google, bookmark); sebelumnya kosong.
 - Header keamanan (seperti photo-selection-platform): situs tidak bisa dibingkai situs lain; galeri klien, invoice, dan admin tidak diindeks mesin pencari dan alamatnya tidak bocor ke situs lain lewat referrer.

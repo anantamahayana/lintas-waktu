@@ -141,7 +141,9 @@ export default function SessionPage({ params }: { params: Promise<{ id: string }
                       : <span key="p" className="text-mute">none · anyone with the link can open it</span>],
                     ["WhatsApp", s.client_wa ? <a key="w" href={`https://wa.me/${s.client_wa}`} target="_blank" rel="noreferrer" className="link font-mono">+{s.client_wa}</a> : <span key="w" className="text-mute">not saved · add it via Edit so the button opens their chat</span>],
                     ["Language", isId ? "Bahasa Indonesia" : "English"],
-                    ["Package", `${s.photo_limit} photos${s.max_limit ? ` · up to ${s.max_limit}` : ""}`],
+                    ["Package", <span key="k">{s.photo_limit} photos{s.max_limit ? ` · up to ${s.max_limit}` : ""}
+                      {/* a package larger than the folder can never be filled: the client is stuck below the count */}
+                      {cache && cache.total > 0 && s.photo_limit > cache.total && <span className="block t-small text-error">The folder has only {cache.total}. Lower the package or add photos, then Sync.</span>}</span>],
                     ["Deadline", s.expires_at ? `${fmtDate(s.expires_at)} · ${daysLeft(s.expires_at)} days left` : "—"],
                     ["Drive folder", <a key="d" href={`https://drive.google.com/drive/folders/${s.drive_folder_id}`} target="_blank" rel="noreferrer" className="link">open ↗</a>],
                     ["Photos", cache ? `${cache.total} · ${cache.ready ? "cache ready" : "preparing"}` : "—"],
