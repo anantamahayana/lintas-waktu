@@ -11,6 +11,7 @@ dan **langkah manual** kalau ada. Detail teknis lengkap ada di pesan commit (`gi
   **Manual:** ganti foto profil Instagram/WhatsApp dengan `web/public/brand/avatar-1080.png` (atau `-dark`). Kalau di Admin → Settings pernah diunggah logo galeri atau nama studio diisi selain "Lintas Waktu", itu yang tampil di galeri klien, bukan logo baru. Pratinjau link lama di WhatsApp bisa masih menampilkan gambar lama sampai cache-nya habis.
 - Nav: logo kini tersusun (gerbang di atas, LINTAS WAKTU, deskriptor) dalam satu poros tengah, simetris dengan menu kiri-kanan; garis bawah huruf wordmark di HP tidak lagi terpotong. Ikon di hasil Google sebelumnya adalah favicon bawaan Next/Vercel; file sudah diganti, Google memperbaruinya sendiri.
   **Manual:** di Google Search Console, minta indeks ulang beranda (Inspeksi URL → Minta pengindeksan) agar ikon baru lebih cepat muncul.
+- Galeri klien: kartu pembuka memainkan animasi logo **Terbit** (gerbang muncul, jalan setapak terbentuk, matahari terbit, nama muncul per huruf), lalu "Galeri untuk …" menyusul; kartu tampil ±1 detik lebih lama. Hanya untuk sesi bernama Lintas Waktu tanpa logo unggahan. CSS saja (transform/opacity), tidak tampil untuk pengunjung yang mematikan animasi.
 
 ### 2026-09-29 · Yukti
 - Admin → sesi: peringatan merah kalau paket lebih besar dari jumlah foto di folder (klien tidak akan pernah bisa memenuhinya). Login admin salah password kini "Wrong password" (admin berbahasa Inggris).

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode } from "react";
 import clsx from "clsx";
 import { GOLD, Logo } from "@/components/brand/Logo";
+import { GateIntro, TERBIT_MS } from "@/components/brand/GateIntro";
 import { gapi, galleryToken, localDraft, GalleryError, type DraftOut, type GalleryData, type GalleryMeta, type GPhoto } from "@/lib/gallery-api";
 import { T, type Dict, type Lang } from "./i18n";
 import { AlbumPreview } from "./AlbumPreview";
@@ -11,6 +12,9 @@ type Filter = "all" | "selected" | "maybe";
 type Stage = "loading" | "pin" | "gallery" | "confirm" | "sent" | "expired";
 type IntroPhase = "in" | "out" | "gone";
 const INTRO_MS = 2600;
+
+/** Our own sessions show the Gerbang Waktu logo; a custom studio name or uploaded logo still wins. */
+const isOurs = (studioName?: string | null) => (studioName || "Lintas Waktu").trim().toLowerCase() === "lintas waktu";
 
 type Picks = { ids: string[]; notes: Record<string, string>; maybe: string[] };
 const PULL_MS = 12000; // an open gallery checks for picks made on other devices this often
@@ -160,9 +164,13 @@ export function ClientGallery({ slug }: { slug: string }) {
 
   // intro timing: lift away after INTRO_MS (or on tap), then unmount
   useEffect(() => {
-    if (intro === "in") { const h = setTimeout(() => setIntro("out"), INTRO_MS); return () => clearTimeout(h); }
+    if (intro === "in") {
+      const terbit = !!meta && !meta.branding.logo_url && isOurs(meta.branding.studio_name);
+      const h = setTimeout(() => setIntro("out"), INTRO_MS + (terbit ? TERBIT_MS : 0));
+      return () => clearTimeout(h);
+    }
     if (intro === "out") { const h = setTimeout(() => { setIntro("gone"); sessionStorage.setItem(`lw_intro_${slug}`, "1"); }, 700); return () => clearTimeout(h); }
-  }, [intro, slug]);
+  }, [intro, slug, meta]);
 
   // 2. autosave draft — not in preview, not when completed. Changes are kept on this device at
   // once; the server gets them after a short pause, right away when the page is left, and again
@@ -317,8 +325,9 @@ export function ClientGallery({ slug }: { slug: string }) {
   if (!meta) return <Screen>{error ? <p className="t-mono text-error">{error}</p> : <span className="t-mono text-faint">…</span>}</Screen>;
   const b = meta.branding;
   const studio = b.studio_name || "Lintas Waktu";
-  // Our own sessions show the Gerbang Waktu logo; a custom studio name or uploaded logo still wins.
-  const ours = studio.trim().toLowerCase() === "lintas waktu";
+  const ours = isOurs(b.studio_name);
+  const lag = !b.logo_url && ours ? TERBIT_MS : 0; // the title card's lines wait for the Terbit logo
+  const after = (ms: number) => ({ animationDelay: `${ms + lag}ms` });
   const langSwitch = (
     <span className="t-mono flex gap-2">
       {(["en", "id"] as Lang[]).map((l) => <button key={l} type="button" onClick={() => setLang(l)} className={clsx(lang === l ? "text-current" : "opacity-50")}>{l.toUpperCase()}</button>)}
@@ -338,7 +347,7 @@ export function ClientGallery({ slug }: { slug: string }) {
       {b.logo_url ? (
         <img src={gapi.img(b.logo_url)} alt={studio} className="intro-logo h-24 max-w-[260px] object-contain mb-2" />
       ) : ours ? (
-        <Logo size={88} stacked label={studio} className="intro-logo mb-2" />
+        <span className="mb-2"><GateIntro size={88} label={studio} /></span>
       ) : (
         <h1 className="t-display" aria-label={studio}>
           {Array.from(studio).map((ch, i) => (
@@ -346,11 +355,11 @@ export function ClientGallery({ slug }: { slug: string }) {
           ))}
         </h1>
       )}
-      {b.tagline && <span className="intro-sub t-mono text-on-dark-mute" style={{ animationDelay: "900ms" }}>{b.tagline}</span>}
-      <span className="intro-line h-px w-16 mt-2" style={{ background: GOLD }} />
-      <span className="intro-sub t-small text-on-dark-mute mt-2" style={{ animationDelay: "1300ms" }}>{t.galleryFor}</span>
-      <span className="intro-sub font-serif italic text-[34px] leading-none" style={{ animationDelay: "1400ms" }}>{meta.client_name}</span>
-      <span className="intro-sub absolute bottom-10 t-mono text-on-dark-mute" style={{ animationDelay: "1700ms" }}>{t.tapToEnter}</span>
+      {b.tagline && <span className="intro-sub t-mono text-on-dark-mute" style={after(900)}>{b.tagline}</span>}
+      <span className="intro-line h-px w-16 mt-2" style={{ background: lag ? "var(--color-on-dark-mute)" : GOLD, ...after(800) }} />
+      <span className="intro-sub t-small text-on-dark-mute mt-2" style={after(1300)}>{t.galleryFor}</span>
+      <span className="intro-sub font-serif italic text-[34px] leading-none" style={after(1400)}>{meta.client_name}</span>
+      <span className="intro-sub absolute bottom-10 t-mono text-on-dark-mute" style={after(1700)}>{t.tapToEnter}</span>
     </div>
   );
 
@@ -604,7 +613,7 @@ function PinGate({ slug, studio, client, t, onUnlocked, langSwitch }: { slug: st
   return (
     <Screen>
       <div className="absolute top-5 right-5 text-mute">{langSwitch}</div>
-      {studio.trim().toLowerCase() === "lintas waktu" ? <Logo size={48} stacked label={studio} /> : <span className="t-wordmark">{studio}</span>}
+      {isOurs(studio) ? <Logo size={48} stacked label={studio} /> : <span className="t-wordmark">{studio}</span>}
       <span className="t-mono text-mute">{t.privateGallery} · {client}</span>
       <p className="t-statement max-w-[24ch]">{t.enterPin}</p>
       <div className="relative flex gap-3">

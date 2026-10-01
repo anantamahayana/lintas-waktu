@@ -40,6 +40,11 @@ Panduan lengkap (ruang kosong, ukuran minimum, larangan, contoh pakai): Figma, f
 | File siap pakai | `web/public/brand/`: `logo-horizontal(-light).svg`, `logo-stacked(-light).svg`, `mark(-light,-mono).svg`, `avatar-1080(-dark).png` (Instagram/WhatsApp). Juga tersedia di `https://lintaswaktuvisual.com/brand/…` |
 | Ikon | `web/src/app/icon.svg` (ikut mode gelap), `apple-icon.png`, `favicon.ico`; kartu share `opengraph-image.tsx` |
 
+**Gerak logo (1b).** Dua animasi, sumbernya HTML/SVG yang dirender per frame (tanpa audio):
+- *Golden Hour* (3,2 dtk): langit senja → keemasan → krem, matahari terbit, tulisan tertulis kiri ke kanan. Untuk penutup Reels/Story/film.
+- *Terbit* (4,6 dtk): gerbang muncul, jalan setapak terbentuk dari bawah ke cakrawala, matahari terbit di ujungnya, tulisan muncul per huruf. Ada versi overlay transparan (ProRes 4444, logo tinta untuk footage terang, krem untuk footage gelap).
+- Di situs, *Terbit* versi CSS (`components/brand/GateIntro.tsx`, kelas `.ti-*`) membuka kartu judul galeri klien, ±2,2 dtk; hanya `transform`/`opacity`, dilewati untuk reduced motion.
+
 Galeri klien: logo tampil kalau nama studio di Admin → Settings kosong atau "Lintas Waktu". Logo yang diunggah di sana (`logo_url`) tetap didahulukan.
 
 ---
