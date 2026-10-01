@@ -37,7 +37,7 @@ Panduan lengkap (ruang kosong, ukuran minimum, larangan, contoh pakai): Figma, f
 | Ukuran minimum | Gerbang 20 px tinggi di layar; di bawah itu pakai favicon |
 | Di atas foto/gelap | Gerbang `Krem #F3EFE7`, matahari tetap emas |
 | Jangan | Bayangan, transparansi, gradien, memutar, mengganti font wordmark, mewarnai gerbang dengan emas |
-| File siap pakai | `web/public/brand/`: `logo-horizontal(-light).svg`, `logo-stacked(-light).svg`, `mark(-light,-mono).svg`, `avatar-1080(-dark).png` (Instagram/WhatsApp). Juga tersedia di `https://lintaswaktu.com/brand/…` |
+| File siap pakai | `web/public/brand/`: `logo-horizontal(-light).svg`, `logo-stacked(-light).svg`, `mark(-light,-mono).svg`, `avatar-1080(-dark).png` (Instagram/WhatsApp). Juga tersedia di `https://lintaswaktuvisual.com/brand/…` |
 | Ikon | `web/src/app/icon.svg` (ikut mode gelap), `apple-icon.png`, `favicon.ico`; kartu share `opengraph-image.tsx` |
 
 Galeri klien: logo tampil kalau nama studio di Admin → Settings kosong atau "Lintas Waktu". Logo yang diunggah di sana (`logo_url`) tetap didahulukan.
@@ -73,7 +73,7 @@ Nav saat scroll memakai kelas `.glass`: `white` 72% + `backdrop-filter: blur(18p
 | Judul section | Cormorant Regular, sentence case, kata penekanan `<em>` italic | `.t-display-sm` | clamp 30–46px |
 | Kutipan / pernyataan | Cormorant Italic | `.t-statement` | clamp 22–32px |
 | Caption kartu | Cormorant Regular | `.t-caption` | 18–20px |
-| Logo | Komponen `<Logo>` (Marcellus sebagai path). `.t-wordmark` (Cormorant Italic) hanya untuk nama studio lain di galeri klien | — | gerbang 26px di nav, 64px di footer |
+| Logo | Komponen `<Logo>` (Marcellus sebagai path). `.t-wordmark` (Cormorant Italic) hanya untuk nama studio lain di galeri klien | — | nav: tersusun dalam satu poros tengah (gerbang 24px, wordmark 10px, deskriptor); footer: tersusun, gerbang 64px |
 | Label kecil | **Inter** 11px UPPERCASE tracking 0.18em | `.t-mono` | 11px |
 | Body | Inter 14–15px, warna `mute` | `.t-body` | 14–15px |
 

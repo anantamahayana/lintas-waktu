@@ -24,9 +24,9 @@ const MARK_RATIO = 120 / 140;
 export function BrandSprite() {
   return (
     <svg aria-hidden width="0" height="0" style={{ position: "absolute" }}>
-      <symbol id="lw-word" viewBox={`0 0 ${WORD_W} ${WORD_H}`}>
-        <path d={WORD} />
-      </symbol>
+      <defs>
+        <path id="lw-word" d={WORD} />
+      </defs>
     </svg>
   );
 }
@@ -34,7 +34,7 @@ export function BrandSprite() {
 /** The gate. Ink follows `currentColor`; the sun stays gold unless `mono`. */
 export function GateMark({ size, mono, className }: { size: number; mono?: boolean; className?: string }) {
   return (
-    <svg aria-hidden viewBox="40 40 120 140" width={+(size * MARK_RATIO).toFixed(1)} height={size} className={clsx("shrink-0", className)}>
+    <svg aria-hidden viewBox="40 40 120 140" width={+(size * MARK_RATIO).toFixed(1)} height={size} className={clsx("shrink-0 overflow-visible", className)}>
       <path fill="currentColor" fillRule="evenodd" d={mono ? `${GATE} ${SUN}` : GATE} />
       {!mono && <circle cx="100" cy="92" r="13" fill={GOLD} />}
     </svg>
@@ -44,7 +44,7 @@ export function GateMark({ size, mono, className }: { size: number; mono?: boole
 /** "LINTAS WAKTU" in Marcellus, `height` = cap height in px. */
 export function Wordmark({ height, className }: { height: number; className?: string }) {
   return (
-    <svg aria-hidden viewBox={`0 0 ${WORD_W} ${WORD_H}`} width={+(height * WORD_W / WORD_H).toFixed(1)} height={height} className={clsx("shrink-0", className)}>
+    <svg aria-hidden viewBox={`0 0 ${WORD_W} ${WORD_H}`} width={+(height * WORD_W / WORD_H).toFixed(1)} height={height} className={clsx("shrink-0 overflow-visible", className)}>
       <use href="#lw-word" fill="currentColor" />
     </svg>
   );

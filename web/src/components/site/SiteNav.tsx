@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 import clsx from "clsx";
 import { Link, usePathname } from "@/i18n/navigation";
-import { Logo } from "@/components/brand/Logo";
+import { GateMark, Logo, Wordmark } from "@/components/brand/Logo";
 
 const left = [["home", "/"], ["work", "/work"], ["services", "/services"]] as const;
 const isActive = (pathname: string, href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
@@ -74,16 +74,18 @@ export function SiteNav() {
           {open ? t("nav.close") : t("nav.menu")}
         </button>
 
-        <Link href="/" onClick={close} className="flex flex-col items-center justify-self-center overflow-hidden">
-          <Logo
-            size={26}
-            label={t("brand.name")}
-            className="transition-transform duration-500 ease-out-soft"
-            style={{ transform: scrolled ? "scale(0.88)" : "none" }}
-          />
+        {/* Gate, wordmark and descriptor share one centre line, like the footer. */}
+        <Link href="/" onClick={close} aria-label={t("brand.name")} className="flex flex-col items-center justify-self-center">
           <span
-            className="t-mono text-faint hidden sm:block transition-[opacity,max-height,margin] duration-500 ease-out-soft"
-            style={{ opacity: scrolled ? 0 : 1, maxHeight: scrolled ? 0 : 16, marginTop: scrolled ? 0 : 4 }}
+            className="flex flex-col items-center gap-[7px] transition-transform duration-500 ease-out-soft"
+            style={{ transform: scrolled ? "scale(0.9)" : "none" }}
+          >
+            <GateMark size={24} />
+            <Wordmark height={10} />
+          </span>
+          <span
+            className="t-mono text-faint !text-[9.5px] hidden sm:block overflow-hidden transition-[opacity,max-height,margin] duration-500 ease-out-soft"
+            style={{ opacity: scrolled ? 0 : 1, maxHeight: scrolled ? 0 : 14, marginTop: scrolled ? 0 : 6 }}
           >
             {t("brand.descriptor")}
           </span>
