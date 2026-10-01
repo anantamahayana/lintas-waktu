@@ -6,6 +6,10 @@ dan **langkah manual** kalau ada. Detail teknis lengkap ada di pesan commit (`gi
 
 ---
 
+### 2026-10-01 · NantaPakeAI
+- Logo baru **Gerbang Waktu** (gerbang, jalan yang melintas, matahari emas; tulisan LINTAS WAKTU dalam Marcellus) di seluruh situs: nav, menu HP, footer; galeri klien (layar pembuka, PIN, terima kasih); admin dan login admin; halaman cek invoice dan kop invoice. Favicon, ikon iPhone, dan gambar share (WhatsApp/Instagram) ikut baru. Emas Senja `#C8832F` jadi satu-satunya warna aksen (juga tombol pilih di galeri klien, dulu emas pucat). Aturan logo: `docs/BRAND.md` → 1a. Skor Lighthouse dan CLS tidak berubah.
+  **Manual:** ganti foto profil Instagram/WhatsApp dengan `web/public/brand/avatar-1080.png` (atau `-dark`). Kalau di Admin → Settings pernah diunggah logo galeri atau nama studio diisi selain "Lintas Waktu", itu yang tampil di galeri klien, bukan logo baru. Pratinjau link lama di WhatsApp bisa masih menampilkan gambar lama sampai cache-nya habis.
+
 ### 2026-09-29 · Yukti
 - Admin → sesi: peringatan merah kalau paket lebih besar dari jumlah foto di folder (klien tidak akan pernah bisa memenuhinya). Login admin salah password kini "Wrong password" (admin berbahasa Inggris).
 - Galeri klien (ID): sapaan seragam "kamu" (sebelumnya campur "Anda" di dialog kirim dan pratinjau album).

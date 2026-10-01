@@ -15,6 +15,7 @@
   --color-on-dark: #f3f1ec;
   --color-on-dark-mute: #b9b6ae;
   --color-error: #a3402f;
+  --color-gold: #c8832f;        /* Emas Senja: the logo's sun; one moment per page, never decoration */
 
   --font-serif: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
   --font-sans: var(--font-inter), Inter, system-ui, sans-serif;

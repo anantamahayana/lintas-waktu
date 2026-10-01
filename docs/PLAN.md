@@ -117,3 +117,16 @@ blok jam dirender tak terlihat dengan ukuran akhirnya sejak awal.
 
 \* run pertama setelah server menyala. Semua efek tahap 2 CSS/SVG; garis progres baca memakai scroll timeline bawaan browser (tanpa JS).
 Halaman 404 tidak bisa diukur Lighthouse (status 404), dicek visual.
+
+## Logo baru: Gerbang Waktu (1 Okt 2026) — ✅
+Logo dipasang di nav, menu HP, footer (tersusun), galeri klien (intro, PIN, terima kasih), admin, login admin, cek invoice, kop invoice;
+favicon/ikon/apple-icon, kartu share, dan file unduhan di `web/public/brand/`. Wordmark berupa path SVG (tanpa font baru), satu kali per halaman.
+
+| Halaman | Sebelum | Sesudah | CLS | JS |
+|---|---|---|---|---|
+| /id | 94–96, TBT 60–180 ms | 94–96, TBT 20–30 ms | 0 | 178 → 180 KB |
+| /id/work/ayu-marco | 93–96, TBT 70–80 ms | 96, TBT 40–80 ms | 0 | 184 → 185 KB |
+| /id/contact | 94–95, TBT 20–90 ms | 93–96, TBT 10–70 ms | 0 | 183 → 184 KB |
+
+Diukur dengan `next build --webpack` (lingkungan tes tidak bisa mengunduh Google Fonts untuk Turbopack), jadi angka JS tidak bisa
+dibandingkan langsung dengan tabel di atas. Yang dibandingkan: sebelum vs sesudah pada build yang sama. Tambahan ±1–2 KB = bentuk gerbang di nav.

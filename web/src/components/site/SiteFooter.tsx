@@ -3,7 +3,7 @@ import { Link } from "@/i18n/navigation";
 import { SocialIcon, socialLinks } from "./Social";
 import { BaliTime } from "./BaliTime";
 import { BackToTop } from "./BackToTop";
-import { Mark } from "@/components/ui/Mark";
+import { Logo } from "@/components/brand/Logo";
 import { getSite } from "@/lib/content";
 
 /** Centred, symmetrical, like the end of a printed programme. */
@@ -14,9 +14,8 @@ export async function SiteFooter() {
   return (
     <footer className="border-t border-line">
       <div className="wrap gutter py-14 lg:py-20 flex flex-col items-center text-center gap-8">
-        <Mark />
-        <div className="flex flex-col items-center gap-2">
-          <span className="t-wordmark text-[28px]">{t("brand.name")}</span>
+        <div className="flex flex-col items-center gap-4">
+          <Logo size={64} stacked label={t("brand.name")} />
           <span className="t-mono text-faint">{t("footer.tagline")}</span>
         </div>
         <nav className="flex flex-wrap justify-center gap-x-8 gap-y-3">

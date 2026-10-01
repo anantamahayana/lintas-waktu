@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { api, token } from "@/lib/admin-api";
 import { Btn, Field, Input } from "@/components/admin/ui";
+import { Logo } from "@/components/brand/Logo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,8 +30,8 @@ export default function LoginPage() {
   return (
     <div className="min-h-dvh flex items-center justify-center bg-[#f6f5f1] px-5">
       <form onSubmit={onSubmit} className="w-full max-w-[400px] bg-white border border-line p-8 flex flex-col gap-6">
-        <div className="flex flex-col gap-1">
-          <span className="font-serif italic text-[24px] leading-none">Lintas Waktu</span>
+        <div className="flex flex-col items-start gap-3">
+          <Logo size={28} />
           <span className="t-mono text-mute">Admin sign in</span>
         </div>
         <Field label="Password" error={error ?? undefined}>

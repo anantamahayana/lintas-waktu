@@ -67,8 +67,9 @@ cd web && npx tsc --noEmit && npm run lint   # 1 warning <img> lama boleh diabai
 Untuk perubahan tampilan, buka halamannya dan lihat sendiri (lebar HP ±390 px dan desktop).
 
 ## Keputusan yang sudah diambil (jangan diubah tanpa tanya pemilik)
-- **Desain**: acuannya kode di `web/` + `docs/BRAND.md` (classic editorial, tanpa warna aksen, Instrument Serif). Figma usang. Animasi elegan tapi ringan.
+- **Desain**: acuannya kode di `web/` + `docs/BRAND.md` (classic editorial, Cormorant + Inter, aksen hanya emas logo). Figma usang. Animasi elegan tapi ringan.
 - **Brand**: sebutan mengikuti `docs/BRAND.md`: duo independen, bukan "studio"; nama di situs "Lintas Waktu". Editorial & Model adalah kategori resmi (29 Sep 2026).
+- **Logo** (1 Okt 2026): **Gerbang Waktu** (gerbang + jalan + matahari emas, wordmark Marcellus). Dipakai di seluruh situs, galeri klien, admin, invoice, ikon, dan kartu share. Aturan dan file: `docs/BRAND.md` → 1a. Emas Senja `#C8832F` satu momen per layar.
 - **Harga** (29 Sep 2026): tingkat freelancer pemula, Rp 500 rb – 5 jt, untuk membangun portofolio dulu. Paket wedding Essential 2,5 jt · Duo 4 jt · Full Story 5 jt; layanan mulai 500 rb (Personal) s.d. 2,5 jt (Wedding). Promo peluncuran (reel 1 menit Rp 500 rb untuk klien foto, kuota 5, s.d. 31 Des 2026) **tidak** dipajang di situs, hanya ditawarkan lewat WhatsApp. Harga dinaikkan bertahap setelah 3–5 proyek masuk portofolio. Paket **Duo** ditonjolkan (label "Rekomendasi kami", baris penghematan); Full Story = Duo + sesi pre-wedding 2 jam, film upacara utuh jadi tambahan Rp 750 rb. Syarat: DP 30% mengunci tanggal, pelunasan H-7; maksimal 8 wedding per bulan (angka jujur dari pemilik, jangan dikecilkan untuk kesan langka).
 - **Bahasa**: situs EN utama, ID kedua. Semua yang dibaca klien (galeri, pesan WhatsApp, invoice) mengikuti bahasa klien (`lang` per sesi/invoice). Admin berbahasa Inggris.
 - **Kalender hanya untuk admin**: tidak ada ketersediaan publik.

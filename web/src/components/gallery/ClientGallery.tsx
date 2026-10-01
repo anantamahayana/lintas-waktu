@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode } from "react";
 import clsx from "clsx";
+import { GOLD, Logo } from "@/components/brand/Logo";
 import { gapi, galleryToken, localDraft, GalleryError, type DraftOut, type GalleryData, type GalleryMeta, type GPhoto } from "@/lib/gallery-api";
 import { T, type Dict, type Lang } from "./i18n";
 import { AlbumPreview } from "./AlbumPreview";
@@ -10,8 +11,6 @@ type Filter = "all" | "selected" | "maybe";
 type Stage = "loading" | "pin" | "gallery" | "confirm" | "sent" | "expired";
 type IntroPhase = "in" | "out" | "gone";
 const INTRO_MS = 2600;
-
-const GOLD = "#c9a84c";
 
 type Picks = { ids: string[]; notes: Record<string, string>; maybe: string[] };
 const PULL_MS = 12000; // an open gallery checks for picks made on other devices this often
@@ -318,6 +317,8 @@ export function ClientGallery({ slug }: { slug: string }) {
   if (!meta) return <Screen>{error ? <p className="t-mono text-error">{error}</p> : <span className="t-mono text-faint">…</span>}</Screen>;
   const b = meta.branding;
   const studio = b.studio_name || "Lintas Waktu";
+  // Our own sessions show the Gerbang Waktu logo; a custom studio name or uploaded logo still wins.
+  const ours = studio.trim().toLowerCase() === "lintas waktu";
   const langSwitch = (
     <span className="t-mono flex gap-2">
       {(["en", "id"] as Lang[]).map((l) => <button key={l} type="button" onClick={() => setLang(l)} className={clsx(lang === l ? "text-current" : "opacity-50")}>{l.toUpperCase()}</button>)}
@@ -336,6 +337,8 @@ export function ClientGallery({ slug }: { slug: string }) {
     <div role="presentation" onClick={() => setIntro("out")} className={clsx("intro fixed inset-0 z-[70] bg-dark text-on-dark flex flex-col items-center justify-center gap-4 px-8 text-center cursor-pointer", intro === "out" && "intro-out")}>
       {b.logo_url ? (
         <img src={gapi.img(b.logo_url)} alt={studio} className="intro-logo h-24 max-w-[260px] object-contain mb-2" />
+      ) : ours ? (
+        <Logo size={88} stacked label={studio} className="intro-logo mb-2" />
       ) : (
         <h1 className="t-display" aria-label={studio}>
           {Array.from(studio).map((ch, i) => (
@@ -378,7 +381,7 @@ export function ClientGallery({ slug }: { slug: string }) {
           {albumPhotos.length >= 2 && <button type="button" onClick={() => setAlbum(true)} className="t-mono text-ink px-6 py-3.5 rounded-full" style={{ background: GOLD }}>{t.albumBtn} →</button>}
           <button type="button" onClick={() => { setFilter("selected"); setStage("gallery"); }} className="action">{t.viewSelection}</button>
         </div>
-        <span className="absolute bottom-8 t-wordmark">{studio}</span>
+        <span className="absolute bottom-8">{ours ? <Logo size={22} label={studio} /> : <span className="t-wordmark">{studio}</span>}</span>
         {album && <AlbumPreview photos={albumPhotos} clientName={data.client_name} studio={studio} t={t.album} onClose={() => setAlbum(false)} />}
       </Screen>
     );
@@ -601,7 +604,7 @@ function PinGate({ slug, studio, client, t, onUnlocked, langSwitch }: { slug: st
   return (
     <Screen>
       <div className="absolute top-5 right-5 text-mute">{langSwitch}</div>
-      <span className="t-wordmark">{studio}</span>
+      {studio.trim().toLowerCase() === "lintas waktu" ? <Logo size={48} stacked label={studio} /> : <span className="t-wordmark">{studio}</span>}
       <span className="t-mono text-mute">{t.privateGallery} · {client}</span>
       <p className="t-statement max-w-[24ch]">{t.enterPin}</p>
       <div className="relative flex gap-3">

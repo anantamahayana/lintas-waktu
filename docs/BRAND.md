@@ -19,13 +19,34 @@ Sumber kebenaran: **kode di `web/`** (`src/app/globals.css`, komponen). File Fig
 | Target | Lokal (Bali/Indonesia) + internasional (destination wedding & pre-wedding di Bali) |
 | Bahasa | Inggris utama, Indonesia kedua (`/id/*`) |
 | Nada | Tenang, editorial, hangat, tidak berlebihan. Kalimat pendek. Satu frasa dihighlight italic. |
-| Logo | Belum ada → **wordmark tipografi** (Instrument Serif Regular, "Lintas Waktu"). Logo simbolik menyusul. |
+| Logo | **Gerbang Waktu** (1 Okt 2026): gerbang melengkung, jalan setapak yang melintas, matahari emas. Lihat bagian **1a**. |
+
+---
+
+## 1a. Logo — Gerbang Waktu
+
+Gerbang (lengkung) = pintu ke sebuah momen. Jalan yang meliuk menembusnya = waktu yang dilintasi. Matahari emas = cahaya golden hour, satu momen yang dijaga.
+Panduan lengkap (ruang kosong, ukuran minimum, larangan, contoh pakai): Figma, file *Branding*, halaman **"Brand Guidelines — Gerbang Waktu"**
+(`figma.com/design/Hgt0vZobid64UHcl8P8CHu`). Halaman "L Memeluk Cahaya" adalah kandidat yang tidak dipilih.
+
+| | |
+|---|---|
+| Komponen kode | `web/src/components/brand/Logo.tsx`: `Logo` (berdampingan / `stacked`), `GateMark`, `Wordmark`, `BrandSprite` |
+| Wordmark | **Marcellus** Regular, KAPITAL, tracking 30%. Sudah diubah jadi path SVG, jadi situs tidak memuat font Marcellus. Path-nya ada satu kali per halaman (`BrandSprite` di setiap root layout) dan dipakai lewat `<use>` |
+| Versi | Warna (gerbang tinta/krem + matahari emas) · **Mono** satu warna (`mono`: matahari jadi lubang, untuk foil, cap, emboss) |
+| Ukuran minimum | Gerbang 20 px tinggi di layar; di bawah itu pakai favicon |
+| Di atas foto/gelap | Gerbang `Krem #F3EFE7`, matahari tetap emas |
+| Jangan | Bayangan, transparansi, gradien, memutar, mengganti font wordmark, mewarnai gerbang dengan emas |
+| File siap pakai | `web/public/brand/`: `logo-horizontal(-light).svg`, `logo-stacked(-light).svg`, `mark(-light,-mono).svg`, `avatar-1080(-dark).png` (Instagram/WhatsApp). Juga tersedia di `https://lintaswaktu.com/brand/…` |
+| Ikon | `web/src/app/icon.svg` (ikut mode gelap), `apple-icon.png`, `favicon.ico`; kartu share `opengraph-image.tsx` |
+
+Galeri klien: logo tampil kalau nama studio di Admin → Settings kosong atau "Lintas Waktu". Logo yang diunggah di sana (`logo_url`) tetap didahulukan.
 
 ---
 
 ## 2. Warna — `@theme` di `web/src/app/globals.css`
 
-Sengaja **tanpa warna aksen**. Warna datang dari foto.
+Hampir tanpa warna aksen: warna datang dari foto. Satu-satunya aksen adalah **Emas Senja** (`gold`), dan hanya untuk satu momen per layar (matahari di logo, tombol pilih di galeri klien). Bukan hiasan.
 
 | Token | Hex | Dipakai untuk |
 |---|---|---|
@@ -37,6 +58,8 @@ Sengaja **tanpa warna aksen**. Warna datang dari foto.
 | `dark` | `#2A2926` | **Satu** section gelap hangat per halaman (Behind the camera, Values), lightbox, blok film |
 | `on-dark` / `on-dark-mute` | `#F3F1EC` / `#B9B6AE` | Teks di atas `dark` |
 | `error` | `#A3402F` | Hanya validasi form |
+| `gold` | `#C8832F` | Emas Senja: matahari logo, aksen galeri klien. Satu momen per layar |
+| (brand) | Krem `#F3EFE7` · Pasir `#DCD2C1` · Sawah `#6B7355` · foil `#B8862F` | Materi cetak/sosial (album, kartu, kemasan), bukan situs |
 
 Nav saat scroll memakai kelas `.glass`: `white` 72% + `backdrop-filter: blur(18px) saturate(140%)`.
 
@@ -50,7 +73,7 @@ Nav saat scroll memakai kelas `.glass`: `white` 72% + `backdrop-filter: blur(18p
 | Judul section | Cormorant Regular, sentence case, kata penekanan `<em>` italic | `.t-display-sm` | clamp 30–46px |
 | Kutipan / pernyataan | Cormorant Italic | `.t-statement` | clamp 22–32px |
 | Caption kartu | Cormorant Regular | `.t-caption` | 18–20px |
-| Wordmark | Cormorant Italic (seperti tanda tangan) | `.t-wordmark` | 22px (footer 28px) |
+| Logo | Komponen `<Logo>` (Marcellus sebagai path). `.t-wordmark` (Cormorant Italic) hanya untuk nama studio lain di galeri klien | — | gerbang 26px di nav, 64px di footer |
 | Label kecil | **Inter** 11px UPPERCASE tracking 0.18em | `.t-mono` | 11px |
 | Body | Inter 14–15px, warna `mute` | `.t-body` | 14–15px |
 

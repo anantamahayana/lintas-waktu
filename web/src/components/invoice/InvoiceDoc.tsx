@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import { Logo } from "@/components/brand/Logo";
 import { QR } from "./QR";
 import { STR, type Lang } from "./strings";
 
@@ -40,8 +41,10 @@ export function InvoiceDoc({ doc, business, className }: { doc: Doc; business: B
       )}
 
       {/* Letterhead */}
-      <header className="flex flex-col gap-1">
-        <span className="font-serif italic text-[28px] leading-none">{business.name}</span>
+      <header className="flex flex-col items-start gap-1">
+        {business.name.trim().toLowerCase() === "lintas waktu"
+          ? <Logo size={34} label={business.name} className="mb-2" />
+          : <span className="font-serif italic text-[28px] leading-none">{business.name}</span>}
         {business.tagline && <span className="t-mono text-mute">{business.tagline}</span>}
       </header>
 

@@ -4,6 +4,7 @@ import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
+import { Logo } from "@/components/brand/Logo";
 import { token } from "@/lib/admin-api";
 import { confirm, confirmLeave, hasUnsavedChanges } from "@/components/admin/ui";
 
@@ -68,8 +69,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
       {/* Sidebar */}
       <aside className="border-b lg:border-b-0 lg:border-r border-line bg-[#f6f5f1] print:hidden">
         <div className="flex items-center justify-between px-5 py-4 lg:py-6">
-          <Link href="/admin" className="flex flex-col gap-0.5">
-            <span className="font-serif italic text-[20px] leading-none">Lintas Waktu</span>
+          <Link href="/admin" className="flex flex-col items-start gap-1.5">
+            <Logo size={22} />
             <span className="t-mono text-faint">Admin</span>
           </Link>
           <button type="button" onClick={() => setOpen((v) => !v)} className="lg:hidden t-mono text-mute">{open ? "Close" : "Menu"}</button>

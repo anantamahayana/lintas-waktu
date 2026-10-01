@@ -5,14 +5,15 @@ import { createPortal } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 import clsx from "clsx";
 import { Link, usePathname } from "@/i18n/navigation";
+import { Logo } from "@/components/brand/Logo";
 
 const left = [["home", "/"], ["work", "/work"], ["services", "/services"]] as const;
 const isActive = (pathname: string, href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 const right = [["about", "/about"], ["contact", "/contact"]] as const;
 
 /**
- * A quiet white bar: links left and right, the wordmark in the middle
- * like a signature. On phones: wordmark + "Menu".
+ * A quiet white bar: links left and right, the logo in the middle
+ * like a signature. On phones: logo + "Menu".
  */
 export function SiteNav() {
   const t = useTranslations();
@@ -74,9 +75,12 @@ export function SiteNav() {
         </button>
 
         <Link href="/" onClick={close} className="flex flex-col items-center justify-self-center overflow-hidden">
-          <span className="t-wordmark transition-transform duration-500 ease-out-soft" style={{ transform: scrolled ? "scale(0.92)" : "none" }}>
-            {t("brand.name")}
-          </span>
+          <Logo
+            size={26}
+            label={t("brand.name")}
+            className="transition-transform duration-500 ease-out-soft"
+            style={{ transform: scrolled ? "scale(0.88)" : "none" }}
+          />
           <span
             className="t-mono text-faint hidden sm:block transition-[opacity,max-height,margin] duration-500 ease-out-soft"
             style={{ opacity: scrolled ? 0 : 1, maxHeight: scrolled ? 0 : 16, marginTop: scrolled ? 0 : 4 }}
@@ -157,8 +161,8 @@ function MobileMenu({ open, close }: { open: boolean; close: () => void }) {
         className="gutter pb-[max(28px,env(safe-area-inset-bottom))] flex items-end justify-between transition-opacity duration-700 ease-out-soft"
         style={{ transitionDelay: open ? "420ms" : "0ms", opacity: open ? 1 : 0 }}
       >
-        <div className="flex flex-col gap-1">
-          <span className="t-wordmark">{t("brand.name")}</span>
+        <div className="flex flex-col items-start gap-2">
+          <Logo size={22} label={t("brand.name")} />
           <span className="t-mono text-faint">{t("brand.descriptor")}</span>
         </div>
         <LangSwitch />

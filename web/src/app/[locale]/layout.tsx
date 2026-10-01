@@ -9,6 +9,7 @@ import { SITE_URL } from "@/lib/seo";
 import { SiteNav } from "@/components/site/SiteNav";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { REVEAL_SCRIPT } from "@/components/ui/Reveal";
+import { BrandSprite } from "@/components/brand/Logo";
 import "../globals.css";
 
 const cormorant = Cormorant_Garamond({
@@ -54,6 +55,7 @@ export default async function LocaleLayout({
     // suppressHydrationWarning: the pre-hydration script adds the `js` class on purpose
     <html lang={locale} className={`${cormorant.variable} ${inter.variable}`} suppressHydrationWarning>
       <body className="min-h-dvh flex flex-col">
+        <BrandSprite />
         <Script id="reveal" strategy="beforeInteractive">{REVEAL_SCRIPT}</Script>
         <NextIntlClientProvider>
           <SiteNav />

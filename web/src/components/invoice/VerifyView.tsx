@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import clsx from "clsx";
+import { Logo } from "@/components/brand/Logo";
 import { money } from "./InvoiceDoc";
 import { VERIFY, type Lang } from "./strings";
 
@@ -48,8 +49,8 @@ export function VerifyView({ number: n0, code: c0, lang: l0 }: { number: string;
 
   return (
     <main className="px-5 py-14 sm:py-20 max-w-[560px] mx-auto flex flex-col gap-10">
-      <header className="flex flex-col gap-2 text-center relative">
-        <span className="font-serif italic text-[26px] leading-none">Lintas Waktu</span>
+      <header className="flex flex-col items-center gap-3 text-center relative">
+        <Logo size={44} stacked />
         <span className="t-mono text-mute">{v.title}</span>
         <span className="t-mono absolute right-0 top-0 flex gap-2">
           {(["en", "id"] as Lang[]).map((l) => <button key={l} type="button" onClick={() => setLang(l)} className={lang === l ? "text-ink" : "text-faint"}>{l.toUpperCase()}</button>)}
