@@ -14,7 +14,7 @@ Kerja lain di branch terpisah, gabung ke `main` lewat pull request.
 | Root Directory | `web` · Framework Preset **Next.js** (dengan "Other" situs 404) |
 | Function Region | **Singapore (sin1)** — sejak 25 Sep 2026, sama dengan Railway (sebelumnya default Washington) |
 | Domain | **https://www.lintaswaktuvisual.com** (utama) · `lintaswaktuvisual.com` → 308 ke www · `lintas-waktu-omega.vercel.app` |
-| Env | `API_URL` = https://lintas-waktu-production.up.railway.app (tujuan rewrite `/api/*`) · `REVALIDATE_SECRET` (sama dengan Railway) · `NEXT_PUBLIC_SITE_URL` (? pastikan = https://www.lintaswaktuvisual.com — sitemap/og:url pernah menampilkan apex) |
+| Env | `API_URL` = https://lintas-waktu-production.up.railway.app (tujuan rewrite `/api/*`) · `REVALIDATE_SECRET` (sama dengan Railway) · `NEXT_PUBLIC_SITE_URL` = https://www.lintaswaktuvisual.com (dicek 5 Okt 2026: sitemap memakai www; apex `lintaswaktuvisual.com` → 308 ke www di Vercel → Domains) |
 | Sengaja tidak diset | `NEXT_PUBLIC_API_URL` — browser memanggil `/api/{gallery,admin,public}/*` di origin yang sama, `web/next.config.ts` meneruskannya ke `API_URL` |
 
 Catatan: plan Hobby resminya untuk non-komersial — pertimbangkan Pro.
