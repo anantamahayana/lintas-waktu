@@ -9,6 +9,8 @@ dan **langkah manual** kalau ada. Detail teknis lengkap ada di pesan commit (`gi
 ### 2026-10-05 · NantaPakeAI
 - Domain: alamat situs diseragamkan ke `www.lintaswaktuvisual.com` (env `NEXT_PUBLIC_SITE_URL`, apex dialihkan 308). Sitemap dan link share kini memakai www, supaya Google tidak memegang dua alamat (ikon lama di hasil pencarian ikut diperbarui).
   **Manual:** kirim ulang sitemap `https://www.lintaswaktuvisual.com/sitemap.xml` di Search Console dan minta pengindeksan `https://www.lintaswaktuvisual.com/`.
+- Beranda lebih lengkap: **Cara kami bekerja** (4 langkah: ngobrol → kunci tanggal → hari-H → galeri privat), **Paket & harga** (paket wedding dengan IDR/USD + harga mulai Pre-wedding, Acara, Editorial, Personal), **FAQ** (4 pertanyaan teratas, sisanya di Layanan), dan **Cek tanggal** di ajakan penutup: pilih tanggal → form Contact terbuka dengan jenis Wedding dan tanggal sudah terisi. Lighthouse beranda tetap 96, CLS 0.
+  **Manual:** teks baru bisa diedit di Admin → Site text → Home (Cara kami bekerja, catatan harga); harga tetap dari tab Packages dan Services.
 
 ### 2026-10-01 · NantaPakeAI
 - Logo baru **Gerbang Waktu** (gerbang, jalan yang melintas, matahari emas; tulisan LINTAS WAKTU dalam Marcellus) di seluruh situs: nav, menu HP, footer; galeri klien (layar pembuka, PIN, terima kasih); admin dan login admin; halaman cek invoice dan kop invoice. Favicon, ikon iPhone, dan gambar share (WhatsApp/Instagram) ikut baru. Emas Senja `#C8832F` jadi satu-satunya warna aksen (juga tombol pilih di galeri klien, dulu emas pucat). Aturan logo: `docs/BRAND.md` → 1a. Skor Lighthouse dan CLS tidak berubah.

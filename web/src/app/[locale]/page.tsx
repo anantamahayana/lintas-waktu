@@ -7,6 +7,9 @@ import { Behind } from "@/components/home/Behind";
 import { RecentWork } from "@/components/home/RecentWork";
 import { KindWords } from "@/components/home/KindWords";
 import { Invite } from "@/components/home/Invite";
+import { Process } from "@/components/home/Process";
+import { Prices } from "@/components/home/Prices";
+import { HomeFaq } from "@/components/home/HomeFaq";
 import { getProjects, getSite, getSiteFrames, getSiteImages } from "@/lib/content";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
@@ -25,7 +28,10 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
       <Intro images={img} frames={fr} />
       <Behind src={img["behind-main"]} frame={fr["behind-main"]} />
       <RecentWork projects={featured.length ? featured : projects.slice(0, 3)} />
+      <Process />
+      <Prices />
       <KindWords />
+      <HomeFaq />
       <Invite site={site} src={img.cta} frame={fr.cta} />
     </>
   );

@@ -19,10 +19,14 @@ export default async function ContactPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ kind?: string }>;
+  searchParams: Promise<{ kind?: string; date?: string }>;
 }) {
   const { locale } = await params;
-  const { kind } = await searchParams;
+  const { kind, date } = await searchParams;
+  // ?date=2027-06-12 comes from the home page's date field; the form shows it in words
+  const initialDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date)
+    ? new Date(`${date}T12:00:00Z`).toLocaleDateString(locale === "id" ? "id-ID" : "en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
+    : "";
   setRequestLocale(locale);
   const fr = await getSiteFrames();
   const img = await getSiteImages();
@@ -55,7 +59,7 @@ export default async function ContactPage({
           <Photo src={img["contact-1"]} seed="contact-1" frame={fr["contact-1"] && { ...fr["contact-1"], fit: "cover" }} sizes="33vw" className="h-full w-full" />
         </Reveal>
         <Reveal delay={100} className="relative lg:col-span-7 lg:col-start-6 border border-line p-6 sm:p-8 lg:p-10">
-          <ContactForm initialKind={kind} whatsapp={site.whatsapp.number} />
+          <ContactForm initialKind={kind} initialDate={initialDate} whatsapp={site.whatsapp.number} />
         </Reveal>
       </section>
     </div>

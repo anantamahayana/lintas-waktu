@@ -79,7 +79,7 @@ export default async function ServicesPage({ params }: { params: Promise<{ local
         <Packages eyebrow={t("packages.eyebrow")} note={t("packages.note")} />
       </div>
 
-      <section className="border-t border-line">
+      <section id="faq" className="border-t border-line scroll-mt-20">
         <div className="wrap gutter py-20 lg:py-28 flex flex-col items-center gap-10">
           <Reveal className="flex flex-col items-center text-center gap-4">
             <span className="t-mono text-mute">{t("faq.eyebrow")}</span>

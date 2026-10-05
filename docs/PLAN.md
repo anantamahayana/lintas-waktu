@@ -130,3 +130,8 @@ favicon/ikon/apple-icon, kartu share, dan file unduhan di `web/public/brand/`. W
 
 Diukur dengan `next build --webpack` (lingkungan tes tidak bisa mengunduh Google Fonts untuk Turbopack), jadi angka JS tidak bisa
 dibandingkan langsung dengan tabel di atas. Yang dibandingkan: sebelum vs sesudah pada build yang sama. Tambahan ±1–2 KB = bentuk gerbang di nav.
+
+## Beranda lebih lengkap (5 Okt 2026) — ✅
+Urutan: Hero · Pengantar + 3 kartu · Di balik kamera · Karya terbaru (hanya jika ada proyek) · **Cara kami bekerja** · **Paket & harga** ·
+Testimoni · **FAQ (4)** · Ajakan + **cek tanggal** (form GET tanpa JS → `/contact?kind=wedding&date=YYYY-MM-DD`).
+Lighthouse mobile /id: 96, TBT 40–60 ms, CLS 0, JS 180 → 182 KB (akordeon FAQ). Ide berikutnya kalau perlu: testimoni lebih dari satu, kalender ketersediaan per bulan.

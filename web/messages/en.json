@@ -97,8 +97,38 @@
       "eyebrow": "Let’s talk",
       "title": "Tell us about <em>your day</em>",
       "body": "Dates in Bali fill quickly in the dry season (May–September). A short message is enough to start — we reply within a day.",
-      "cta": "Inquire now"
-    }
+      "cta": "Inquire now",
+      "date": "Your date",
+      "check": "Check the date"
+    },
+    "process": {
+      "eyebrow": "How we work",
+      "title": "From the first message to your <em>gallery</em>",
+      "steps": [
+        {
+          "title": "Talk",
+          "body": "Tell us about your day on WhatsApp or the form. We reply within a day, then talk it through on a short video call."
+        },
+        {
+          "title": "Hold the date",
+          "body": "A 30% deposit holds your date. We help shape the day's timeline around the best light."
+        },
+        {
+          "title": "The day",
+          "body": "The two of us arrive, one on photo, one on film. Quiet, little directing: we let the moments happen."
+        },
+        {
+          "title": "Your private gallery",
+          "body": "Your photos arrive in a PIN-protected gallery. Pick favourites on your phone, preview the album, and we finish the edit."
+        }
+      ]
+    },
+    "prices": {
+      "note": "At most eight weddings a month · a 30% deposit holds your date · balance due a week before.",
+      "other": "Other sessions, from",
+      "all": "See all services"
+    },
+    "faqMore": "All questions"
   },
   "footer": {
     "tagline": "Photography & Film · Bali, Indonesia",

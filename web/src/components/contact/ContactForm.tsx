@@ -15,12 +15,12 @@ type Values = {
   date: string; location: string; budget: string; message: string; website: string;
 };
 
-export function ContactForm({ initialKind = "", whatsapp }: { initialKind?: string; whatsapp?: string }) {
+export function ContactForm({ initialKind = "", initialDate = "", whatsapp }: { initialKind?: string; initialDate?: string; whatsapp?: string }) {
   const t = useTranslations("contact.form");
   const locale = useLocale();
   const [v, setV] = useState<Values>({
     name: "", partner: "", email: "", based: "", kind: KINDS.includes(initialKind as never) ? initialKind : "",
-    date: "", location: "", budget: "", message: "", website: "",
+    date: initialDate, location: "", budget: "", message: "", website: "",
   });
   const [errors, setErrors] = useState<Partial<Record<keyof Values, string>>>({});
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");

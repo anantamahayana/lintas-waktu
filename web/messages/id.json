@@ -97,8 +97,38 @@
       "eyebrow": "Mari bicara",
       "title": "Ceritakan tentang <em>harimu</em>",
       "body": "Tanggal di Bali cepat penuh di musim kemarau (Mei–September). Pesan singkat sudah cukup untuk memulai — kami balas dalam sehari.",
-      "cta": "Hubungi kami"
-    }
+      "cta": "Hubungi kami",
+      "date": "Tanggal acaramu",
+      "check": "Cek tanggal"
+    },
+    "process": {
+      "eyebrow": "Cara kami bekerja",
+      "title": "Dari pesan pertama sampai <em>galerimu</em>",
+      "steps": [
+        {
+          "title": "Ngobrol",
+          "body": "Ceritakan harimu lewat WhatsApp atau form. Kami balas dalam sehari, lalu ngobrol singkat lewat video call."
+        },
+        {
+          "title": "Kunci tanggal",
+          "body": "DP 30% mengunci tanggalmu. Kami bantu menyusun jadwal hari-H mengikuti cahaya terbaik."
+        },
+        {
+          "title": "Hari-H",
+          "body": "Kami berdua datang, satu memotret, satu merekam film. Tenang, tidak banyak mengatur: momen dibiarkan terjadi."
+        },
+        {
+          "title": "Galeri privat",
+          "body": "Foto tiba di galeri ber-PIN. Pilih favoritmu dari HP, lihat pratinjau albumnya, lalu kami selesaikan editnya."
+        }
+      ]
+    },
+    "prices": {
+      "note": "Maksimal delapan wedding per bulan · DP 30% mengunci tanggal · pelunasan H-7.",
+      "other": "Layanan lain, mulai dari",
+      "all": "Lihat semua layanan"
+    },
+    "faqMore": "Semua pertanyaan"
   },
   "footer": {
     "tagline": "Fotografi & Film · Bali, Indonesia",
