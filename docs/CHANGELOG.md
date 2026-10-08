@@ -7,6 +7,8 @@ dan **langkah manual** kalau ada. Detail teknis lengkap ada di pesan commit (`gi
 ---
 
 ### 2026-10-08 · NantaPakeAI
+- Keamanan: Next.js 16.3.5 → 16.3.8 (menambal celah kritis di gambar share `next/og` dan beberapa celah cache/SSRF), sharp diperbarui; API: Pillow, FastAPI/Starlette, python-multipart, uvicorn, lxml dkk. diperbarui, token admin pindah dari python-jose ke PyJWT (sesi admin yang sedang login tetap berlaku). Audit npm (produksi) dan pip: 0 celah. Logo SVG unggahan kini disajikan tanpa izin skrip. 6 tes keamanan baru (47 tes total). Detail: `docs/PLAN.md` → "Pemeriksaan keamanan".
+  **Manual:** setelah deploy, cek Railway hijau dan `/api/health` = ok. Disarankan `SECRET_KEY` di Railway ≥ 32 karakter (log API akan memberi peringatan kalau lebih pendek; menggantinya membuat PIN galeri yang sedang aktif perlu dibagikan ulang, jadi lakukan saat tidak ada galeri berjalan).
 - Sumber animasi logo (Golden Hour, Terbit, Melintas) disimpan di `brand/motion/` beserta cara render ke MP4 dan overlay ProRes transparan (`brand/motion/README.md`). Video tidak disimpan di repo.
 
 ### 2026-10-05 · NantaPakeAI

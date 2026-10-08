@@ -135,3 +135,17 @@ dibandingkan langsung dengan tabel di atas. Yang dibandingkan: sebelum vs sesuda
 Urutan: Hero · Pengantar + 3 kartu · Di balik kamera · Karya terbaru (hanya jika ada proyek) · **Cara kami bekerja** · **Paket & harga** ·
 Testimoni · **FAQ (4)** · Ajakan + **cek tanggal** (form GET tanpa JS → `/contact?kind=wedding&date=YYYY-MM-DD`).
 Lighthouse mobile /id: 96, TBT 40–60 ms, CLS 0, JS 180 → 182 KB (akordeon FAQ). Ide berikutnya kalau perlu: testimoni lebih dari satu, kalender ketersediaan per bulan.
+
+## Pemeriksaan keamanan (8 Okt 2026) — ✅
+**Diperbaiki:** Next.js 16.3.8 (RCE `next/og`, cache poisoning, SSRF image optimizer), sharp, source-map-js; API: Pillow 12.3,
+FastAPI 0.142/Starlette 1.7, python-multipart 0.0.32, uvicorn 0.54, lxml 6.1, python-dotenv 1.2, pytest 9; python-jose → PyJWT.
+Logo SVG unggahan disajikan dengan CSP `sandbox` + nosniff. Peringatan saat start kalau `SECRET_KEY` < 32 karakter.
+**Sudah aman (dicek):** password admin PBKDF2 200k; slug galeri 72 bit acak, token invoice 144 bit, kode verifikasi HMAC;
+cache foto bernama hash (tanpa path traversal); proxy foto publik hanya folder proyek terbit + folder situs (ada tesnya);
+batas PIN per galeri 10/15 mnt dan login 20/15 mnt total, tersimpan di DB.
+**Catatan (risiko rendah, belum diubah):**
+- Alamat pengunjung untuk batas PIN/login dibaca dari X-Forwarded-For (`--proxy-headers`); siapa pun yang memanggil URL Railway
+  langsung bisa memalsukannya. Hanya batas per-pengunjung yang lolos; batas per-galeri/total tetap berlaku. Perbaikan penuh:
+  Railway hanya menerima dari Vercel (shared secret header), atau batasi `--forwarded-allow-ips`.
+- `/verify` membedakan "nomor tidak dikenal" dan "kode tidak cocok", jadi nomor invoice bisa ditebak ada/tidak (nomornya memang berurutan).
+- 20 peringatan lint lama di web (bukan error).

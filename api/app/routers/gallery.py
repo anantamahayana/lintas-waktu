@@ -26,8 +26,9 @@ NOTE_MAX = 300
 # ---------------------------------------------------------------- PIN brute-force guard
 # Two counters, both in memory: per visitor (5 wrong / 15 min) and per gallery (10 wrong / 15 min
 # from anyone). The per-gallery one can't be dodged by switching or faking addresses, so at most
-# ~40 guesses an hour are possible against 10,000 four-digit PINs. The visitor address is the real
-# connection address; the X-Forwarded-For header is ignored because anyone can fake it.
+# ~40 guesses an hour are possible against 10,000 four-digit PINs. The visitor address comes from
+# uvicorn's --proxy-headers (X-Forwarded-For, set by Vercel/Railway). Someone calling the Railway URL
+# directly can fake it, which only defeats the per-visitor counter; the per-gallery one still holds.
 PIN_MAX_FAILS = 5
 PIN_MAX_FAILS_GALLERY = 10
 PIN_WINDOW_S = 15 * 60
@@ -129,7 +130,12 @@ def branding_logo():
     p = branding.logo_path()
     if not p:
         raise HTTPException(404)
-    return FileResponse(p, headers={"Cache-Control": "public, max-age=86400"})
+    # An uploaded SVG is a document: opened on its own it must not run scripts or load anything.
+    return FileResponse(p, headers={
+        "Cache-Control": "public, max-age=86400",
+        "Content-Security-Policy": "default-src 'none'; img-src data:; style-src 'unsafe-inline'; sandbox",
+        "X-Content-Type-Options": "nosniff",
+    })
 
 
 @router.get("/gallery/{slug}/meta", response_model=GalleryMeta)

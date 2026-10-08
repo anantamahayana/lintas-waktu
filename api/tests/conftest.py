@@ -8,7 +8,7 @@ import pytest
 TMP = Path(tempfile.mkdtemp(prefix="pilihfoto-test-"))
 os.environ["DATABASE_URL"] = f"sqlite:///{TMP / 'test.db'}"
 os.environ["ADMIN_PASSWORD"] = "rahasia-tes"
-os.environ["SECRET_KEY"] = "kunci-tes"
+os.environ["SECRET_KEY"] = "kunci-tes-yang-cukup-panjang-untuk-hs256"
 
 from fastapi.testclient import TestClient  # noqa: E402  (harus setelah env di atas)
 

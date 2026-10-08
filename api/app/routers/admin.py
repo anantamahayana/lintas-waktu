@@ -87,7 +87,9 @@ def _extract_folder_id(value: str) -> str:
     return m.group(1) if m else value.strip()
 
 
-# Admin login brute-force guard: 5 wrong per address and 20 wrong in total per 15 minutes.
+# Admin login brute-force guard: 5 wrong per address and 20 wrong in total per 15 minutes. The address
+# comes from X-Forwarded-For (uvicorn --proxy-headers) and can be faked by calling Railway directly; the
+# total cap is what bounds guessing.
 # Counts live in the database so a restart does not reset them.
 LOGIN_WINDOW_S = 15 * 60
 

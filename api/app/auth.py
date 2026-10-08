@@ -3,7 +3,8 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
+import jwt
+from jwt import PyJWTError as JWTError
 
 from .config import get_settings
 

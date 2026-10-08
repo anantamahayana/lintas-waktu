@@ -63,6 +63,8 @@ def warn_insecure_defaults() -> None:
         log.warning("!! ADMIN_PASSWORD masih default. Ganti di backend/.env sebelum dibuka ke internet.")
     if settings.secret_key.startswith(("dev-secret", "your-super-secret")):
         log.warning("!! SECRET_KEY masih default. (Catatan: menggantinya membuat PIN sesi lama tidak berlaku.)")
+    elif len(settings.secret_key) < 32:
+        log.warning("!! SECRET_KEY lebih pendek dari 32 karakter; sebaiknya diganti dengan yang lebih panjang (PIN sesi lama ikut berubah).")
 
 
 @asynccontextmanager
