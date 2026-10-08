@@ -8,8 +8,8 @@
 @theme {
   --color-white: #fbfaf7;
   --color-ink: #1f1e1c;
-  --color-mute: #74726c;        /* 4.6:1 on white — the smallest step that passes WCAG AA for body text */
-  --color-faint: #aeaca5;
+  --color-mute: #66645f;        /* 5.7:1 on white (WCAG AA) */
+  --color-faint: #75736d;       /* 4.5:1: tertiary text still passes AA, a clear step below mute */
   --color-line: #e6e4de;
   --color-dark: #2a2926;        /* the one dark section */
   --color-on-dark: #f3f1ec;
@@ -85,7 +85,7 @@
   textarea.field { @apply h-auto py-3.5 min-h-[140px]; }
   select.field {
     @apply appearance-none pr-10 cursor-pointer;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2374726c' stroke-width='1.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2366645f' stroke-width='1.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 14px center;
   }

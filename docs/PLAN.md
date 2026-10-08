@@ -155,4 +155,4 @@ JSON-LD (`web/src/lib/jsonld.tsx`): WebSite + ProfessionalService (semua halaman
 CreativeWork (/work/[slug]). Meta EN/ID diperbarui, judul Layanan "Layanan & Harga". Lighthouse SEO 100, aksesibilitas 96.
 **Tahap berikutnya (butuh keputusan pemilik):** halaman khusus per layanan (mis. /services/prewedding "Fotografer prewedding Bali")
 dengan teks dan foto sendiri; Google Business Profile (paling berpengaruh untuk pencarian lokal, dibuat pemilik di Google).
-**Belum diubah:** teks `faint` (#AEACA5, kontras 2,2:1) untuk label tersier — pilihan desain, tunggu keputusan pemilik.
+**Selesai:** `faint` #75736D dan `mute` #66645F (keduanya ≥ 4,5:1), aksesibilitas 100. Halaman per layanan: tidak dikerjakan (keputusan pemilik).
