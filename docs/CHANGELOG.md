@@ -6,6 +6,9 @@ dan **langkah manual** kalau ada. Detail teknis lengkap ada di pesan commit (`gi
 
 ---
 
+### 2026-10-08 · NantaPakeAI
+- Sumber animasi logo (Golden Hour, Terbit, Melintas) disimpan di `brand/motion/` beserta cara render ke MP4 dan overlay ProRes transparan (`brand/motion/README.md`). Video tidak disimpan di repo.
+
 ### 2026-10-05 · NantaPakeAI
 - Domain: alamat situs diseragamkan ke `www.lintaswaktuvisual.com` (env `NEXT_PUBLIC_SITE_URL`, apex dialihkan 308). Sitemap dan link share kini memakai www, supaya Google tidak memegang dua alamat (ikon lama di hasil pencarian ikut diperbarui).
   **Manual:** kirim ulang sitemap `https://www.lintaswaktuvisual.com/sitemap.xml` di Search Console dan minta pengindeksan `https://www.lintaswaktuvisual.com/`.

@@ -1,0 +1,94 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face { font-family: M; src: url(fonts/montserrat-500.woff2) format("woff2"); font-weight: 500; }
+html,body { margin:0; background:transparent; overflow:hidden; }
+svg { display:block; }
+</style></head>
+<body>
+<!-- Terbit: the gate appears, the path is laid from the bottom to the horizon,
+     the sun rises where the path ends, then the name is set letter by letter.
+     ?w=&h=  size · ?bg=cream|none · ?tone=ink|cream (logo colour for light/dark footage) -->
+<svg id="s" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="horizon"><rect x="40" y="0" width="120" height="116"/></clipPath>
+    <clipPath id="ahead"><rect id="wipe" x="30" y="181" width="140" height="0"/></clipPath>
+    <linearGradient id="soft" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#000"/>
+    </linearGradient>
+    <mask id="roadMask" maskUnits="userSpaceOnUse" x="30" y="30" width="140" height="160">
+      <rect x="30" y="30" width="140" height="160" fill="#fff"/>
+      <!-- the part of the path laid so far is cut out of the gate -->
+      <g clip-path="url(#ahead)"><path d="__ROAD__" fill="#000"/></g>
+      <!-- a soft leading edge: the next few units fade in -->
+      <rect id="edge" x="30" y="181" width="140" height="6" fill="url(#soft)" opacity="0"/>
+    </mask>
+  </defs>
+  <rect id="bg" width="100%" height="100%" fill="#F3EFE7"/>
+  <g id="logo">
+    <g id="markWrap"><g id="mark">
+      <path id="gate" fill-rule="evenodd" d="__ARCH__" mask="url(#roadMask)"/>
+      <g clip-path="url(#horizon)"><circle id="sun" cx="100" cy="92" r="13" fill="#C8832F"/></g>
+    </g></g>
+    <g id="word">__LETTERS__</g>
+    <text id="desc" text-anchor="middle" font-family="M" font-weight="500" opacity="0">PHOTOGRAPHY &amp; FILM · BALI</text>
+  </g>
+</svg>
+<script>
+const Q = new URLSearchParams(location.search);
+const W = +Q.get("w") || 1920, H = +Q.get("h") || 1080, BG = Q.get("bg") || "cream", TONE = Q.get("tone") || "ink";
+const DUR = 4.6;
+const $ = (id) => document.getElementById(id);
+const s = $("s"); s.setAttribute("width", W); s.setAttribute("height", H); s.setAttribute("viewBox", `0 0 ${W} ${H}`);
+if (BG === "none") $("bg").remove();
+const INK = TONE === "cream" ? "#F3EFE7" : "#1F1E1C";
+$("gate").setAttribute("fill", INK);
+document.querySelectorAll(".L").forEach((l) => l.setAttribute("fill", INK));
+const desc = $("desc");
+desc.setAttribute("fill", TONE === "cream" ? "#F3EFE7" : "#77756F");
+if (TONE === "cream") desc.setAttribute("fill-opacity", 0.8);
+
+const short = Math.min(W, H);
+const gateH = short * 0.36, k = gateH / 140;
+const wordW = gateH * 1.55, wordH = wordW * 73 / 1030.4, ws = wordW / 1030.4;
+const gap1 = gateH * 0.24, gap2 = wordH * 1.25, descSize = Math.max(14, wordH * 0.5);
+const y0 = (H - gateH - gap1 - wordH - gap2 - descSize) / 2 - H * 0.02;
+const markX = W / 2 - 100 * k, markY = y0 - 40 * k;
+$("mark").setAttribute("transform", `translate(${markX} ${markY}) scale(${k})`);
+const wordX = (W - wordW) / 2, wordY = y0 + gateH + gap1;
+desc.setAttribute("x", W / 2); desc.setAttribute("font-size", descSize); desc.setAttribute("letter-spacing", descSize * 0.32);
+const descY = wordY + wordH + gap2 + descSize * 0.85;
+const letters = [...document.querySelectorAll(".L")];
+
+const clamp = (x) => Math.max(0, Math.min(1, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const io = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+const out = (x) => 1 - Math.pow(1 - x, 3);
+const outBack = (x) => { const c = 1.2; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+
+window.render = (t) => {
+  // 1. the gate appears: a soft rise and fade
+  const g = out(seg(t, 0, 0.9));
+  $("markWrap").setAttribute("opacity", g);
+  $("markWrap").setAttribute("transform", `translate(0 ${(1 - g) * gateH * 0.06})`);
+  // 2. the path is laid from the bottom edge to the horizon (y 180 -> 116)
+  const r = io(seg(t, 0.55, 1.85));
+  const y = 181 - (181 - 114) * r;
+  $("wipe").setAttribute("y", y); $("wipe").setAttribute("height", 181 - y);
+  // 3. the sun rises where the path ends
+  const u = outBack(seg(t, 1.55, 2.65));
+  $("sun").setAttribute("cy", 92 + 37 * (1 - u));
+  // 4. the name, letter by letter
+  letters.forEach((l, i) => {
+    const p = out(seg(t, 2.2 + i * 0.075, 2.2 + i * 0.075 + 0.55));
+    l.setAttribute("opacity", p);
+    l.setAttribute("transform", `translate(${wordX} ${wordY + (1 - p) * wordH * 0.35}) scale(${ws})`);
+  });
+  // 5. descriptor
+  const d = out(seg(t, 3.3, 3.95));
+  desc.setAttribute("opacity", d); desc.setAttribute("y", descY + (1 - d) * descSize * 0.6);
+};
+window.DUR = DUR;
+document.fonts.ready.then(() => { render(+Q.get("t") || 0); window.ready = true; });
+</script>
+</body></html>

@@ -1,0 +1,96 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face { font-family: M; src: url(fonts/montserrat-500.woff2) format("woff2"); font-weight: 500; }
+html,body { margin:0; background:transparent; overflow:hidden; }
+svg { display:block; }
+</style></head>
+<body>
+<!-- Melintas: the logo, then the camera walks the path into the gate. The path is the only
+     transparent part, so the next shot shows through it and finally fills the frame.
+     ?w=&h=  size · ?tone=light (ink gate on paper) | dark (paper gate on ink) -->
+<svg id="s" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <mask id="m" maskUnits="userSpaceOnUse" x="0" y="0">
+      <rect id="mr" fill="#fff"/>
+      <g id="camM"><g class="place"><path d="__ROAD__" fill="#000"/></g></g>
+    </mask>
+  </defs>
+  <g mask="url(#m)">
+    <rect id="bg"/>
+    <g id="cam">
+      <g class="place">
+        <path id="gate" fill-rule="evenodd" d="__GATE__"/>
+        <circle id="sun" cx="100" cy="92" r="13" fill="#C8832F"/>
+      </g>
+    </g>
+    <g id="type">
+      <g id="word">__LETTERS__</g>
+      <text id="desc" text-anchor="middle" font-family="M" font-weight="500">PHOTOGRAPHY &amp; FILM · BALI</text>
+    </g>
+  </g>
+</svg>
+<script>
+const Q = new URLSearchParams(location.search);
+const W = +Q.get("w") || 1920, H = +Q.get("h") || 1080, TONE = Q.get("tone") || "light";
+const DUR = 3.6;
+const $ = (id) => document.getElementById(id);
+const s = $("s"); s.setAttribute("width", W); s.setAttribute("height", H); s.setAttribute("viewBox", `0 0 ${W} ${H}`);
+for (const r of [$("mr"), $("bg")]) { r.setAttribute("width", W); r.setAttribute("height", H); }
+$("m").setAttribute("width", W); $("m").setAttribute("height", H);
+const PAPER = "#F3EFE7", INKC = "#1F1E1C";
+const BG = TONE === "dark" ? INKC : PAPER, FG = TONE === "dark" ? PAPER : INKC;
+const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const mix = (p, q, x) => { const A = hex(p), B = hex(q); return "#" + A.map((v, i) => Math.round(v + (B[i] - v) * x).toString(16).padStart(2, "0")).join(""); };
+$("gate").setAttribute("fill", FG);
+document.querySelectorAll(".L").forEach((l) => l.setAttribute("fill", FG));
+const desc = $("desc"); desc.setAttribute("fill", TONE === "dark" ? "#B9B6AE" : "#77756F");
+
+const short = Math.min(W, H);
+const gateH = short * 0.36, k = gateH / 140;
+const wordW = gateH * 1.55, wordH = wordW * 73 / 1030.4, ws = wordW / 1030.4;
+const gap1 = gateH * 0.24, gap2 = wordH * 1.25, descSize = Math.max(14, wordH * 0.5);
+const y0 = (H - gateH - gap1 - wordH - gap2 - descSize) / 2 - H * 0.02;
+const markX = W / 2 - 100 * k, markY = y0 - 40 * k;
+document.querySelectorAll(".place").forEach((g) => g.setAttribute("transform", `translate(${markX} ${markY}) scale(${k})`));
+const wordX = (W - wordW) / 2, wordY = y0 + gateH + gap1;
+desc.setAttribute("x", W / 2); desc.setAttribute("font-size", descSize); desc.setAttribute("letter-spacing", descSize * 0.32);
+const descY = wordY + wordH + gap2 + descSize * 0.85;
+document.querySelectorAll(".L").forEach((l) => l.setAttribute("transform", `translate(${wordX} ${wordY}) scale(${ws})`));
+desc.setAttribute("y", descY);
+
+// Where the camera goes: a point on the path's centre line, in its widest stretch.
+const bez = (p0, p1, p2, p3, u) => [0, 1].map((i) => (1 - u) ** 3 * p0[i] + 3 * (1 - u) ** 2 * u * p1[i] + 3 * (1 - u) * u * u * p2[i] + u ** 3 * p3[i]);
+const P = bez([78.4, 180], [79.6, 166], [146.8, 166], [146.8, 147], +(Q.get("u") || 0.45));
+const PX = markX + P[0] * k, PY = markY + P[1] * k;
+
+const clamp = (x) => Math.max(0, Math.min(1, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const io = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+const out = (x) => 1 - Math.pow(1 - x, 3);
+const ZMAX = 90;
+
+window.render = (t) => {
+  // 1. the logo arrives
+  const a = out(seg(t, 0, 0.6));
+  $("cam").setAttribute("opacity", a);
+  // 2. the name steps back as we start walking
+  const f = 1 - io(seg(t, 1.05, 1.5));
+  $("type").setAttribute("opacity", Math.min(a, f));
+  $("type").setAttribute("transform", `translate(0 ${(1 - f) * wordH * 0.5})`);
+  // as the walk starts the world takes the gate's colour: we are inside it, only the path is light
+  const dk = io(seg(t, 1.1, 1.75));
+  $("bg").setAttribute("fill", mix(BG, FG, dk));
+  // 3. the walk: zoom on a log scale (steady feel), centring on the path
+  const zp = seg(t, 1.15, 3.0), z = Math.exp(Math.log(ZMAX) * Math.pow(zp, 2.1) * (3 - 2 * zp));
+  const c = io(seg(t, 1.15, 2.2));               // how far the focus has moved to the screen centre
+  const fx = W / 2 + (PX - W / 2) * c, fy = H / 2 + (PY - H / 2) * c;
+  const cam = `translate(${fx} ${fy}) scale(${z}) translate(${-fx} ${-fy})`;
+  const toCentre = `translate(${(W / 2 - fx) * c} ${(H / 2 - fy) * c})`;
+  $("cam").setAttribute("transform", toCentre + " " + cam);
+  $("camM").setAttribute("transform", toCentre + " " + cam);
+};
+window.DUR = DUR;
+document.fonts.ready.then(() => { render(+Q.get("t") || 0); window.ready = true; });
+</script>
+</body></html>
