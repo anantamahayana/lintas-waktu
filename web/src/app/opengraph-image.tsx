@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { GATE, GOLD, WORD, WORD_H, WORD_W } from "@/components/brand/Logo";
 
 export const runtime = "edge";
-export const alt = "Lintas Waktu — Wedding & Film Photographer, Bali";
+export const alt = "Lintas Waktu — Wedding Photographer & Videographer in Bali";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 

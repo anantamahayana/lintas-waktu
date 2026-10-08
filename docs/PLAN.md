@@ -149,3 +149,10 @@ batas PIN per galeri 10/15 mnt dan login 20/15 mnt total, tersimpan di DB.
   Railway hanya menerima dari Vercel (shared secret header), atau batasi `--forwarded-allow-ips`.
 - `/verify` membedakan "nomor tidak dikenal" dan "kode tidak cocok", jadi nomor invoice bisa ditebak ada/tidak (nomornya memang berurutan).
 - 20 peringatan lint lama di web (bukan error).
+
+## SEO (8 Okt 2026) — ✅ tahap 1
+JSON-LD (`web/src/lib/jsonld.tsx`): WebSite + ProfessionalService (semua halaman, harga dari copy admin), FAQPage (/services),
+CreativeWork (/work/[slug]). Meta EN/ID diperbarui, judul Layanan "Layanan & Harga". Lighthouse SEO 100, aksesibilitas 96.
+**Tahap berikutnya (butuh keputusan pemilik):** halaman khusus per layanan (mis. /services/prewedding "Fotografer prewedding Bali")
+dengan teks dan foto sendiri; Google Business Profile (paling berpengaruh untuk pencarian lokal, dibuat pemilik di Google).
+**Belum diubah:** teks `faint` (#AEACA5, kontras 2,2:1) untuk label tersier — pilihan desain, tunggu keputusan pemilik.

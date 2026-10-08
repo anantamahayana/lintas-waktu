@@ -10,12 +10,14 @@ import { Reveal } from "@/components/ui/Reveal";
 import { Faq } from "@/components/ui/Faq";
 import { Mark } from "@/components/ui/Mark";
 import { Packages } from "@/components/home/Packages";
+import { JsonLd, faqLd } from "@/lib/jsonld";
 
 const keys = ["wedding", "prewedding", "editorial", "event", "personal"] as const;
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
-  return pageMeta(locale, "/services", { titleKey: "services" });
+  const t = await getTranslations({ locale, namespace: "meta" });
+  return pageMeta(locale, "/services", { title: t("servicesTitle"), description: t("services") });
 }
 
 export default async function ServicesPage({ params }: { params: Promise<{ locale: string }> }) {
@@ -79,6 +81,7 @@ export default async function ServicesPage({ params }: { params: Promise<{ local
         <Packages eyebrow={t("packages.eyebrow")} note={t("packages.note")} />
       </div>
 
+      <JsonLd data={faqLd(faq)} />
       <section id="faq" className="border-t border-line scroll-mt-20">
         <div className="wrap gutter py-20 lg:py-28 flex flex-col items-center gap-10">
           <Reveal className="flex flex-col items-center text-center gap-4">

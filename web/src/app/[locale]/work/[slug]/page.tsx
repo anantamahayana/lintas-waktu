@@ -10,6 +10,7 @@ import { Reveal } from "@/components/ui/Reveal";
 import { Gallery } from "@/components/work/Gallery";
 import { Film, FilmBadge } from "@/components/work/Film";
 import { getProject, getProjects, related } from "@/lib/content";
+import { JsonLd, projectLd } from "@/lib/jsonld";
 
 type Params = Promise<{ locale: string; slug: string }>;
 
@@ -42,6 +43,7 @@ export default async function ProjectPage({ params }: { params: Params }) {
 
   return (
     <article>
+      <JsonLd data={projectLd(locale, p, t(`categories.${p.category}`))} />
       <div aria-hidden className="read-progress" />
       {/* Hero — a photograph, or for a film project the film itself (click to play) */}
       {isFilm && p.film ? (

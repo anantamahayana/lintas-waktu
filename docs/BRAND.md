@@ -58,7 +58,7 @@ Hampir tanpa warna aksen: warna datang dari foto. Satu-satunya aksen adalah **Em
 |---|---|---|
 | `white` | `#FBFAF7` | Latar halaman (putih pecah, bukan krem) |
 | `ink` | `#1F1E1C` | Teks utama, tombol isi |
-| `mute` | `#77756F` | Body text, label |
+| `mute` | `#74726C` | Body text, label (4,6:1, lolos WCAG AA; dulu `#77756F`) |
 | `faint` | `#AEACA5` | Placeholder, teks tersier, tautan nonaktif |
 | `line` | `#E6E4DE` | Garis tipis: pemisah section, bingkai field/form, kolom paket |
 | `dark` | `#2A2926` | **Satu** section gelap hangat per halaman (Behind the camera, Values), lightbox, blok film |

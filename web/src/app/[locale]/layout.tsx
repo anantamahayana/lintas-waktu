@@ -9,6 +9,8 @@ import { SITE_URL } from "@/lib/seo";
 import { SiteNav } from "@/components/site/SiteNav";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { REVEAL_SCRIPT } from "@/components/ui/Reveal";
+import { JsonLd, businessLd } from "@/lib/jsonld";
+import { getSite } from "@/lib/content";
 import { BrandSprite } from "@/components/brand/Logo";
 import "../globals.css";
 
@@ -30,10 +32,10 @@ const inter = Inter({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Lintas Waktu — Wedding & Film Photographer, Bali",
+    default: "Lintas Waktu — Wedding Photographer & Videographer in Bali",
     template: "%s — Lintas Waktu",
   },
-  description: "Independent wedding, pre-wedding, event and personal photography & film in Bali.",
+  description: "Wedding, pre-wedding, editorial, event and personal photography & film in Bali, by an independent duo.",
 };
 
 export function generateStaticParams() {
@@ -50,12 +52,14 @@ export default async function LocaleLayout({
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
+  const business = await businessLd(locale, await getSite());
 
   return (
     // suppressHydrationWarning: the pre-hydration script adds the `js` class on purpose
     <html lang={locale} className={`${cormorant.variable} ${inter.variable}`} suppressHydrationWarning>
       <body className="min-h-dvh flex flex-col">
         <BrandSprite />
+        <JsonLd data={business} />
         <Script id="reveal" strategy="beforeInteractive">{REVEAL_SCRIPT}</Script>
         <NextIntlClientProvider>
           <SiteNav />

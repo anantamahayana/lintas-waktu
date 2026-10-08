@@ -132,6 +132,7 @@ function MobileMenu({ open, close }: { open: boolean; close: () => void }) {
   return (
     <div
       aria-hidden={!open}
+      inert={!open} /* closed: its links must not be reachable with Tab or a screen reader */
       className={clsx(
         "fixed inset-0 z-50 bg-white flex flex-col lg:hidden transition-opacity duration-500 ease-out-soft",
         open ? "opacity-100" : "opacity-0 pointer-events-none",
