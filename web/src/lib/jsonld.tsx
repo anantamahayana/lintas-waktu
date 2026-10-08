@@ -41,8 +41,9 @@ export async function businessLd(locale: string, site: SiteInfo) {
       "@type": "WebSite",
       "@id": `${SITE_URL}/#website`,
       url: localeUrl(locale),
-      name: "Lintas Waktu",
-      alternateName: "Lintas Waktu Visual",
+      // the site name Google shows above results; people search for the full name
+      name: "Lintas Waktu Visual",
+      alternateName: ["Lintas Waktu", "lintaswaktuvisual.com"],
       inLanguage: locale,
       publisher: { "@id": BUSINESS_ID },
     },

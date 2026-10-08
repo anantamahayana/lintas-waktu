@@ -32,7 +32,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Lintas Waktu — Wedding Photographer & Videographer in Bali",
+    default: "Lintas Waktu Visual — Wedding Photographer & Videographer in Bali",
     template: "%s — Lintas Waktu",
   },
   description: "Wedding, pre-wedding, editorial, event and personal photography & film in Bali, by an independent duo.",
