@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { autoCounts, layPages, MAX_PER_PAGE, newAlbum, pickTpl, removePhoto, replacePhoto, setCount, shuffleTemplates, swapPhotos, TEMPLATES } from "./layout";
+import { applyTpl, autoCounts, gridTpl, joinPages, layPages, MAX_PER_PAGE, newAlbum, pickTpl, removePhoto, replacePhoto, setCount, setCustomTemplates, shuffleTemplates, splitPages, swapPhotos, TEMPLATES, templatesFor, validTpl, type Tpl } from "./layout";
+import { toSpreads } from "./export";
 import { jpegSize } from "./photos";
 import { cellRectMm, cropRect, DEFAULT_PRESET, effectiveDpi, setJpegDpi, spreadMm, spreadPx } from "./print";
 
 const ids = (n: number) => Array.from({ length: n }, (_, i) => `p${i}`);
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
+const SHAPE = { page: 1.4, sheet: 2.9, gapPage: 0.02, gapSheet: 0.01 };
 
 describe("autoCounts", () => {
   it("uses every photo once, 1 to 4 per page", () => {
@@ -89,11 +91,89 @@ describe("templates", () => {
   });
   it("shuffle changes unlocked pages only", () => {
     const a = { order: ids(6), pages: [{ n: 3 }, { n: 3, locked: true }] };
-    const laid = layPages(a, () => 1.5, 1.4);
+    const laid = layPages(a, () => 1.5, SHAPE);
     const b = shuffleTemplates(a, laid, 7);
     expect(b.pages[0].tpl).toBeDefined();
     expect(b.pages[0].tpl).not.toBe(laid[0].tpl!.id);
     expect(b.pages[1].tpl).toBeUndefined();
+  });
+});
+
+describe("joined pages (layflat)", () => {
+  const check = (a: { order: string[]; pages: { n: number }[] }, n: number) => {
+    expect(sum(a.pages.map((p) => p.n))).toBe(n);
+    expect(new Set(a.order).size).toBe(n);
+  };
+  it("join makes one sheet, moves the second page's photos on, and split undoes it", () => {
+    let a = newAlbum(ids(12), 6); // 2 per page
+    a = joinPages(a, 2);
+    check(a, 12);
+    expect(a.pages[2]).toMatchObject({ n: 2, joined: true });
+    expect(a.pages[3]).toMatchObject({ n: 0, tail: true });
+    const laid = layPages(a, () => 1.5, SHAPE);
+    expect(laid[2].side).toBe("both");
+    expect(laid[2].tpl!.spread).toBe(true);
+    expect(laid[3].side).toBe("tail");
+    const sp = toSpreads(laid);
+    expect(sp[1].left).toBe(laid[2]);
+    expect(sp[1].right).toBe(laid[3]);
+    a = setCount(a, 2, 1);
+    check(a, 12);
+    expect(layPages(a, () => 1.5, SHAPE)[2].tpl!.id).toBe("s1-full");
+    a = splitPages(a, 2);
+    check(a, 12);
+    expect(a.pages.some((p) => p.joined || p.tail)).toBe(false);
+  });
+  it("a joined sheet starts on a left page; the page before it faces a blank", () => {
+    const a = joinPages(newAlbum(ids(6), 6), 1);
+    const laid = layPages(a, () => 1.5, SHAPE);
+    expect(laid.map((p) => [p.side, p.spread])).toEqual([[0, 0], ["both", 1], ["tail", 1], [0, 2], [1, 2], [0, 3], [1, 3]].slice(0, laid.length));
+    expect(toSpreads(laid)[0].right).toBeNull();
+  });
+  it("removing the only photo of a joined sheet removes both pages", () => {
+    let a = setCount(joinPages(newAlbum(ids(8), 4), 0), 0, 1);
+    a = removePhoto(a, a.order[0]);
+    check(a, 7);
+    expect(a.pages.some((p) => p.joined || p.tail)).toBe(false);
+  });
+  it("a frame may cross the fold", () => {
+    const p = DEFAULT_PRESET;
+    const r = cellRectMm(p, "both", 3, 1, [0, 0, 2, 1]);
+    const fold = p.bleedMm + p.pageWmm;
+    expect(r.x).toBeLessThan(fold);
+    expect(r.x + r.w).toBeGreaterThan(fold);
+    const full = cellRectMm({ ...p, marginPct: 0 }, "both", 1, 1, [0, 0, 1, 1]);
+    expect(full).toEqual({ x: 0, y: 0, ...spreadMm(p) });
+  });
+});
+
+describe("custom templates", () => {
+  const mine: Tpl = { id: "c-test", n: 5, label: "Lima", cols: 3, rows: 2, cells: [[0, 0, 2, 1], [2, 0, 1, 1], [0, 1, 1, 1], [1, 1, 1, 1], [2, 1, 1, 1]], custom: true };
+  it("validates frames", () => {
+    expect(validTpl(mine.cols, mine.rows, mine.cells)).toBe(true);
+    expect(validTpl(2, 2, [[0, 0, 2, 1], [1, 0, 1, 2]])).toBe(false); // overlap
+    expect(validTpl(2, 2, [[1, 1, 2, 1]])).toBe(false); // off the grid
+    expect(validTpl(2, 2, [])).toBe(false);
+    expect(validTpl(3, 3, [[0, 0, 1, 1], [2, 2, 1, 1]])).toBe(true); // gaps are white space
+  });
+  it("applying one changes the page's photo count and reflows", () => {
+    setCustomTemplates([mine]);
+    expect(templatesFor(5)).toEqual([mine]);
+    let a = newAlbum(ids(20), 10);
+    a = applyTpl(a, 1, mine);
+    expect(sum(a.pages.map((p) => p.n))).toBe(20);
+    expect(a.pages[1]).toMatchObject({ n: 5, tpl: "c-test" });
+    expect(layPages(a, () => 1.5, SHAPE)[1].tpl).toBe(mine);
+    // Deleted later: the page falls back to a plain grid instead of breaking.
+    setCustomTemplates([]);
+    const t = layPages(a, () => 1.5, SHAPE)[1].tpl!;
+    expect(t.n).toBe(5);
+    expect(validTpl(t.cols, t.rows, t.cells)).toBe(true);
+    expect(gridTpl(7, true).cells).toHaveLength(7);
+  });
+  it("a page template is not applied to a joined sheet", () => {
+    const a = joinPages(newAlbum(ids(8), 4), 0);
+    expect(applyTpl(a, 0, mine)).toBe(a);
   });
 });
 

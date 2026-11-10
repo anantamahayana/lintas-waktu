@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { Design } from "../App";
-import { toSpreads, lowResWarnings } from "../lib/export";
-import { layPages, MAX_PER_PAGE, removePhoto, replacePhoto, setCount, shuffleTemplates, swapPhotos, templatesFor, type LaidPage } from "../lib/layout";
+import { lowResWarnings, pageNo, toSpreads } from "../lib/export";
+import { applyTpl, countsFor, joinPages, layPages, removePhoto, replacePhoto, setCount, shuffleTemplates, splitPages, swapPhotos, templatesFor, type LaidPage, type Tpl } from "../lib/layout";
 import type { Photo } from "../lib/photos";
 import { CENTER, cellRectMm, effectiveDpi, spreadMm, type Placement, type Preset } from "../lib/print";
+import { TemplateEditor } from "./TemplateEditor";
 
 type Props = {
   photos: Photo[];
@@ -17,26 +18,29 @@ type Props = {
   setPreset: (p: Preset) => void;
   onRebuild: () => void;
   onExport: () => void;
+  custom: Tpl[];
+  setCustom: (list: Tpl[]) => void;
 };
 
 const pct = (n: number) => `${n * 100}%`;
 
 /** Shared by the editor and the export screen: lay the album out for a preset. */
-export function useLaidPages(photos: Photo[], design: Design, preset: Preset) {
+export function useLaidPages(photos: Photo[], design: Design, preset: Preset, custom: Tpl[]) {
   const byId = useMemo(() => new Map(photos.map((p) => [p.id, p])), [photos]);
   const pages = useMemo(() => {
-    const m = (preset.marginPct / 100) * preset.pageWmm;
-    const cw = preset.pageWmm - 2 * m, ch = preset.pageHmm - 2 * m;
-    const gap = ((preset.gapPct / 100) * preset.pageWmm) / cw;
+    const m = (preset.marginPct / 100) * preset.pageWmm, g = (preset.gapPct / 100) * preset.pageWmm;
+    const cw = preset.pageWmm - 2 * m, sw = 2 * preset.pageWmm - 2 * m, ch = preset.pageHmm - 2 * m;
     const aspect = (id: string) => { const p = byId.get(id); return p && p.w ? p.w / p.h : 1.5; };
-    return layPages(design.album, aspect, cw / ch, gap);
-  }, [design.album, byId, preset.marginPct, preset.gapPct, preset.pageWmm, preset.pageHmm]);
+    return layPages(design.album, aspect, { page: cw / ch, sheet: sw / ch, gapPage: g / cw, gapSheet: g / sw });
+    // `custom` is read through the template registry: lay out again when the user's templates change.
+  }, [design.album, byId, preset.marginPct, preset.gapPct, preset.pageWmm, preset.pageHmm, custom]); // eslint-disable-line react-hooks/exhaustive-deps
   return { byId, pages };
 }
 
-export function Editor({ photos, design, commit, undo, redo, canUndo, canRedo, preset, setPreset, onRebuild, onExport }: Props) {
+export function Editor({ photos, design, commit, undo, redo, canUndo, canRedo, preset, setPreset, onRebuild, onExport, custom, setCustom }: Props) {
   const { album, place } = design;
-  const { byId, pages } = useLaidPages(photos, design, preset);
+  const { byId, pages } = useLaidPages(photos, design, preset, custom);
+  const [making, setMaking] = useState(false);
   const spreads = useMemo(() => toSpreads(pages), [pages]);
   const [si, setSi] = useState(0);
   const [sel, setSel] = useState("");
@@ -51,7 +55,8 @@ export function Editor({ photos, design, commit, undo, redo, canUndo, canRedo, p
   const tray = useMemo(() => photos.filter((p) => p.pick === true && !inAlbum.has(p.id)), [photos, inAlbum]);
   const warnings = useMemo(() => lowResWarnings(pages, byId, place, preset), [pages, byId, place, preset]);
 
-  const selPage: LaidPage | null = (sel && pages.find((p) => p.ids.includes(sel))) || spread?.left || spread?.right || null;
+  const selPage: LaidPage | null = (sel && pages.find((p) => p.ids.includes(sel))) || spread?.left || (spread?.right?.side === 1 ? spread.right : null);
+  const joined = selPage?.side === "both";
   const selPhoto = sel ? byId.get(sel) : undefined;
   const selOnSpread = !!sel && !!selPage && (selPage === spread?.left || selPage === spread?.right);
 
@@ -69,7 +74,7 @@ export function Editor({ photos, design, commit, undo, redo, canUndo, canRedo, p
   }, [undo, redo, spreads.length]);
 
   const setAlbum = (a: typeof album) => { if (a !== album) commit({ album: a, place }); };
-  const setPage = (i: number, patch: Partial<{ tpl: string; locked: boolean }>) =>
+  const setPage = (i: number, patch: Partial<{ locked: boolean }>) =>
     setAlbum({ ...album, pages: album.pages.map((p, j) => (j === i ? { ...p, ...patch } : p)) });
   const setPlace = (id: string, patch: Partial<Placement>) => {
     commit({ album, place: { ...place, [id]: { ...(place[id] ?? CENTER), ...patch } } }, sliding.current);
@@ -82,13 +87,13 @@ export function Editor({ photos, design, commit, undo, redo, canUndo, canRedo, p
     setSel(inAlbum.has(dragged) ? dragged : dragged);
   };
 
-  const cell = (pg: LaidPage, side: 0 | 1, k: number) => {
+  const cell = (pg: LaidPage, k: number) => {
     const id = pg.ids[k], ph = byId.get(id), pl = place[id] ?? CENTER;
-    const r = cellRectMm(preset, side, pg.tpl!.cols, pg.tpl!.rows, pg.tpl!.cells[k]);
+    const r = cellRectMm(preset, pg.side as 0 | 1 | "both", pg.tpl!.cols, pg.tpl!.rows, pg.tpl!.cells[k]);
     const box: CSSProperties = { left: pct(r.x / sheet.w), top: pct(r.y / sheet.h), width: pct(r.w / sheet.w), height: pct(r.h / sheet.h) };
     const pos = `${pl.x * 100}% ${pl.y * 100}%`;
     return (
-      <button key={id} type="button" className="cell" style={box} aria-pressed={sel === id} aria-label={`Foto ${ph?.name ?? id}, halaman ${pg.index + 1}`}
+      <button key={id} type="button" className="cell" style={box} aria-pressed={sel === id} aria-label={`Foto ${ph?.name ?? id}, halaman ${pageNo(pg)}`}
         draggable onClick={() => setSel(id)}
         onDragStart={(e) => { e.dataTransfer.setData("text/plain", id); e.dataTransfer.effectAllowed = "move"; }}
         onDragOver={(e) => e.preventDefault()}
@@ -99,7 +104,7 @@ export function Editor({ photos, design, commit, undo, redo, canUndo, canRedo, p
   };
 
   const selRect = selOnSpread && selPage?.tpl && selPhoto
-    ? cellRectMm(preset, (selPage.index % 2) as 0 | 1, selPage.tpl.cols, selPage.tpl.rows, selPage.tpl.cells[selPage.ids.indexOf(sel)])
+    ? cellRectMm(preset, selPage.side as 0 | 1 | "both", selPage.tpl.cols, selPage.tpl.rows, selPage.tpl.cells[selPage.ids.indexOf(sel)])
     : null;
   const selDpi = selRect && selPhoto?.w ? Math.round(effectiveDpi(selPhoto.w, selPhoto.h, selRect, place[sel] ?? CENTER)) : 0;
   const selPl = place[sel] ?? CENTER;
@@ -136,10 +141,10 @@ export function Editor({ photos, design, commit, undo, redo, canUndo, canRedo, p
         <main className="stage dark">
           {spread && (
             <div className="sheetwrap">
-              <div className="pagenos"><span>{spread.left ? `Halaman ${spread.left.index + 1}` : ""}</span><span>{spread.right ? `Halaman ${spread.right.index + 1}` : ""}</span></div>
+              <div className="pagenos"><span>Halaman {s * 2 + 1}</span>{spread.left?.side === "both" && <span>dua halaman menyambung</span>}<span>Halaman {s * 2 + 2}</span></div>
               <div className="sheet" style={{ aspectRatio: `${sheet.w} / ${sheet.h}`, background: preset.bg }} onClick={(e) => { if (e.target === e.currentTarget) setSel(""); }}>
-                {spread.left?.tpl && spread.left.ids.map((_, k) => cell(spread.left!, 0, k))}
-                {spread.right?.tpl && spread.right.ids.map((_, k) => cell(spread.right!, 1, k))}
+                {spread.left?.tpl && spread.left.ids.map((_, k) => cell(spread.left!, k))}
+                {spread.right?.tpl && spread.right.side === 1 && spread.right.ids.map((_, k) => cell(spread.right!, k))}
                 {guides && (
                   <>
                     <div className="trim" style={{ inset: `${pct(preset.bleedMm / sheet.h)} ${pct(preset.bleedMm / sheet.w)}` }} />
@@ -158,8 +163,8 @@ export function Editor({ photos, design, commit, undo, redo, canUndo, canRedo, p
           <div className="spreads" role="tablist" aria-label="Spread">
             {spreads.map((sp, i) => (
               <button key={i} type="button" role="tab" aria-selected={i === s} className="spreadtab" onClick={() => { setSi(i); setSel(""); }}>
-                {(sp.left?.index ?? 0) + 1}–{(sp.right?.index ?? sp.left?.index ?? 0) + 1}
-                {(sp.left?.cfg.locked || sp.right?.cfg.locked) ? " · kunci" : ""}
+                {i * 2 + 1}–{i * 2 + 2}
+                {sp.left?.side === "both" ? " · sambung" : ""}{(sp.left?.cfg.locked || sp.right?.cfg.locked) ? " · kunci" : ""}
               </button>
             ))}
           </div>
@@ -168,22 +173,28 @@ export function Editor({ photos, design, commit, undo, redo, canUndo, canRedo, p
         <aside className="panel" aria-label="Properti">
           {selPage && (
             <>
-              <h2>Tata letak · halaman {selPage.index + 1}</h2>
-              <div className="five" role="group" aria-label="Jumlah foto di halaman">
-                {Array.from({ length: MAX_PER_PAGE }, (_, i) => i + 1).map((n) => (
+              <h2>Tata letak · {joined ? `halaman ${pageNo(selPage)}–${pageNo(selPage) + 1}` : `halaman ${pageNo(selPage)}`}</h2>
+              <button type="button" className="btn" aria-pressed={joined}
+                onClick={() => { setAlbum(joined ? splitPages(album, selPage.index) : joinPages(album, selPage.side === 1 ? selPage.index - 1 : selPage.index)); setSel(""); }}>
+                {joined ? "Pisahkan jadi dua halaman" : "Sambung dua halaman"}
+              </button>
+              {joined && preset.binding === "biasa" && <div className="warn">Jilid biasa: bagian foto di lipatan bisa tertelan jilid. Ubah jenis jilid di Ekspor kalau albumnya layflat.</div>}
+              <div className="five" role="group" aria-label="Jumlah foto">
+                {countsFor(joined).map((n) => (
                   <button key={n} type="button" className="btn" aria-pressed={selPage.cfg.n === n} aria-label={`${n} foto`}
                     onClick={() => setAlbum(setCount(album, selPage.index, n))}>{n}</button>
                 ))}
               </div>
-              <div className="tpls">
-                {templatesFor(selPage.ids.length).map((t) => (
+              <div className={joined ? "tpls wide" : "tpls"}>
+                {templatesFor(selPage.ids.length, joined).map((t) => (
                   <button key={t.id} type="button" className="tpl" aria-pressed={selPage.tpl?.id === t.id} aria-label={t.label} title={t.label}
-                    onClick={() => setPage(selPage.index, { tpl: t.id })}
+                    onClick={() => setAlbum(applyTpl(album, selPage.index, t))}
                     style={{ gridTemplateColumns: `repeat(${t.cols}, 1fr)`, gridTemplateRows: `repeat(${t.rows}, 1fr)` }}>
                     {t.cells.map(([c, r, cs, rs], k) => <span key={k} style={{ gridColumn: `${c + 1} / span ${cs}`, gridRow: `${r + 1} / span ${rs}` }} />)}
                   </button>
                 ))}
               </div>
+              <button type="button" className="btn" onClick={() => setMaking(true)}>Buat template sendiri…</button>
               <div className="two">
                 <button type="button" className="btn" disabled={!!selPage.cfg.locked} onClick={() => { setAlbum(shuffleTemplates(album, pages, seed, selPage.index)); setSeed(seed + 1); }}>Acak halaman</button>
                 <button type="button" className="btn" aria-pressed={!!selPage.cfg.locked} onClick={() => setPage(selPage.index, { locked: !selPage.cfg.locked })}>
@@ -225,8 +236,12 @@ export function Editor({ photos, design, commit, undo, redo, canUndo, canRedo, p
           )}
         </aside>
       </div>
+      {making && (
+        <TemplateEditor preset={preset} custom={custom} setCustom={setCustom} startSpread={joined} onClose={() => setMaking(false)}
+          onUse={(t) => { if (selPage && !!t.spread === joined) setAlbum(applyTpl(album, selPage.index, t)); }} />
+      )}
       <footer className="status">
-        <span>Spread {s + 1} dari {spreads.length}</span><span>{pages.length} halaman</span>
+        <span>Spread {s + 1} dari {spreads.length}</span><span>{spreads.length * 2} halaman</span>
         <span>{album.order.length} foto di album</span>
         {warnings.length > 0 && <span className="warn">{warnings.length} foto beresolusi rendah</span>}
         <span className="right">← → pindah spread · Ctrl+Z urungkan</span>

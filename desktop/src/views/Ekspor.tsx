@@ -1,17 +1,19 @@
 import { useMemo, useState } from "react";
 import type { Design } from "../App";
 import { exportAlbum, lowResWarnings, spreadFileName, toSpreads } from "../lib/export";
+import type { Tpl } from "../lib/layout";
 import type { Photo } from "../lib/photos";
 import { SIZES, spreadPx, type Preset } from "../lib/print";
 import { useLaidPages } from "./Editor";
 
-type Props = { photos: Photo[]; design: Design; preset: Preset; setPreset: (p: Preset) => void };
+type Props = { photos: Photo[]; design: Design; preset: Preset; setPreset: (p: Preset) => void; custom: Tpl[] };
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 /** Print settings (all editable) and the export itself. */
-export function Ekspor({ photos, design, preset, setPreset }: Props) {
-  const { byId, pages } = useLaidPages(photos, design, preset);
+export function Ekspor({ photos, design, preset, setPreset, custom }: Props) {
+  const { byId, pages } = useLaidPages(photos, design, preset, custom);
+  const joinedCount = pages.filter((p) => p.side === "both").length;
   const spreads = useMemo(() => toSpreads(pages), [pages]);
   const warnings = useMemo(() => lowResWarnings(pages, byId, design.place, preset), [pages, byId, design.place, preset]);
   const [busy, setBusy] = useState(false);
@@ -66,6 +68,12 @@ export function Ekspor({ photos, design, preset, setPreset }: Props) {
           <label className="field">Lebar halaman (mm)<input {...num("pageWmm", 50, 600)} /></label>
           <label className="field">Tinggi halaman (mm)<input {...num("pageHmm", 50, 600)} /></label>
           <label className="field">Jumlah halaman (untuk susun otomatis)<input {...num("pages", 2, 200)} step={2} /></label>
+          <label className="field">Jilid
+            <select value={preset.binding} onChange={(e) => setPreset({ ...preset, binding: e.target.value as Preset["binding"] })}>
+              <option value="layflat">Menyambung (layflat): foto boleh melintasi lipatan</option>
+              <option value="biasa">Jilid biasa: lipatan tertelan jilid</option>
+            </select>
+          </label>
         </fieldset>
 
         <fieldset>
@@ -94,11 +102,14 @@ export function Ekspor({ photos, design, preset, setPreset }: Props) {
       <aside className="panel wide" aria-label="Ekspor">
         <h2>Ringkasan ekspor</h2>
         <dl>
-          <dt>Isi</dt><dd>{spreads.length} spread · {pages.length} halaman</dd>
+          <dt>Isi</dt><dd>{spreads.length} spread · {spreads.length * 2} halaman</dd>
           <dt>Piksel</dt><dd>{px.w.toLocaleString("id-ID")} × {px.h.toLocaleString("id-ID")} per spread</dd>
           <dt>Bleed</dt><dd>{preset.bleedMm} mm, sudah termasuk</dd>
           <dt>Format</dt><dd>JPG per spread · sRGB · {preset.dpi} dpi</dd>
         </dl>
+        {preset.binding === "biasa" && joinedCount > 0 && (
+          <div className="notice">{joinedCount} spread memakai foto yang melintasi lipatan, padahal jilidnya biasa. Bagian di lipatan bisa tertelan jilid.</div>
+        )}
         {warnings.length > 0 && (
           <div className="notice">
             <strong>{warnings.length} foto beresolusi rendah</strong>

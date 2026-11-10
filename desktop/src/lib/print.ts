@@ -13,6 +13,8 @@ export type Preset = {
   marginPct: number;
   gapPct: number;
   bg: string;
+  /** "layflat": pages open flat, a photo may cross the fold. "biasa": part of the fold is lost in the binding. */
+  binding: "layflat" | "biasa";
   /** File name stem for exports: `<pattern>_01.jpg`. */
   pattern: string;
 };
@@ -35,6 +37,7 @@ export const DEFAULT_PRESET: Preset = {
   marginPct: 7,
   gapPct: 2,
   bg: "#ffffff",
+  binding: "layflat",
   pattern: "Album",
 };
 
@@ -57,25 +60,27 @@ export type GridCell = [c: number, r: number, cs: number, rs: number];
 
 /**
  * Where a template cell sits on the spread, in mm from the sheet's top-left corner.
- * With no margin, cells that touch a trimmed edge run out into the bleed (never across the fold).
+ * `side` "both" lays the template over the two pages as one sheet, so cells may cross the fold.
+ * With no margin, cells that touch a trimmed edge run out into the bleed.
  */
-export function cellRectMm(p: Preset, side: 0 | 1, cols: number, rows: number, cell: GridCell): Rect {
+export function cellRectMm(p: Preset, side: 0 | 1 | "both", cols: number, rows: number, cell: GridCell): Rect {
   const [c, r, cs, rs] = cell;
   const m = (p.marginPct / 100) * p.pageWmm;
   const g = (p.gapPct / 100) * p.pageWmm;
-  const W = p.pageWmm - 2 * m;
+  const both = side === "both";
+  const W = (both ? 2 : 1) * p.pageWmm - 2 * m;
   const H = p.pageHmm - 2 * m;
   const cw = (W - g * (cols - 1)) / cols;
   const ch = (H - g * (rows - 1)) / rows;
-  let x = p.bleedMm + side * p.pageWmm + m + c * (cw + g);
+  let x = p.bleedMm + (side === 1 ? p.pageWmm : 0) + m + c * (cw + g);
   let y = p.bleedMm + m + r * (ch + g);
   let w = cs * cw + (cs - 1) * g;
   let h = rs * ch + (rs - 1) * g;
   if (m === 0) {
     if (r === 0) { y -= p.bleedMm; h += p.bleedMm; }
     if (r + rs === rows) h += p.bleedMm;
-    if (side === 0 && c === 0) { x -= p.bleedMm; w += p.bleedMm; }
-    if (side === 1 && c + cs === cols) w += p.bleedMm;
+    if (side !== 1 && c === 0) { x -= p.bleedMm; w += p.bleedMm; }
+    if (side !== 0 && c + cs === cols) w += p.bleedMm;
   }
   return { x, y, w, h };
 }

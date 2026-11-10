@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { newAlbum, type Album } from "./lib/layout";
+import { newAlbum, setCustomTemplates, type Album, type Tpl } from "./lib/layout";
 import { photosFromFiles, readAll, type Photo } from "./lib/photos";
 import { DEFAULT_PRESET, type Placement, type Preset } from "./lib/print";
 import { Editor } from "./views/Editor";
@@ -12,6 +12,11 @@ export type Design = { album: Album; place: Record<string, Placement> };
 type Saved = { v: 1; marks: Record<string, [boolean | null, number]>; design: Design | null; preset: Preset; target: number };
 
 const saveKey = (folder: string) => `lwalbum:${folder}`;
+/** The user's own templates are shared by every album on this computer. */
+const TPL_KEY = "lwalbum:templates";
+function loadTemplates(): Tpl[] {
+  try { const v = JSON.parse(localStorage.getItem(TPL_KEY) ?? "[]"); return Array.isArray(v) ? v : []; } catch { return []; }
+}
 
 export function App() {
   const [folder, setFolder] = useState("");
@@ -24,6 +29,12 @@ export function App() {
   const [hist, setHist] = useState<{ past: Design[]; now: Design | null; future: Design[] }>({ past: [], now: null, future: [] });
   const [restored, setRestored] = useState(false);
   const run = useRef(0);
+  const [custom, setCustomState] = useState<Tpl[]>(loadTemplates);
+  setCustomTemplates(custom); // the layout code looks templates up by id
+  const setCustom = useCallback((list: Tpl[]) => {
+    setCustomState(list);
+    try { localStorage.setItem(TPL_KEY, JSON.stringify(list)); } catch { /* storage full: templates last until the app closes */ }
+  }, []);
 
   const open = useCallback((files: FileList | null) => {
     if (!files || !files.length) return;
@@ -128,10 +139,10 @@ export function App() {
       )}
       {tab === "editor" && design && (
         <Editor photos={photos} design={design} commit={commit} undo={undo} redo={redo} canUndo={hist.past.length > 0}
-          canRedo={hist.future.length > 0} preset={preset} setPreset={setPreset} onRebuild={build} onExport={() => setTab("ekspor")} />
+          canRedo={hist.future.length > 0} preset={preset} setPreset={setPreset} onRebuild={build} onExport={() => setTab("ekspor")} custom={custom} setCustom={setCustom} />
       )}
       {tab === "ekspor" && design && (
-        <Ekspor photos={photos} design={design} preset={preset} setPreset={setPreset} />
+        <Ekspor photos={photos} design={design} preset={preset} setPreset={setPreset} custom={custom} />
       )}
     </div>
   );

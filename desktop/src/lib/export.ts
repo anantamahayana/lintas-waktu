@@ -4,11 +4,19 @@ import { CENTER, cellRectMm, cropRect, effectiveDpi, mmToPx, setJpegDpi, spreadP
 
 export type Spread = { left: LaidPage | null; right: LaidPage | null };
 
+/** Group laid pages into sheets. A joined sheet has its photos on `left` (side "both") and an empty tail on `right`. */
 export function toSpreads(pages: LaidPage[]): Spread[] {
   const out: Spread[] = [];
-  for (let i = 0; i < pages.length; i += 2) out.push({ left: pages[i] ?? null, right: pages[i + 1] ?? null });
+  for (const pg of pages) {
+    const s = (out[pg.spread] ??= { left: null, right: null });
+    if (pg.side === 1 || pg.side === "tail") s.right = pg; else s.left = pg;
+  }
+  for (let i = 0; i < out.length; i++) out[i] ??= { left: null, right: null };
   return out;
 }
+
+/** Printed page number of a laid page (blank facing pages count). */
+export const pageNo = (pg: LaidPage) => pg.spread * 2 + (pg.side === 1 || pg.side === "tail" ? 2 : 1);
 
 export type Warning = { page: number; id: string; dpi: number };
 
@@ -16,13 +24,14 @@ export type Warning = { page: number; id: string; dpi: number };
 export function lowResWarnings(pages: LaidPage[], byId: Map<string, Photo>, place: Record<string, Placement>, p: Preset): Warning[] {
   const out: Warning[] = [];
   for (const pg of pages) {
-    if (!pg.tpl) continue;
+    if (!pg.tpl || pg.side === "tail") continue;
+    const side = pg.side;
     pg.ids.forEach((id, k) => {
       const ph = byId.get(id);
       if (!ph || !ph.w) return;
-      const rect = cellRectMm(p, (pg.index % 2) as 0 | 1, pg.tpl!.cols, pg.tpl!.rows, pg.tpl!.cells[k]);
+      const rect = cellRectMm(p, side, pg.tpl!.cols, pg.tpl!.rows, pg.tpl!.cells[k]);
       const dpi = effectiveDpi(ph.w, ph.h, rect, place[id] ?? CENTER);
-      if (dpi < (p.dpi * 2) / 3) out.push({ page: pg.index + 1, id, dpi: Math.round(dpi) });
+      if (dpi < (p.dpi * 2) / 3) out.push({ page: pageNo(pg), id, dpi: Math.round(dpi) });
     });
   }
   return out;
@@ -36,8 +45,9 @@ export async function renderSpread(spread: Spread, byId: Map<string, Photo>, pla
   ctx.fillStyle = p.bg;
   ctx.fillRect(0, 0, w, h);
   ctx.imageSmoothingQuality = "high";
-  for (const [side, pg] of [[0, spread.left], [1, spread.right]] as const) {
-    if (!pg || !pg.tpl) continue;
+  for (const pg of [spread.left, spread.right]) {
+    if (!pg || !pg.tpl || pg.side === "tail") continue;
+    const side = pg.side;
     for (let k = 0; k < pg.ids.length; k++) {
       const ph = byId.get(pg.ids[k]);
       if (!ph) continue;
