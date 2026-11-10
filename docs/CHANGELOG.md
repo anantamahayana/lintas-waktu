@@ -6,6 +6,9 @@ dan **langkah manual** kalau ada. Detail teknis lengkap ada di pesan commit (`gi
 
 ---
 
+### 2026-11-10 · NantaPakeAI
+- Rencana proyek aplikasi desktop album foto (membuat, mengedit, mengelola produksi album): `docs/ALBUM_APP_PLAN.md`. Baru usulan; situs, admin, dan API tidak berubah. Lima keputusan pemilik di bagian 9 perlu dijawab sebelum pengerjaan mulai.
+
 ### 2026-10-11 · NantaPakeAI
 - Pemasaran: folder `marketing/` berisi riset pasar fotografi wedding Bali (harga pasar lokal vs asing, pesaing, saluran klien), rencana pemasaran 90 hari (13 Okt 2026 – 10 Jan 2027), daftar 45 calon mitra (kontak masih perlu dicek), dan template pesan EN/ID. Situs tidak berubah.
 
