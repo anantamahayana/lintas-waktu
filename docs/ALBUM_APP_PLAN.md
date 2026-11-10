@@ -1,6 +1,7 @@
 # Rencana proyek — aplikasi desktop album foto ("Lintas Waktu Album")
 
-Status: **usulan, belum dikerjakan.** Dibuat 2026-11-10; keputusan pemilik dicatat di bagian 9 (2026-11-10).
+Status: **fase 1 berjalan.** Bagian pertama (buka folder → kurasi → susun otomatis → edit → ekspor JPG cetak) ada di
+`desktop/` sejak 2026-11-10; daftar yang sudah dan belum ada: `desktop/README.md`. Keputusan pemilik: bagian 9.
 
 ## 1. Tujuan
 Satu aplikasi di laptop untuk **membuat, mengedit, dan mengelola produksi** album foto klien, dari pilihan klien di galeri
