@@ -8,7 +8,8 @@ dan **langkah manual** kalau ada. Detail teknis lengkap ada di pesan commit (`gi
 
 ### 2026-11-10 · NantaPakeAI
 - Rencana proyek aplikasi desktop album foto (membuat, mengedit, mengelola produksi album): `docs/ALBUM_APP_PLAN.md`. Baru usulan; situs, admin, dan API tidak berubah. Keputusan pemilik sudah dicatat di bagian 9: Windows, A4 sebagai ukuran bawaan, album sebagai tambahan berbayar, proof lewat galeri atau PDF WhatsApp, hanya untuk Lintas Waktu, dan jalur "kami yang memilih" dengan kurasi cepat untuk acara ribuan foto.
-  **Manual:** minta spesifikasi cetak ke percetakan (bleed, zona aman, jilid, format file) sebelum fase 1.
+Semua pengaturan cetak (ukuran, orientasi, bleed, zona aman, jilid, format ekspor) dan tata letak tiap halaman dipilih di aplikasi, dengan nilai bawaan umum dan preset yang bisa disimpan.
+  **Manual:** sebelum pesanan cetak pertama, cocokkan preset dengan percetakan yang dipakai.
 
 ### 2026-10-11 · NantaPakeAI
 - Pemasaran: folder `marketing/` berisi riset pasar fotografi wedding Bali (harga pasar lokal vs asing, pesaing, saluran klien), rencana pemasaran 90 hari (13 Okt 2026 – 10 Jan 2027), daftar 45 calon mitra (kontak masih perlu dicek), dan template pesan EN/ID. Situs tidak berubah.

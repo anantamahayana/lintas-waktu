@@ -1,6 +1,6 @@
 # Rencana proyek — aplikasi desktop album foto ("Lintas Waktu Album")
 
-Status: **usulan, belum dikerjakan.** Dibuat 2026-11-10; keputusan pemilik dicatat di bagian 9 (2026-11-10). Satu hal masih terbuka: nama dan spesifikasi percetakan.
+Status: **usulan, belum dikerjakan.** Dibuat 2026-11-10; keputusan pemilik dicatat di bagian 9 (2026-11-10).
 
 ## 1. Tujuan
 Satu aplikasi di laptop untuk **membuat, mengedit, dan mengelola produksi** album foto klien, dari pilihan klien di galeri
@@ -42,6 +42,34 @@ album jadi dan meminta revisi kalau perlu.
   bebas; jumlah halaman bisa diatur. Preset percetakan terpisah (bleed, zona aman, lipatan).
 - Tata letak otomatis: titik awalnya algoritma `layoutPages` di `AlbumPreview.tsx` (1–3 foto per halaman, mengikuti
   orientasi), diperluas dengan foto satu spread penuh dan urutan mengikuti waktu pemotretan.
+
+### Semua bisa diatur (prinsip desain)
+Tidak ada angka cetak atau tata letak yang dikunci di kode. Aplikasi datang dengan nilai bawaan yang umum dipakai,
+dan semuanya bisa diubah, disimpan sebagai preset, lalu dipilih per album:
+
+| Yang diatur | Bawaan | Pilihan |
+|---|---|---|
+| Ukuran & orientasi | A4 mendatar | A4 tegak, 20×30, 25×25, 30×30 cm, ukuran bebas (cm) |
+| Jumlah halaman | 20 | bebas; tambah/hapus spread kapan saja |
+| Bleed | 3 mm tiap sisi | 0–10 mm |
+| Zona aman | 5 mm dari tepi potong, 10 mm dari lipatan | bebas |
+| Jilid | lipatan tengah rata (layflat) | jilid biasa (foto tidak melewati lipatan) |
+| Resolusi & warna | 300 dpi, sRGB | 150–600 dpi; profil warna lain menyusul |
+| Format ekspor | JPG per spread, kualitas maksimum | JPG per halaman, PDF satu file, PNG |
+| Nama file | `NamaKlien_01.jpg` | pola bebas |
+| Margin & jarak antar foto | 7% tepi, 2% jarak | bebas, per album atau per halaman |
+| Latar halaman | putih | warna bebas (krem brand, hitam) |
+
+Preset percetakan = satu set nilai di atas dengan nama (mis. "Percetakan X · A4 layflat"); bisa dibuat, diduplikat,
+diekspor/diimpor sebagai file untuk dipakai di laptop kedua. Nilai bawaan adalah kebiasaan umum percetakan, **bukan**
+spesifikasi satu percetakan tertentu: sebelum pesanan pertama, cocokkan sekali dengan percetakan yang dipakai.
+
+**Tata letak halaman dipilih sendiri.** Tata letak otomatis hanya titik awal:
+- Galeri template per halaman dan per spread, dikelompokkan menurut jumlah foto (1, 2, 3, 4, 5+) dan gaya (penuh
+  sampai tepi, bermargin, kolase, satu foto melintasi spread). Klik template → halaman langsung berubah.
+- "Acak ulang" untuk satu halaman, satu spread, atau seluruh album; halaman yang sudah pas bisa **dikunci**.
+- Template buatan sendiri: susun bingkai bebas di halaman, simpan sebagai template, pakai lagi di album lain.
+- Gaya album (set template + margin + latar) bisa disimpan, mis. "Bersih bermargin" dan "Kolase penuh".
 
 ### B. Mengedit
 - Editor spread: seret untuk menukar foto, ganti template halaman, geser/perbesar foto di dalam bingkai, atur margin.
@@ -89,11 +117,11 @@ Perkiraan kasar untuk pengerjaan paruh waktu; dikoreksi setelah fase 0.
 
 | Fase | Isi | Hasil yang bisa dipakai | Perkiraan |
 |---|---|---|---|
-| 0. Spesifikasi | Jawab keputusan bagian 9; kumpulkan spesifikasi 1–2 percetakan; sketsa layar | Dokumen spesifikasi + ukuran album pasti | 1 minggu |
-| 1. Editor inti | Proyek dari folder, proxy, **kurasi cepat**, tata letak otomatis, editor spread, simpan/undo, ekspor JPG + PDF cetak + **PDF pratinjau WhatsApp**, catatan revisi manual | Album pertama (jalur 2) bisa dipilih, didesain, direvisi, dan dicetak | 4–5 minggu |
+| 0. Spesifikasi | Sketsa layar; daftar ±20 template halaman awal; bentuk file preset | Sketsa yang disetujui pemilik | 1 minggu |
+| 1. Editor inti | Proyek dari folder, proxy, **kurasi cepat**, tata letak otomatis, editor spread dengan galeri template dan kunci halaman, pengaturan preset cetak, simpan/undo, ekspor JPG + PDF cetak + **PDF pratinjau WhatsApp**, catatan revisi manual | Album pertama (jalur 2) bisa dipilih, didesain, direvisi, dan dicetak | 5–6 minggu |
 | 2. Sambung ke galeri | Tarik sesi + pilihan klien, cocokkan file asli, unggah proof, komentar + setuju di galeri | Klien menyetujui album tanpa kirim-kiriman file | 2 minggu |
 | 3. Produksi | Papan status, biaya, tenggat, resi, halaman status di admin | Semua album terpantau di satu tempat | 1–2 minggu |
-| 4. Poles | Sampul, pemeriksaan sebelum cetak, installer Windows, pembaruan otomatis | Siap dipakai harian oleh dua orang | 2 minggu |
+| 4. Poles | Sampul, template buatan sendiri, gaya album, pemeriksaan sebelum cetak, installer Windows, pembaruan otomatis | Siap dipakai harian oleh dua orang | 2 minggu |
 
 Setiap fase berakhir dengan satu album sungguhan dikerjakan dari awal sampai akhir sebagai uji.
 
@@ -122,13 +150,12 @@ Dijawab pemilik 2026-11-10:
 4. **Persetujuan klien:** dua cara disediakan (galeri web dan PDF lewat WhatsApp), dipilih per album.
 5. **Cakupan:** hanya untuk Lintas Waktu; tanpa akun, lisensi, atau tanda tangan kode.
 6. **Sumber foto:** bukan hanya pilihan klien; untuk acara panjang kami yang memilih (jalur 2, kurasi cepat).
+7. **Fleksibel di semua hal:** spesifikasi cetak, ukuran/orientasi, dan tata letak tiap halaman dipilih di dalam
+   aplikasi (lihat "Semua bisa diatur"); aplikasi memakai nilai bawaan umum, tidak menunggu spesifikasi percetakan.
 
-Masih terbuka (dijawab di fase 0):
-- Percetakan yang dipakai dan spesifikasinya: bleed, zona aman, jenis jilid (lipatan tengah rata atau tidak), format
-  file yang diminta (JPG per spread, per halaman, atau PDF), jumlah halaman minimum/maksimum.
-- A4 yang biasa dipesan: tegak atau mendatar?
+Tidak ada keputusan yang masih terbuka. Satu pemeriksaan sebelum pesanan cetak pertama: cocokkan preset dengan percetakan.
 
 ## 10. Langkah berikutnya
-Minta spesifikasi cetak ke percetakan (daftar di atas), lalu tulis spesifikasi fase 0 (preset, sketsa layar) dan buat
+Tulis spesifikasi fase 0 (daftar template awal, sketsa layar: kurasi, editor spread, pengaturan preset) dan buat
 kerangka `desktop/` dengan Tauri dan layar pertama (buka folder → kurasi → tata letak otomatis → ekspor satu spread)
 sebagai bukti alur.
