@@ -1,6 +1,6 @@
 # Rencana proyek — aplikasi desktop album foto ("Lintas Waktu Album")
 
-Status: **usulan, belum dikerjakan.** Dibuat 2026-11-10. Keputusan di bagian 9 perlu dijawab pemilik sebelum fase 1 mulai.
+Status: **usulan, belum dikerjakan.** Dibuat 2026-11-10; keputusan pemilik dicatat di bagian 9 (2026-11-10). Satu hal masih terbuka: nama dan spesifikasi percetakan.
 
 ## 1. Tujuan
 Satu aplikasi di laptop untuk **membuat, mengedit, dan mengelola produksi** album foto klien, dari pilihan klien di galeri
@@ -18,17 +18,28 @@ mengedit bersamaan.
 ## 2. Pengguna dan alur kerja
 Pengguna: Nanta dan Yukti (2 orang, laptop masing-masing). Klien tidak memasang apa pun; mereka melihat proof di galeri web.
 
+Dua jalur masuk, satu jalur keluar:
+
 ```
-Klien memilih foto di galeri  →  Aplikasi menarik daftar pilihan  →  Cocokkan dengan file asli di laptop
-→  Tata letak otomatis  →  Edit per spread  →  Kirim proof ke galeri klien  →  Klien komentar / setuju
-→  Ekspor file cetak  →  Pesan ke percetakan  →  Lacak: dicetak → dikirim → diterima
+Jalur 1 (klien memilih):  Klien memilih di galeri → aplikasi menarik daftar pilihan → cocokkan dengan file asli
+Jalur 2 (kami memilih):   Buka folder acara (ribuan foto) → kurasi cepat di aplikasi → foto terpilih
+        ↓
+Tata letak otomatis → edit per spread → kirim proof ke klien (galeri web ATAU PDF lewat WhatsApp)
+→ revisi sampai disetujui → ekspor file cetak → percetakan → lacak: dicetak → dikirim → diterima
 ```
+
+Jalur 2 dipakai untuk acara panjang dengan ribuan foto: kami yang memilih dan mendesain dulu, klien baru melihat
+album jadi dan meminta revisi kalau perlu.
 
 ## 3. Fitur
 ### A. Membuat
 - Proyek album baru dari sesi yang ada di API (nama klien, tanggal, daftar foto pilihan) atau dari folder biasa.
 - Mencocokkan pilihan klien dengan **file asli resolusi penuh** di laptop lewat nama file; yang tidak ketemu ditandai.
-- Preset ukuran album (mis. 20×30, 25×25, 30×30 cm; jumlah halaman) dan preset percetakan (bleed, zona aman, lipatan).
+- **Kurasi cepat** untuk jalur 2: buka folder berisi ribuan foto, lihat satu per satu atau per kisi, tandai dengan
+  keyboard (pilih / lewati / bintang), filter menurut waktu pemotretan, dan penghitung "terpilih 84 dari target 80".
+  Thumbnail dibuat di latar belakang supaya folder 3.000+ foto tetap lancar.
+- Preset ukuran album: **A4 (21×29,7 cm) sebagai bawaan**, tegak dan mendatar, plus 20×30, 25×25, 30×30 cm dan ukuran
+  bebas; jumlah halaman bisa diatur. Preset percetakan terpisah (bleed, zona aman, lipatan).
 - Tata letak otomatis: titik awalnya algoritma `layoutPages` di `AlbumPreview.tsx` (1–3 foto per halaman, mengikuti
   orientasi), diperluas dengan foto satu spread penuh dan urutan mengikuti waktu pemotretan.
 
@@ -42,14 +53,16 @@ Klien memilih foto di galeri  →  Aplikasi menarik daftar pilihan  →  Cocokka
 ### C. Mengelola produksi
 - Papan status: Desain → Proof dikirim → Revisi → Disetujui → Dipesan → Dicetak → Dikirim → Diterima.
 - Per album: percetakan, biaya cetak, harga jual, tenggat, nomor resi, catatan.
-- Proof ke klien: pratinjau spread diunggah ke galeri klien; klien memberi komentar per spread dan menekan "Setuju".
+- Proof ke klien, **dua cara yang dipilih per album**: (a) pratinjau spread diunggah ke galeri klien, klien memberi
+  komentar per spread dan menekan "Setuju"; (b) PDF pratinjau kecil bernomor halaman untuk dikirim lewat WhatsApp,
+  revisi dan persetujuan dicatat manual di aplikasi. Setiap putaran revisi disimpan sebagai versi (v1, v2, ...).
 - Ekspor: JPG per spread dan PDF siap cetak (300 dpi, sRGB, dengan bleed), plus PDF pratinjau kecil untuk WhatsApp.
 - Daftar tenggat: album mana yang paling dekat batas waktunya.
 
 ## 4. Teknologi (usulan)
 | Bagian | Pilihan | Alasan |
 |---|---|---|
-| Kerangka desktop | **Tauri 2** | Installer kecil (±10 MB), jalan di Windows dan macOS, UI ditulis dengan React seperti `web/` |
+| Kerangka desktop | **Tauri 2** | Installer kecil (±10 MB), target **Windows** (WebView2 sudah ada di Windows 10/11), UI ditulis dengan React seperti `web/` |
 | UI | React + TypeScript + Tailwind | Sama dengan situs; komponen logo dan warna brand bisa dipakai ulang |
 | Pengolahan gambar | Rust (`image`, `fast_image_resize`) | Membuat proxy dan mengekspor file besar tanpa membuat UI macet |
 | Data lokal | SQLite + file proyek `.lwalbum` (JSON) | Bekerja tanpa internet; file proyek bisa dicadangkan/dipindah |
@@ -77,10 +90,10 @@ Perkiraan kasar untuk pengerjaan paruh waktu; dikoreksi setelah fase 0.
 | Fase | Isi | Hasil yang bisa dipakai | Perkiraan |
 |---|---|---|---|
 | 0. Spesifikasi | Jawab keputusan bagian 9; kumpulkan spesifikasi 1–2 percetakan; sketsa layar | Dokumen spesifikasi + ukuran album pasti | 1 minggu |
-| 1. Editor inti | Proyek dari folder, proxy, tata letak otomatis, editor spread, simpan/undo, ekspor JPG + PDF | Album pertama bisa didesain dan dicetak | 3–4 minggu |
+| 1. Editor inti | Proyek dari folder, proxy, **kurasi cepat**, tata letak otomatis, editor spread, simpan/undo, ekspor JPG + PDF cetak + **PDF pratinjau WhatsApp**, catatan revisi manual | Album pertama (jalur 2) bisa dipilih, didesain, direvisi, dan dicetak | 4–5 minggu |
 | 2. Sambung ke galeri | Tarik sesi + pilihan klien, cocokkan file asli, unggah proof, komentar + setuju di galeri | Klien menyetujui album tanpa kirim-kiriman file | 2 minggu |
 | 3. Produksi | Papan status, biaya, tenggat, resi, halaman status di admin | Semua album terpantau di satu tempat | 1–2 minggu |
-| 4. Poles | Sampul, pemeriksaan sebelum cetak, installer Windows/macOS, pembaruan otomatis | Siap dipakai harian oleh dua orang | 2 minggu |
+| 4. Poles | Sampul, pemeriksaan sebelum cetak, installer Windows, pembaruan otomatis | Siap dipakai harian oleh dua orang | 2 minggu |
 
 Setiap fase berakhir dengan satu album sungguhan dikerjakan dari awal sampai akhir sebagai uji.
 
@@ -89,7 +102,7 @@ Setiap fase berakhir dengan satu album sungguhan dikerjakan dari awal sampai akh
   (ukuran piksel = ukuran cm × 300 dpi + bleed).
 - Tes API (`cd api && python -m pytest -q`) untuk endpoint album dan izin PIN.
 - Uji cetak: satu album contoh ke percetakan di akhir fase 1; bandingkan warna dan potongan dengan layar.
-- Uji beban: proyek 150 foto asli (±25 MB per file) tetap lancar di laptop 8 GB RAM.
+- Uji beban: kurasi folder 3.000 foto dan proyek 150 foto asli (±25 MB per file) tetap lancar di laptop 8 GB RAM.
 
 ## 8. Risiko
 | Risiko | Penanganan |
@@ -98,16 +111,24 @@ Setiap fase berakhir dengan satu album sungguhan dikerjakan dari awal sampai akh
 | Spesifikasi tiap percetakan berbeda | Preset per percetakan yang bisa diedit, bukan angka tetap di kode |
 | File besar membuat aplikasi lambat | Edit dengan proxy; file asli hanya dibuka saat ekspor, satu spread per kali |
 | Nama file asli berubah setelah diunggah | Cocokkan dengan nama + waktu pemotretan (EXIF); sisanya dicocokkan manual |
-| Installer diberi peringatan oleh Windows/macOS | Untuk dua pengguna internal cukup "tetap jalankan"; tanda tangan kode (berbayar) hanya kalau dibagikan ke luar |
+| Installer diberi peringatan oleh Windows (SmartScreen) | Untuk dua pengguna internal cukup "tetap jalankan"; tanda tangan kode (berbayar) tidak diperlukan |
 | Menyita waktu dari pekerjaan klien | Berhenti setelah fase 1 kalau editor inti saja sudah cukup menghemat waktu |
 
-## 9. Keputusan yang perlu dijawab
-1. **Sistem operasi** laptop Nanta dan Yukti (Windows, macOS, atau keduanya)?
-2. **Percetakan** yang dipakai sekarang dan ukuran album yang dijual (ini menentukan preset pertama)?
-3. **Album dijual sebagai apa**: tambahan berbayar seperti di ratecard (album kolase 20 hlm + box Rp 1 jt), atau masuk paket?
-4. **Persetujuan klien** lewat galeri web (usulan) atau cukup PDF lewat WhatsApp untuk versi pertama? Yang kedua memangkas fase 2.
-5. **Hanya untuk Lintas Waktu**, atau suatu saat dijual ke fotografer lain? Kalau dijual, butuh akun, lisensi, dan tanda tangan kode sejak awal.
+## 9. Keputusan
+Dijawab pemilik 2026-11-10:
+1. **Sistem operasi:** Windows saja.
+2. **Ukuran:** biasanya A4; ukuran lain tetap disediakan.
+3. **Penjualan:** album adalah tambahan berbayar, bukan isi paket.
+4. **Persetujuan klien:** dua cara disediakan (galeri web dan PDF lewat WhatsApp), dipilih per album.
+5. **Cakupan:** hanya untuk Lintas Waktu; tanpa akun, lisensi, atau tanda tangan kode.
+6. **Sumber foto:** bukan hanya pilihan klien; untuk acara panjang kami yang memilih (jalur 2, kurasi cepat).
+
+Masih terbuka (dijawab di fase 0):
+- Percetakan yang dipakai dan spesifikasinya: bleed, zona aman, jenis jilid (lipatan tengah rata atau tidak), format
+  file yang diminta (JPG per spread, per halaman, atau PDF), jumlah halaman minimum/maksimum.
+- A4 yang biasa dipesan: tegak atau mendatar?
 
 ## 10. Langkah berikutnya
-Setelah lima hal di atas dijawab: tulis spesifikasi fase 0 (ukuran, preset, sketsa layar), lalu buat kerangka `desktop/`
-dengan Tauri dan layar pertama (buka folder → tata letak otomatis → ekspor satu spread) sebagai bukti alur.
+Minta spesifikasi cetak ke percetakan (daftar di atas), lalu tulis spesifikasi fase 0 (preset, sketsa layar) dan buat
+kerangka `desktop/` dengan Tauri dan layar pertama (buka folder → kurasi → tata letak otomatis → ekspor satu spread)
+sebagai bukti alur.
