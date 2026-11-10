@@ -6,6 +6,17 @@ dan **langkah manual** kalau ada. Detail teknis lengkap ada di pesan commit (`gi
 
 ---
 
+### 2026-11-10 · NantaPakeAI
+- Aplikasi album (`desktop/`, baru): versi pertama yang bisa dipakai. Buka folder foto → kurasi dengan keyboard (P pilih, X lewati, 1–5 bintang, target jumlah) → album disusun otomatis → edit per halaman (jumlah foto 1–4, pilih template, acak, kunci, seret untuk menukar, perbesar/geser foto, margin, jarak, latar, urungkan) → ekspor JPG per spread dari file asli (A4 mendatar bawaan: 7.087 × 2.551 px, 300 dpi, bleed 3 mm; semua angka bisa diubah) dengan peringatan resolusi rendah. Pekerjaan tersimpan otomatis per nama folder. Belum ada: sampul, PDF pratinjau, proof ke galeri, papan produksi. Situs, admin, dan API tidak berubah.
+- Aplikasi album: **template buatan sendiri** (atur kisi, tandai bingkai dengan klik dua sudut, sampai 12 foto per halaman, tersimpan untuk semua album) dan **dua halaman menyambung** untuk jilid layflat (satu spread jadi satu lembar, foto boleh melintasi lipatan; 7 template spread bawaan; jenis jilid dipilih di Ekspor, jilid biasa diberi peringatan).
+  **Manual:** untuk installer Windows, buka GitHub → Actions → "Album app (Windows installer)" → Run workflow, lalu unduh dari Artifacts (build Windows belum pernah dijalankan; kabari kalau gagal). Untuk mencoba tanpa installer: `cd desktop && npm install && npm run dev`, buka di Chrome/Edge.
+- Rencana proyek aplikasi desktop album foto (membuat, mengedit, mengelola produksi album): `docs/ALBUM_APP_PLAN.md`. Baru usulan; situs, admin, dan API tidak berubah. Keputusan pemilik sudah dicatat di bagian 9: Windows, A4 sebagai ukuran bawaan, album sebagai tambahan berbayar, proof lewat galeri atau PDF WhatsApp, hanya untuk Lintas Waktu, dan jalur "kami yang memilih" dengan kurasi cepat untuk acara ribuan foto.
+Semua pengaturan cetak (ukuran, orientasi, bleed, zona aman, jilid, format ekspor) dan tata letak tiap halaman dipilih di aplikasi, dengan nilai bawaan umum dan preset yang bisa disimpan.
+  **Manual:** sebelum pesanan cetak pertama, cocokkan preset dengan percetakan yang dipakai.
+
+### 2026-10-11 · NantaPakeAI
+- Pemasaran: folder `marketing/` berisi riset pasar fotografi wedding Bali (harga pasar lokal vs asing, pesaing, saluran klien), rencana pemasaran 90 hari (13 Okt 2026 – 10 Jan 2027), daftar 45 calon mitra (kontak masih perlu dicek), dan template pesan EN/ID. Situs tidak berubah.
+
 ### 2026-10-08 · NantaPakeAI
 - Keamanan: Next.js 16.3.5 → 16.3.8 (menambal celah kritis di gambar share `next/og` dan beberapa celah cache/SSRF), sharp diperbarui; API: Pillow, FastAPI/Starlette, python-multipart, uvicorn, lxml dkk. diperbarui, token admin pindah dari python-jose ke PyJWT (sesi admin yang sedang login tetap berlaku). Audit npm (produksi) dan pip: 0 celah. Logo SVG unggahan kini disajikan tanpa izin skrip. 6 tes keamanan baru (47 tes total). Detail: `docs/PLAN.md` → "Pemeriksaan keamanan".
   **Manual:** setelah deploy, cek Railway hijau dan `/api/health` = ok. Disarankan `SECRET_KEY` di Railway ≥ 32 karakter (log API akan memberi peringatan kalau lebih pendek; menggantinya membuat PIN galeri yang sedang aktif perlu dibagikan ulang, jadi lakukan saat tidak ada galeri berjalan).
