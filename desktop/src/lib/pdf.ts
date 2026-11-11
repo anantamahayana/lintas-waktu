@@ -2,9 +2,9 @@ import { jpegSize } from "./photos";
 
 /**
  * A small PDF of JPEG pages (the images are embedded as they are, no re-encoding).
- * Each page is `widthPt` wide and as tall as its image's shape asks.
+ * Each page is `widthPt` wide (one number for all, or one per page) and as tall as its image's shape asks.
  */
-export function pdfFromJpegs(jpegs: Uint8Array[], widthPt = 842): Blob {
+export function pdfFromJpegs(jpegs: Uint8Array[], widthPt: number | number[] = 842): Blob {
   const enc = new TextEncoder();
   const chunks: Uint8Array[] = [];
   const offsets: number[] = [];
@@ -20,7 +20,7 @@ export function pdfFromJpegs(jpegs: Uint8Array[], widthPt = 842): Blob {
   obj(2, () => put(`<< /Type /Pages /Count ${n} /Kids [${jpegs.map((_, i) => `${pageId(i)} 0 R`).join(" ")}] >>`));
   jpegs.forEach((jpg, i) => {
     const size = jpegSize(jpg) ?? { w: 1, h: 1 };
-    const W = widthPt, H = Math.round((widthPt * size.h) / size.w * 100) / 100;
+    const W = Math.round((Array.isArray(widthPt) ? widthPt[i] : widthPt) * 100) / 100, H = Math.round((W * size.h) / size.w * 100) / 100;
     const content = `q ${W} 0 0 ${H} 0 0 cm /Im Do Q`;
     obj(pageId(i), () => put(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /XObject << /Im ${pageId(i) + 2} 0 R >> >> /Contents ${pageId(i) + 1} 0 R >>`));
     obj(pageId(i) + 1, () => { put(`<< /Length ${content.length} >>\nstream\n`); put(content); put("\nendstream"); });

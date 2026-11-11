@@ -106,6 +106,27 @@ export async function proofPdf(
   return pdfFromJpegs(pages);
 }
 
+/**
+ * The print files as one PDF at full resolution: cover (if any) then every spread, bleed included,
+ * each page at its real size in millimetres, ready for a printer that asks for a PDF.
+ */
+export async function printPdf(
+  cover: Cover | null, spreads: Spread[], byId: Map<string, Photo>, place: Record<string, Placement>, p: Preset, onProgress: (done: number) => void,
+): Promise<Blob> {
+  const pt = (mm: number) => (mm / 25.4) * 72;
+  const pages: Uint8Array[] = [], widths: number[] = [];
+  if (cover && hasCover(cover)) {
+    pages.push(new Uint8Array(await (await renderCover(cover, byId, p)).arrayBuffer()));
+    widths.push(pt(2 * p.pageWmm + p.spineMm + 2 * (p.bleedMm + p.wrapMm)));
+  }
+  for (let i = 0; i < spreads.length; i++) {
+    pages.push(new Uint8Array(await (await renderSpread(spreads[i], byId, place, p)).arrayBuffer()));
+    widths.push(pt(spreadMm(p).w));
+    onProgress(i + 1);
+  }
+  return pdfFromJpegs(pages, widths);
+}
+
 export const hasCover = (c: Cover) => !!(c.front || c.back || c.title);
 
 export const spreadFileName = (p: Preset, i: number) =>
