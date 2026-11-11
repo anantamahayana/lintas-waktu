@@ -1,4 +1,4 @@
-import type { Photo } from "./photos";
+import { photoBlob, type Photo } from "./photos";
 import { CENTER, cropRect, mmToPx, setJpegDpi, type Placement, type Preset, type Rect } from "./print";
 
 /** The cover: back panel, spine and front panel printed as one sheet. */
@@ -41,7 +41,7 @@ export function coverParts(p: Preset): { back: Rect; spine: Rect; front: Rect; t
 
 /** Gets a decoded image for a photo: the full file for print, the thumbnail for on-screen previews. */
 export type Source = (ph: Photo) => Promise<ImageBitmap>;
-export const fromFile: Source = (ph) => createImageBitmap(ph.file);
+export const fromFile: Source = async (ph) => createImageBitmap(await photoBlob(ph));
 export const fromThumb: Source = async (ph) => createImageBitmap(await (await fetch(ph.thumb!)).blob());
 
 async function drawPhoto(ctx: OffscreenCanvasRenderingContext2D, ph: Photo, r: Rect, pl: Placement, dpi: number, src: Source) {

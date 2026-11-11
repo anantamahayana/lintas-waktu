@@ -2,6 +2,12 @@
 
 Aplikasi Windows untuk memilih foto, menyusun album, dan mengekspor file cetak. Rencana lengkap: `docs/ALBUM_APP_PLAN.md`.
 
+## Aplikasi Windows vs pratinjau web
+Di aplikasi Windows: folder foto diingat, proyek berupa file `.lwalbum` di `Documents\LW Album\Proyek` (versi lama di
+`.versi`), thumbnail di cache aplikasi, RAW didukung lewat pratinjau JPEG di dalam file RAW, ekspor langsung ke folder.
+Di browser/pratinjau web: folder dipilih ulang tiap membuka proyek, proyek di penyimpanan browser, hanya JPG/PNG/WebP.
+Kode yang menyentuh file ada di `src/lib/platform.ts` (sisi web) dan `src-tauri/src/` (sisi Windows).
+
 ## Yang sudah ada (fase 1, bagian pertama)
 - **Beranda**: buat proyek baru (nama, titik awal seperti A4 mendatar/tegak, 25×25, 30×30, lalu semua properti album) atau
   lanjutkan proyek terakhir. Foto (JPG/PNG/WebP) tetap di laptop; tidak ada yang diunggah. Saat membuka proyek lama,

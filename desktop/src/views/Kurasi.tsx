@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { ask } from "../lib/ask";
-import type { Photo } from "../lib/photos";
+import { photoUrl, type Photo } from "../lib/photos";
 
 type Filter = "all" | "picked" | "unseen" | "stars";
 type Props = {
@@ -33,9 +33,9 @@ export function Kurasi({ photos, setPhotos, curId, setCurId, target, setTarget, 
   // The big view shows the original file, decoded by the browser (EXIF rotation included).
   useEffect(() => {
     if (!cur) { setFull(""); return; }
-    const url = URL.createObjectURL(cur.file);
+    const { url, release } = photoUrl(cur);
     setFull(url);
-    return () => URL.revokeObjectURL(url);
+    return release;
   }, [cur?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const go = useCallback((d: number) => {

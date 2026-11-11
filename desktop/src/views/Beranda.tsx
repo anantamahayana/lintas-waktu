@@ -3,18 +3,22 @@ import { ask } from "../lib/ask";
 import { DEFAULT_PRESET, STARTS, type Preset } from "../lib/print";
 import { PresetForm } from "./PresetForm";
 
-/** What the home screen lists for each saved project. */
-export type ProjectMeta = { id: string; name: string; folder: string; updated: number; photos: number; picked: number; size: string };
+import { isNative } from "../lib/platform";
+import type { ProjectMeta } from "../lib/projects";
+export type { ProjectMeta };
 
 type Props = {
   projects: ProjectMeta[];
   onCreate: (name: string, preset: Preset) => void;
   onOpen: (p: ProjectMeta) => void;
   onDelete: (p: ProjectMeta) => void;
+  /** Windows app: open a project file from anywhere (a copy from another laptop, a backup). */
+  onOpenFile?: () => void;
+  projectsDir?: string;
 };
 
 /** Start screen: make a project (and set the album's properties) or carry on with a recent one. */
-export function Beranda({ projects, onCreate, onOpen, onDelete }: Props) {
+export function Beranda({ projects, onCreate, onOpen, onDelete, onOpenFile, projectsDir }: Props) {
   const [name, setName] = useState("");
   const [start, setStart] = useState(STARTS[0].id);
   const [preset, setPreset] = useState<Preset>(DEFAULT_PRESET);
@@ -63,13 +67,16 @@ export function Beranda({ projects, onCreate, onOpen, onDelete }: Props) {
               <button type="button" className="proj-open" onClick={() => onOpen(p)}>
                 <strong>{p.name}</strong>
                 <span className="dim">{p.size} · {p.picked} dari {p.photos} foto dipilih</span>
-                <span className="dim">Folder "{p.folder}" · {new Date(p.updated).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}</span>
+                <span className="dim">Folder "{p.folder.split(/[\\/]/).filter(Boolean).pop() ?? p.folder}" · {new Date(p.updated).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}</span>
               </button>
               <button type="button" className="btn" aria-label={`Hapus proyek ${p.name}`}
                 onClick={async () => { if (await ask(`Hapus proyek "${p.name}"? Foto di laptop tidak ikut terhapus.`, "Hapus")) onDelete(p); }}>Hapus</button>
             </div>
           ))}
-          {projects.length > 0 && <p className="dim">Saat membuka proyek, pilih lagi folder fotonya: aplikasi tidak menyimpan salinan foto.</p>}
+          {onOpenFile && <button type="button" className="btn" onClick={onOpenFile}>Buka file proyek lain…</button>}
+          {isNative
+            ? projectsDir && <p className="dim">Proyek tersimpan sebagai file .lwalbum di {projectsDir}. Salin file itu untuk memindahkan proyek ke laptop lain; versi lama ada di folder .versi.</p>
+            : projects.length > 0 && <p className="dim">Saat membuka proyek, pilih lagi folder fotonya: aplikasi tidak menyimpan salinan foto.</p>}
         </section>
       </div>
     </div>

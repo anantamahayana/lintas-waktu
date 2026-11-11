@@ -2,6 +2,7 @@ import type { LaidPage } from "./layout";
 import type { Photo } from "./photos";
 import { drawCover, fromFile, renderCover, type Cover, type Source } from "./cover";
 import { pdfFromJpegs } from "./pdf";
+import { isNative, join, pickFolder, writeBytes } from "./platform";
 import { zip } from "./zip";
 import { CENTER, cellRectMm, cropRect, effectiveDpi, mmToPx, setJpegDpi, spreadMm, type Placement, type Preset } from "./print";
 
@@ -153,6 +154,20 @@ export async function exportAlbum(
   spreads: Spread[], byId: Map<string, Photo>, place: Record<string, Placement>, p: Preset, onProgress: (done: number) => void,
   cover: Cover | null = null,
 ): Promise<ExportResult> {
+  if (isNative) {
+    const folder = await pickFolder("Simpan file cetak ke folder");
+    if (!folder) throw new DOMException("cancelled", "AbortError");
+    const withCover = !!cover && hasCover(cover);
+    const jobs = [
+      ...(withCover ? [{ name: coverFileName(p), make: () => renderCover(cover!, byId, p) }] : []),
+      ...spreads.map((s, i) => ({ name: spreadFileName(p, i), make: () => renderSpread(s, byId, place, p) })),
+    ];
+    for (let i = 0; i < jobs.length; i++) {
+      await writeBytes(await join(folder, jobs[i].name), await jobs[i].make());
+      onProgress(i + 1);
+    }
+    return "folder";
+  }
   const picker = (window as unknown as { showDirectoryPicker?: (o: object) => Promise<DirHandle> }).showDirectoryPicker;
   let dir: DirHandle | null = null;
   if (picker) {
@@ -194,6 +209,14 @@ export const coverFileName = (p: Preset) => `${stem(p)}_00_Sampul.jpg`;
 
 /** Offer one file: through the hosted preview's save dialog when there is one, else as a normal download. */
 export async function saveFile(blob: Blob, filename: string, host?: Downloads | null): Promise<void> {
+  if (isNative) {
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const ext = filename.slice(filename.lastIndexOf(".") + 1);
+    const path = await save({ defaultPath: filename, filters: [{ name: ext.toUpperCase(), extensions: [ext] }] });
+    if (!path) throw new DOMException("cancelled", "AbortError");
+    await writeBytes(path, blob);
+    return;
+  }
   const h = host === undefined ? await hostDownloads() : host;
   if (h) {
     try { await h.save({ filename, data: blob }); }
