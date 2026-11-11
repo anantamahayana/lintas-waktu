@@ -25,13 +25,18 @@ type Props = {
   onFrames: (page: number, boxes: Box[], replace: boolean) => void;
   onText: (page: number, id: string, patch: Partial<TextBox>, replace: boolean) => void;
   onEditText: (t: TextSel) => void;
+  /** Frames whose photo prints below the target resolution: id → dpi. */
+  lowres?: Map<string, number>;
+  /** Hand tool: the sheet ignores the pointer so the canvas can be dragged. */
+  passive?: boolean;
 };
 
 const pct = (n: number) => `${n * 100}%`;
 const SNAP_MM = 2;
 
 /** One sheet of the album, editable: photos in frames, frames and text that can be moved and resized. */
-export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSelectPhoto, onSelectText, onDrop, onFrames, onText, onEditText }: Props) {
+export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSelectPhoto, onSelectText, onDrop, onFrames, onText, onEditText, lowres, passive }: Props) {
+  const [dragOver, setDragOver] = useState("");
   const ref = useRef<HTMLDivElement>(null);
   const sheet = spreadMm(preset);
   const [lines, setLines] = useState<{ x: number[]; y: number[] }>({ x: [], y: [] });
@@ -122,17 +127,20 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
     const pos = `${pl.x * 100}% ${pl.y * 100}%`;
     const stroke = pg.cfg.stroke && pg.cfg.stroke.mm > 0 ? { boxShadow: `inset 0 0 0 ${(pg.cfg.stroke.mm / sheet.w) * 100}cqw ${pg.cfg.stroke.color}` } : undefined;
     return (
-      <div key={id} className={`frame ${selected ? "on" : ""}`} style={box(r)}>
+      <div key={id} className={`frame ${selected ? "on" : ""} ${dragOver === id ? "over" : ""} ${lowres?.has(id) ? "lowres" : ""}`} style={box(r)}>
         <button type="button" className={ph ? "cell" : "cell blank"} style={stroke} aria-pressed={selected}
           aria-label={ph ? `Foto ${ph.name}` : `Bingkai kosong`} draggable={!!ph}
           onClick={(e) => { e.stopPropagation(); onSelectPhoto(id); }}
           onDragStart={(e) => { e.dataTransfer.setData("text/plain", id); e.dataTransfer.effectAllowed = "move"; }}
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => { e.preventDefault(); onDrop(id, e.dataTransfer.getData("text/plain")); }}>
+          onDragOver={(e) => { e.preventDefault(); if (dragOver !== id) setDragOver(id); }}
+          onDragLeave={() => setDragOver((d) => (d === id ? "" : d))}
+          onDrop={(e) => { e.preventDefault(); setDragOver(""); onDrop(id, e.dataTransfer.getData("text/plain")); }}>
           {ph?.thumb && <img src={ph.thumb} alt="" draggable={false} style={{ objectPosition: pos, transformOrigin: pos, transform: `scale(${pl.z})` }} />}
           {!ph && <span>{isEmpty(id) ? "Seret foto ke sini" : "Foto tidak ditemukan"}</span>}
         </button>
+        {lowres?.has(id) && <span className="lowres-badge">{lowres.get(id)} dpi</span>}
         {selected && handles(pg, k)}
+        {selected && <span className="dimtag">{(Math.round(r.w * 10) / 10).toLocaleString("id-ID")} × {(Math.round(r.h * 10) / 10).toLocaleString("id-ID")} mm</span>}
       </div>
     );
   };
@@ -153,7 +161,7 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
   };
 
   return (
-    <div ref={ref} className="sheet" style={{ aspectRatio: `${sheet.w} / ${sheet.h}`, background: preset.bg }}
+    <div ref={ref} className="sheet" style={{ aspectRatio: `${sheet.w} / ${sheet.h}`, background: preset.bg, pointerEvents: passive ? "none" : undefined }}
       onClick={(e) => { if (e.target === e.currentTarget) { onSelectPhoto(""); onSelectText(null); } }}
       onPointerMove={move} onPointerUp={end} onPointerCancel={end}>
       {pages.filter((pg) => pg.cfg.bg).map((pg) => <div key={`bg${pg.index}`} className="pagebg" style={{ ...box(pageBgRectMm(preset, pg.side as Side)), background: pg.cfg.bg }} />)}

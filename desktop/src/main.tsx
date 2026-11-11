@@ -8,6 +8,7 @@ createRoot(document.getElementById("root")!).render(
     <App />
   </StrictMode>,
 );
+import "@fontsource-variable/inter";
 // Fonts for page text; bundled so they work offline and print the same as on screen.
 import "@fontsource/cormorant-garamond/400.css";
 import "@fontsource/cormorant-garamond/400-italic.css";

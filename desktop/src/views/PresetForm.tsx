@@ -2,6 +2,8 @@ import { useState } from "react";
 import { ask, tell } from "../lib/ask";
 import { saveFile } from "../lib/export";
 import { SIZES, type Preset } from "../lib/print";
+import { ColorField } from "./Editor";
+import { Btn, NumField, Row, Seg } from "./Shell";
 
 /** Named print settings (e.g. one per printer), shared by every project on this computer. */
 const KEY = "lwalbum:presets";
@@ -17,97 +19,82 @@ function PresetLibrary({ preset, setPreset }: { preset: Preset; setPreset: (p: P
   const [newName, setNewName] = useState("");
   const save = (next: Named[]) => { setList(next); storeNamed(next); };
   return (
-    <fieldset>
-      <legend>Preset tersimpan</legend>
-      <label className="field">Pakai preset
+    <div className="fs">
+      <h2>Preset percetakan</h2>
+      <Row label="Pakai preset">
         <select value={pick} onChange={(e) => { setPick(e.target.value); const n = list.find((x) => x.name === e.target.value); if (n) setPreset({ ...preset, ...n.preset, pattern: preset.pattern }); }}>
-          <option value="">Pilih…</option>
+          <option value="">{list.length ? "Pilih…" : "Belum ada preset tersimpan"}</option>
           {list.map((n) => <option key={n.name} value={n.name}>{n.name}</option>)}
         </select>
-      </label>
-      <label className="field">Nama preset baru<input type="text" value={newName} placeholder="mis. Percetakan X · A4 layflat" onChange={(e) => setNewName(e.target.value)} /></label>
-      <div className="field">Kelola
-        <div className="two">
-          <button type="button" className="btn" disabled={!newName.trim()} onClick={() => {
-            const name = newName.trim();
-            save([...list.filter((x) => x.name !== name), { name, preset: strip(preset) as Preset }]); setPick(name); setNewName("");
-          }}>Simpan sebagai preset</button>
-          <button type="button" className="btn" disabled={!pick} onClick={async () => { if (await ask(`Hapus preset "${pick}"?`, "Hapus")) { save(list.filter((x) => x.name !== pick)); setPick(""); } }}>Hapus</button>
-          <button type="button" className="btn" disabled={!list.length} onClick={() => void saveFile(new Blob([JSON.stringify(list, null, 2)], { type: "application/json" }), "preset-lw-album.json").catch(() => {})}>Ekspor ke file</button>
-          <label className="btn">Impor dari file
-            <input type="file" accept=".json" hidden onChange={async (e) => {
-              const f = e.target.files?.[0]; e.target.value = "";
-              if (!f) return;
-              try {
-                const got = JSON.parse(await f.text()) as Named[];
-                if (!Array.isArray(got) || !got.every((x) => x.name && x.preset)) throw new Error("bukan file preset");
-                save([...list.filter((x) => !got.some((g) => g.name === x.name)), ...got]);
-                void tell(`${got.length} preset diimpor.`);
-              } catch (err) { void tell(`File itu tidak bisa dibaca: ${err instanceof Error ? err.message : err}`); }
-            }} />
-          </label>
-        </div>
-      </div>
-    </fieldset>
+        <Btn label="Hapus" kind="ghost" disabled={!pick} onClick={async () => { if (await ask(`Hapus preset “${pick}”?`, "Hapus", "Batal", { danger: true })) { save(list.filter((x) => x.name !== pick)); setPick(""); } }} />
+      </Row>
+      <Row label="Simpan sebagai">
+        <input type="text" value={newName} placeholder="mis. Jaya Album · 30×30 hardcover" onChange={(e) => setNewName(e.target.value)} style={{ flex: 1 }} />
+        <Btn label="Simpan" icon="save" disabled={!newName.trim()} onClick={() => {
+          const name = newName.trim();
+          save([...list.filter((x) => x.name !== name), { name, preset: strip(preset) as Preset }]); setPick(name); setNewName("");
+        }} />
+      </Row>
+      <Row label="Bagikan">
+        <Btn label="Ekspor ke file" icon="upload" kind="ghost" disabled={!list.length} onClick={() => void saveFile(new Blob([JSON.stringify(list, null, 2)], { type: "application/json" }), "preset-lw-album.json").catch(() => {})} />
+        <label className="b ghost"><span className="b-label">Impor dari file</span>
+          <input type="file" accept=".json" hidden onChange={async (e) => {
+            const f = e.target.files?.[0]; e.target.value = "";
+            if (!f) return;
+            try {
+              const got = JSON.parse(await f.text()) as Named[];
+              if (!Array.isArray(got) || !got.every((x) => x.name && x.preset)) throw new Error("bukan file preset");
+              save([...list.filter((x) => !got.some((g) => g.name === x.name)), ...got]);
+              void tell(`${got.length} preset diimpor.`);
+            } catch (err) { void tell(`File itu tidak bisa dibaca: ${err instanceof Error ? err.message : err}`); }
+          }} />
+        </label>
+      </Row>
+    </div>
   );
 }
 
-const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
-
-/** Every print property of an album. Used when a project is made and again on the export screen. */
+/** Every print property of an album (Album › Properti album, and the new-project dialog). */
 export function PresetForm({ preset, setPreset }: { preset: Preset; setPreset: (p: Preset) => void }) {
   const landscape = preset.pageWmm >= preset.pageHmm;
   const long = Math.max(preset.pageWmm, preset.pageHmm), short = Math.min(preset.pageWmm, preset.pageHmm);
   const sizeId = SIZES.find((s) => s.w === long && s.h === short)?.id ?? "custom";
-  const num = (key: keyof Preset, lo: number, hi: number) => ({
-    type: "number" as const, min: lo, max: hi, value: preset[key] as number,
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => setPreset({ ...preset, [key]: clamp(+e.target.value || 0, lo, hi) }),
-  });
+  const set = (patch: Partial<Preset>) => setPreset({ ...preset, ...patch });
   return (
-    <div className="form-stack">
+    <div className="fs" style={{ gap: 20 }}>
       <PresetLibrary preset={preset} setPreset={setPreset} />
-      <fieldset>
-        <legend>Ukuran</legend>
-        <label className="field">Ukuran halaman
-          <select value={sizeId} onChange={(e) => {
-            const s = SIZES.find((x) => x.id === e.target.value);
-            if (s) setPreset({ ...preset, pageWmm: landscape ? s.w : s.h, pageHmm: landscape ? s.h : s.w });
-          }}>
-            {SIZES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-            <option value="custom">Ukuran bebas</option>
-          </select>
-        </label>
-        <label className="field">Orientasi
-          <select value={landscape ? "l" : "p"} onChange={(e) => {
-            const l = e.target.value === "l";
-            setPreset({ ...preset, pageWmm: l ? long : short, pageHmm: l ? short : long });
-          }}>
-            <option value="l">Mendatar</option>
-            <option value="p">Tegak</option>
-          </select>
-        </label>
-        <label className="field">Lebar halaman (mm)<input {...num("pageWmm", 50, 600)} /></label>
-        <label className="field">Tinggi halaman (mm)<input {...num("pageHmm", 50, 600)} /></label>
-        <label className="field">Jumlah halaman<input {...num("pages", 2, 200)} step={2} /></label>
-        <label className="field">Jilid
-          <select value={preset.binding} onChange={(e) => setPreset({ ...preset, binding: e.target.value as Preset["binding"] })}>
-            <option value="layflat">Menyambung (layflat): foto boleh melintasi lipatan</option>
-            <option value="biasa">Jilid biasa: lipatan tertelan jilid</option>
-          </select>
-        </label>
-      </fieldset>
-      <fieldset>
-        <legend>Batas cetak</legend>
-        <label className="field">Bleed (mm)<input {...num("bleedMm", 0, 10)} /></label>
-        <label className="field">Zona aman (mm)<input {...num("safeMm", 0, 30)} /></label>
-        <label className="field">Resolusi (dpi)<input {...num("dpi", 72, 600)} /></label>
-      </fieldset>
-      <fieldset>
-        <legend>Tampilan</legend>
-        <label className="field">Margin halaman (%)<input {...num("marginPct", 0, 20)} step={0.5} /></label>
-        <label className="field">Jarak antar foto (%)<input {...num("gapPct", 0, 10)} step={0.5} /></label>
-        <label className="field">Latar halaman<input type="color" value={preset.bg} onChange={(e) => setPreset({ ...preset, bg: e.target.value })} /></label>
-      </fieldset>
+      <div className="fs">
+        <h2>Ukuran</h2>
+        <div className="form-grid">
+          <Row label="Ukuran halaman">
+            <select value={sizeId} onChange={(e) => { const s = SIZES.find((x) => x.id === e.target.value); if (s) set({ pageWmm: landscape ? s.w : s.h, pageHmm: landscape ? s.h : s.w }); }}>
+              {SIZES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+              <option value="custom">Ukuran bebas</option>
+            </select>
+          </Row>
+          <Row label="Orientasi"><Seg full value={landscape ? "l" : "p"} onChange={(v) => set({ pageWmm: v === "l" ? long : short, pageHmm: v === "l" ? short : long })} items={[{ v: "l", label: "Mendatar" }, { v: "p", label: "Tegak" }]} /></Row>
+          <Row label="Lebar"><NumField value={preset.pageWmm} min={50} max={600} unit="mm" prefix="W" onChange={(v) => set({ pageWmm: v })} /></Row>
+          <Row label="Tinggi"><NumField value={preset.pageHmm} min={50} max={600} unit="mm" prefix="H" onChange={(v) => set({ pageHmm: v })} /></Row>
+          <Row label="Jumlah halaman"><NumField value={preset.pages} min={2} max={200} step={2} unit="hal." onChange={(v) => set({ pages: Math.max(2, Math.round(v / 2) * 2) })} /></Row>
+          <Row label="Jilid"><Seg full value={preset.binding} onChange={(v) => set({ binding: v })} items={[{ v: "layflat", label: "Lay-flat", tip: "Halaman terbuka rata; foto boleh melintasi lipatan" }, { v: "biasa", label: "Biasa", tip: "Lipatan tertelan jilid" }]} /></Row>
+        </div>
+      </div>
+      <div className="fs">
+        <h2>Batas cetak</h2>
+        <div className="form-grid">
+          <Row label="Bleed"><NumField value={preset.bleedMm} min={0} max={10} unit="mm" onChange={(v) => set({ bleedMm: v })} /></Row>
+          <Row label="Area aman"><NumField value={preset.safeMm} min={0} max={30} unit="mm" onChange={(v) => set({ safeMm: v })} /></Row>
+          <Row label="Resolusi"><NumField value={preset.dpi} min={72} max={600} step={50} unit="dpi" onChange={(v) => set({ dpi: v })} /></Row>
+        </div>
+      </div>
+      <div className="fs">
+        <h2>Tampilan halaman</h2>
+        <div className="form-grid">
+          <Row label="Margin"><NumField value={preset.marginPct} min={0} max={20} step={0.5} unit="%" onChange={(v) => set({ marginPct: v })} /></Row>
+          <Row label="Jarak foto"><NumField value={preset.gapPct} min={0} max={10} step={0.5} unit="%" onChange={(v) => set({ gapPct: v })} /></Row>
+          <Row label="Latar"><ColorField value={preset.bg} onChange={(v) => set({ bg: v })} /></Row>
+        </div>
+      </div>
     </div>
   );
 }

@@ -78,6 +78,7 @@ Untuk perubahan tampilan, buka halamannya dan lihat sendiri (lebar HP ±390 px d
 - **Foto proyek** tampil utuh sesuai bentuknya; foto halaman bisa diatur bingkainya di admin.
 - **Region**: Vercel dan Railway sama-sama di Singapura. Railway 1 replica saja selama memakai SQLite.
 - **DNS di Cloudflare** (DNS only), email tetap di hosting anjas.id.
+- **Aplikasi album (`desktop/`)** (11 Nov 2026): tampilan mengikuti file Figma "Editing Album LW" (tema gelap, aksen biru `#2f6fe4`, Inter); setelah diterapkan, kode di `desktop/src` yang jadi acuan. Semua pintasan keyboard didaftarkan di satu tempat (`desktop/src/lib/keys.ts`, CATALOG) dan menu, tooltip, serta daftar pintasan dibaca dari sana; pengguna bisa mengubahnya (Ctrl+,). Pindah modul memakai **Ctrl+Alt+1–4** karena angka 1–5 dipakai untuk bintang di Kurasi.
 
 ## Yang belum dikerjakan / ide berikutnya
 Lihat `docs/PLAN.md`: gambar langsung dari Railway (tidak lewat Vercel), thumbnail WebP, upgrade Railway dengan volume lebih besar.

@@ -1,18 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ask, tell } from "./lib/ask";
 import type { Cover } from "./lib/cover";
+import { installKeys, setScope, useCommands } from "./lib/keys";
 import { emptyAlbum, newAlbum, setCustomTemplates, type Album, type Tpl } from "./lib/layout";
 import { photosFromFiles, readAll, type Photo } from "./lib/photos";
 import { isNative, pickFolder, pickProjectFile, preparePhotos, ready, scanFolder, exists } from "./lib/platform";
 import { DEFAULT_PRESET, type Placement, type Preset } from "./lib/print";
 import { listProjects, loadProject, loadProjectFile, projectsDir, removeProject, saveProject, updateMeta, type ProjectMeta, type Saved } from "./lib/projects";
-import { Beranda } from "./views/Beranda";
+import { Beranda, NewProject } from "./views/Beranda";
 import { Editor } from "./views/Editor";
 import { Ekspor } from "./views/Ekspor";
 import { Kurasi } from "./views/Kurasi";
+import { PresetForm } from "./views/PresetForm";
 import { Sampul } from "./views/Sampul";
+import { Btn, MenuBar, ModuleBar, ShortcutSheet, StatusBar, type Module } from "./views/Shell";
+import { TemplateEditor } from "./views/TemplateEditor";
 
-type Tab = "kurasi" | "editor" | "sampul" | "ekspor";
 /** What undo/redo steps through: the album and how each photo sits in its frame. */
 export type Design = { album: Album; place: Record<string, Placement>; cover?: Cover };
 /** What the browser's folder picker is being opened for. */
@@ -27,19 +30,27 @@ const folderName = (f: string) => f.split(/[\\/]/).filter(Boolean).pop() ?? f;
 /** Photo ids are paths inside the folder. Older browser saves started with the folder's own name. */
 const rel = (id: string) => (id.includes("/") ? id.slice(id.indexOf("/") + 1) : id);
 
+installKeys();
+
 export function App() {
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
   const [dir, setDir] = useState("");
   const [meta, setMeta] = useState<ProjectMeta | null>(null);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [read, setRead] = useState(0);
-  const [tab, setTab] = useState<Tab>("kurasi");
+  const [tab, setTab] = useState<Module>("kurasi");
   const [curId, setCurId] = useState("");
   const [target, setTarget] = useState(80);
   const [preset, setPreset] = useState<Preset>(DEFAULT_PRESET);
   const [hist, setHist] = useState<{ past: Design[]; now: Design | null; future: Design[] }>({ past: [], now: null, future: [] });
   const [saveError, setSaveError] = useState("");
-  const [savedFlash, setSavedFlash] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [panels, setPanels] = useState(true);
+  const [sheet, setSheet] = useState<null | "view" | "edit">(null);
+  const [making, setMaking] = useState(false);
+  const [props, setProps] = useState(false);
+  const [templates, setTemplates] = useState(false);
+  const tplUse = useRef<((t: Tpl) => void) | null>(null);
   const run = useRef(0);
   const picker = useRef<HTMLInputElement>(null);
   const pending = useRef<Pending | null>(null);
@@ -77,14 +88,14 @@ export function App() {
       setHist({ past: [], now: design, future: [] });
       setPreset({ ...DEFAULT_PRESET, ...saved.preset });
       setTarget(saved.target ?? 80);
-      if (missing) void tell(`${missing} foto di album tidak ditemukan di folder ini (dipindah, diganti nama, atau dihapus). Bingkainya tampil kosong.`);
+      if (missing) void tell(`${missing} foto di album tidak ditemukan di folder ini (dipindah, diganti nama, atau dihapus). Bingkainya tampil kosong.`, "Ada foto yang hilang");
     } else {
       setHist({ past: [], now: null, future: [] });
       setPreset(fresh ?? DEFAULT_PRESET);
       setTarget(80);
     }
     setMeta(next);
-    setPhotos(list); setCurId(list[0]?.id ?? ""); setRead(0); setTab("kurasi");
+    setPhotos(list); setCurId(list[0]?.id ?? ""); setRead(0); setTab(saved?.design ? "editor" : "kurasi");
 
     const mine = ++run.current;
     const cancelled = () => run.current !== mine;
@@ -116,14 +127,14 @@ export function App() {
     const folder = await pickFolder("Pilih folder foto acara");
     if (!folder) return;
     const list = await scanFolder(folder);
-    if (!list.length) { void tell("Tidak ada foto (JPG, PNG, WebP, atau RAW) di folder itu."); return; }
+    if (!list.length) { void tell("Tidak ada foto (JPG, PNG, WebP, atau RAW) di folder itu.", "Folder kosong"); return; }
     const projectName = name || folderName(folder);
     start({ id: Date.now().toString(36), name: projectName, folder, updated: Date.now(), photos: list.length, picked: 0, size: "" }, list, null, { ...fresh, pattern: projectName });
   };
   const openSaved = async (saved: Saved) => {
     let folder = saved.meta.folder;
     if (!(await exists(folder).catch(() => false))) {
-      const ok = await ask(`Folder foto proyek ini tidak ditemukan:\n${folder}\n\nMungkin dipindah, atau proyek ini dari laptop lain. Pilih lokasi folder fotonya sekarang?`, "Pilih folder");
+      const ok = await ask(`Folder ${folder} dipindah atau drive-nya tidak tersambung. Tata letak tetap aman.\n\nPilih lokasi folder fotonya sekarang?`, "Cari folder…", "Batal", { title: "Foto proyek tidak ditemukan" });
       if (!ok) return;
       const picked = await pickFolder(`Lokasi baru folder "${folderName(folder)}"`);
       if (!picked) return;
@@ -134,14 +145,14 @@ export function App() {
   };
   const openNative = async (m: ProjectMeta) => {
     const saved = await loadProject(m).catch(() => null);
-    if (!saved) { void tell("File proyek ini tidak bisa dibaca."); refresh(); return; }
+    if (!saved) { void tell("File proyek ini tidak bisa dibaca.", "Gagal membuka"); refresh(); return; }
     await openSaved(saved);
   };
   const openFile = async () => {
     const file = await pickProjectFile();
     if (!file) return;
     const saved = await loadProjectFile(file).catch(() => null);
-    if (!saved) { void tell("File itu bukan proyek LW Album yang bisa dibaca."); return; }
+    if (!saved) { void tell("File itu bukan proyek LW Album yang bisa dibaca.", "Gagal membuka"); return; }
     await openSaved(saved);
   };
 
@@ -152,7 +163,7 @@ export function App() {
     pending.current = null;
     if (!why || !files || !files.length) return;
     const { folder, photos: list } = photosFromFiles(files);
-    if (!list.length) { void tell("Tidak ada foto JPG, PNG, atau WebP di folder itu."); return; }
+    if (!list.length) { void tell("Tidak ada foto JPG, PNG, atau WebP di folder itu.", "Folder kosong"); return; }
     if (why.kind === "new") {
       const name = why.name || folder;
       start({ id: Date.now().toString(36), name, folder, updated: Date.now(), photos: list.length, picked: 0, size: "" }, list, null, { ...why.preset, pattern: name });
@@ -161,23 +172,32 @@ export function App() {
       start({ ...why.saved.meta, folder }, list, why.saved);
     }
   }, [start]);
+  const create = (name: string, p: Preset) => { setMaking(false); if (isNative) void createNative(name, p); else askFolder({ kind: "new", name, preset: p }); };
+  const open = (m: ProjectMeta) => (isNative ? void openNative(m) : void loadProject(m).then((s) => s && askFolder({ kind: "open", saved: s })));
 
   const picked = useMemo(() => photos.filter((p) => p.pick === true), [photos]);
+  const used = useMemo(() => new Set(hist.now?.album.order ?? []), [hist.now?.album.order]);
 
   // Save decisions and the design as they change; the photos themselves stay where they are on disk.
   const metaRef = useRef(meta);
   metaRef.current = meta;
+  const saveNow = useRef<() => void>(() => {});
   useEffect(() => {
     if (!meta) return;
-    const t = setTimeout(() => {
-      const m = metaRef.current!;
+    const save = () => {
+      const m = metaRef.current;
+      if (!m) return;
       const marks: Saved["marks"] = {};
       for (const p of photos) if (p.pick !== null || p.stars) marks[p.id] = [p.pick, p.stars];
       const nextMeta: ProjectMeta = { ...m, updated: Date.now(), photos: photos.length, picked: picked.length, size: `${preset.pageWmm / 10} × ${preset.pageHmm / 10} cm · ${preset.pages} hlm` };
+      setSaving(true);
       saveProject({ v: 3, meta: nextMeta, marks, design: hist.now, preset, target })
         .then((saved) => { setSaveError(""); if (saved.file !== m.file) setMeta(saved); })
-        .catch((e) => setSaveError(String(e)));
-    }, isNative ? 800 : 400);
+        .catch((e) => setSaveError(String(e)))
+        .finally(() => setSaving(false));
+    };
+    saveNow.current = save;
+    const t = setTimeout(save, isNative ? 800 : 400);
     return () => clearTimeout(t);
   }, [meta?.id, photos, picked.length, hist.now, preset, target]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -188,18 +208,7 @@ export function App() {
   const undo = useCallback(() => setHist((h) => (h.past.length && h.now ? { past: h.past.slice(0, -1), now: h.past[h.past.length - 1], future: [h.now, ...h.future] } : h)), []);
   const redo = useCallback(() => setHist((h) => (h.future.length && h.now ? { past: [...h.past, h.now], now: h.future[0], future: h.future.slice(1) } : h)), []);
 
-  // Window title and workspace shortcuts: Ctrl+1..4 switch tabs, Ctrl+S confirms the (automatic) save.
   useEffect(() => { document.title = meta ? `${meta.name} · LW Album` : "LW Album"; }, [meta]);
-  useEffect(() => {
-    const on = (e: KeyboardEvent) => {
-      if (!(e.ctrlKey || e.metaKey) || !metaRef.current) return;
-      const tabs: Tab[] = ["kurasi", "editor", "sampul", "ekspor"];
-      if (e.key >= "1" && e.key <= "4") { e.preventDefault(); setTab(tabs[+e.key - 1]); }
-      else if (e.key.toLowerCase() === "s") { e.preventDefault(); setSavedFlash(Date.now()); }
-    };
-    window.addEventListener("keydown", on);
-    return () => window.removeEventListener("keydown", on);
-  }, []);
 
   const build = useCallback(() => {
     commit({ album: newAlbum(picked.map((p) => p.id), preset.pages), place: {}, cover: hist.now?.cover });
@@ -209,73 +218,148 @@ export function App() {
     commit({ album: emptyAlbum(preset.pages), place: {}, cover: hist.now?.cover });
     setTab("editor");
   }, [commit, preset.pages, hist.now?.cover]);
+  const autoBuild = async () => {
+    if (!picked.length) { void tell("Pilih foto dulu di Kurasi (tekan P pada foto yang ingin dipakai).", "Belum ada foto terpilih"); setTab("kurasi"); return; }
+    if (!hist.now || await ask(`Susun ulang album dari ${picked.length} foto terpilih? Tata letak sekarang masih bisa dikembalikan dengan Urungkan (Ctrl+Z).`, "Susun otomatis")) build();
+  };
 
-  const goHome = () => { run.current++; setMeta(null); setPhotos([]); refresh(); };
+  const goHome = () => { saveNow.current(); run.current++; setMeta(null); setPhotos([]); refresh(); };
   const remove = async (m: ProjectMeta) => { await removeProject(m).catch(() => {}); refresh(); };
+  const fullscreen = async () => {
+    if (isNative) {
+      const { getCurrentWindow } = await import("@tauri-apps/api/window");
+      const w = getCurrentWindow();
+      await w.setFullscreen(!(await w.isFullscreen())).catch(() => {});
+    } else if (document.fullscreenElement) void document.exitFullscreen(); else void document.documentElement.requestFullscreen().catch(() => {});
+  };
+
+  // ---- global commands (Figma page 09) ----
+  const scope = meta ? tab : "home";
+  useEffect(() => { setScope(scope); }, [scope]);
+  const has = !!meta, design = hist.now;
+  useCommands({
+    "app.new": { run: () => { if (meta) goHome(); setMaking(true); } },
+    "app.open": { run: () => { if (isNative) void openFile(); else if (meta) goHome(); } },
+    "app.save": { run: () => saveNow.current(), enabled: has },
+    "app.close": { run: goHome, enabled: has },
+    "app.home": { run: goHome, enabled: has },
+    "app.export": { run: () => setTab("ekspor"), enabled: has && !!design },
+    "app.undo": { run: undo, enabled: has && hist.past.length > 0 },
+    "app.redo": { run: redo, enabled: has && hist.future.length > 0 },
+    "app.keys": { run: () => setSheet((s) => (s ? null : "view")) },
+    "app.prefs": { run: () => setSheet("edit") },
+    "app.props": { run: () => setProps(true), enabled: has },
+    "app.auto": { run: () => void autoBuild(), enabled: has },
+    "app.templates": { run: () => setTemplates(true) },
+    "app.panels": { run: () => setPanels((p) => !p), enabled: has, checked: !panels },
+    "app.full": { run: () => void fullscreen() },
+    "mod.kurasi": { run: () => setTab("kurasi"), enabled: has, checked: has && tab === "kurasi" },
+    "mod.editor": { run: () => setTab("editor"), enabled: has, checked: has && tab === "editor" },
+    "mod.sampul": { run: () => setTab("sampul"), enabled: has, checked: has && tab === "sampul" },
+    "mod.ekspor": { run: () => setTab("ekspor"), enabled: has, checked: has && tab === "ekspor" },
+  });
 
   const folderInput = isNative ? null : (
     <input ref={picker} type="file" multiple hidden onChange={(e) => { const f = e.target.files; void openBrowser(f).finally(() => { e.target.value = ""; }); }} {...{ webkitdirectory: "" }} />
   );
+  const dialogs = (
+    <>
+      {sheet && <ShortcutSheet edit={sheet === "edit"} onClose={() => setSheet(null)} />}
+      {making && <NewProject onCancel={() => setMaking(false)} onCreate={create} />}
+      {templates && <TemplateEditor preset={preset} custom={custom} setCustom={setCustom} startSpread={false} onClose={() => setTemplates(false)}
+        onUse={meta && tab === "editor" ? (t) => tplUse.current?.(t) : undefined} />}
+      {props && meta && <PropsDialog preset={preset} setPreset={setPreset} onClose={() => setProps(false)} />}
+    </>
+  );
 
   if (!meta) {
     return (
-      <>
+      <div className="app">
         {folderInput}
-        <Beranda projects={projects} projectsDir={dir}
-          onCreate={(name, p) => (isNative ? void createNative(name, p) : askFolder({ kind: "new", name, preset: p }))}
-          onOpen={(m) => (isNative ? void openNative(m) : void loadProject(m).then((s) => s && askFolder({ kind: "open", saved: s })))}
+        <MenuBar title="LW Album" />
+        <ModuleBar module={null} onHome={() => {}} onModule={() => {}}
+          right={<>{isNative && <Btn label="Buka…" icon="folder-open" cmd="app.open" />}<Btn label="Proyek baru" icon="plus" kind="primary" cmd="app.new" /></>} />
+        <Beranda projects={projects} projectsDir={dir} onNew={() => setMaking(true)} onOpen={open}
           onOpenFile={isNative ? () => void openFile() : undefined}
-          onDelete={(m) => void remove(m)}
+          onDelete={(m) => void remove(m)} onTemplates={() => setTemplates(true)} onKeys={() => setSheet("edit")}
           onUpdate={(m, patch) => void updateMeta(m, patch).then(refresh).catch((e) => void tell(`Gagal menyimpan: ${e}`))} />
-      </>
+        {dialogs}
+      </div>
     );
   }
 
-  const design = hist.now;
-  const needAlbum = tab !== "kurasi" && !design;
+  const state = saveError ? "Gagal menyimpan — Ctrl+S untuk coba lagi" : saving ? "Menyimpan…" : "Tersimpan";
+  const loading = read < photos.length ? `membaca foto ${read.toLocaleString("id-ID")} dari ${photos.length.toLocaleString("id-ID")}` : "";
+  const noAlbum = tab !== "kurasi" && !design;
   return (
     <div className="app">
       {folderInput}
-      <header className="bar">
-        <button type="button" className="btn" onClick={goHome}>Beranda</button>
-        <strong>{meta.name}</strong>
-        <nav aria-label="Ruang kerja">
-          {(["kurasi", "editor", "sampul", "ekspor"] as const).map((t) => (
-            <button key={t} type="button" className="tab" aria-current={tab === t ? "page" : undefined} onClick={() => setTab(t)}>
-              {t === "kurasi" ? "Kurasi" : t === "editor" ? "Editor" : t === "sampul" ? "Sampul" : "Ekspor"}
-            </button>
-          ))}
-        </nav>
-        <span className="right dim" title={meta.folder}>
-          {folderName(meta.folder)} · {photos.length.toLocaleString("id-ID")} foto
-          {read < photos.length ? ` · membaca ${read.toLocaleString("id-ID")}` : ""}
-        </span>
-        <span key={savedFlash} className={saveError ? "warn" : savedFlash ? "dim flash" : "dim"} title={saveError || meta.file || "Tersimpan otomatis"}>{saveError ? "Gagal menyimpan" : "Tersimpan"}</span>
-      </header>
+      <MenuBar title={meta.name} state={state} tone={saveError ? "danger" : undefined} />
+      <ModuleBar module={tab} onHome={goHome} onModule={setTab}
+        right={<>
+          <Btn kind="ghost" icon="undo-2" cmd="app.undo" tip="Urungkan" className="icon-only" />
+          <Btn kind="ghost" icon="redo-2" cmd="app.redo" tip="Ulangi" className="icon-only" />
+          <span className="vdiv" />
+          <Btn label="Ekspor…" icon="download" kind="primary" cmd="app.export" />
+        </>} />
 
       {tab === "kurasi" && (
-        <Kurasi photos={photos} setPhotos={setPhotos} curId={curId} setCurId={setCurId} target={target} setTarget={setTarget}
-          hasAlbum={!!design} onBuild={build} onBuildEmpty={buildEmpty} onOpenEditor={() => setTab("editor")} />
+        <Kurasi photos={photos} setPhotos={setPhotos} curId={curId} setCurId={setCurId} target={target} setTarget={setTarget} panels={panels}
+          hasAlbum={!!design} used={used} onBuild={() => void autoBuild()} onBuildEmpty={buildEmpty} onOpenEditor={() => setTab("editor")} loading={loading} folder={folderName(meta.folder)} />
       )}
-      {needAlbum && (
-        <div className="empty">
-          <p>Belum ada album. Susun otomatis dari foto terpilih, atau mulai dari album kosong dan seret fotonya sendiri.</p>
-          <div className="two">
-            <button type="button" className="btn primary" disabled={!picked.length} onClick={build}>Susun otomatis dari {picked.length} foto terpilih</button>
-            <button type="button" className="btn" onClick={buildEmpty}>Album kosong, isi sendiri</button>
-          </div>
-        </div>
+      {noAlbum && (
+        <>
+          <div className="work"><div className="center"><div className="canvas" style={{ display: "flex" }}>
+            <div className="dropzone">
+              <Icon2 />
+              <strong>Album belum disusun</strong>
+              <span>Susun otomatis dari foto terpilih, atau mulai dari album kosong lalu seret fotonya sendiri.</span>
+              <div className="two">
+                <Btn label={`Susun otomatis (${picked.length})`} icon="wand-sparkles" kind="primary" disabled={!picked.length} onClick={build} />
+                <Btn label="Album kosong" icon="plus" onClick={buildEmpty} />
+              </div>
+              {!picked.length && <span className="caption">Belum ada foto terpilih. Tandai foto dengan P di Kurasi.</span>}
+            </div>
+          </div></div></div>
+          <StatusBar left={`${photos.length.toLocaleString("id-ID")} foto · ${picked.length} dipilih`} />
+        </>
       )}
       {tab === "editor" && design && (
-        <Editor photos={photos} design={design} commit={commit} undo={undo} redo={redo} canUndo={hist.past.length > 0} canRedo={hist.future.length > 0}
-          preset={preset} setPreset={setPreset} onRebuild={build} canRebuild={picked.length > 0} onExport={() => setTab("ekspor")} custom={custom} setCustom={setCustom} />
+        <Editor photos={photos} design={design} commit={commit} canUndo={hist.past.length > 0}
+          preset={preset} setPreset={setPreset} custom={custom} panels={panels}
+          registerTemplateUse={(fn) => { tplUse.current = fn; }} />
       )}
       {tab === "sampul" && design && (
-        <Sampul photos={photos} design={design} commit={commit} preset={preset} setPreset={setPreset} />
+        <Sampul photos={photos} design={design} commit={commit} preset={preset} setPreset={setPreset} panels={panels} />
       )}
       {tab === "ekspor" && design && (
-        <Ekspor photos={photos} design={design} preset={preset} setPreset={setPreset} custom={custom} />
+        <Ekspor photos={photos} design={design} preset={preset} setPreset={setPreset} custom={custom} onGo={setTab}
+          onDone={(status) => { if (status && meta.status !== status) { const next = { ...meta, status }; setMeta(next); } }} />
       )}
+      {dialogs}
     </div>
+  );
+}
+
+function Icon2() {
+  return <span className="ill" style={{ width: 56, height: 56, borderRadius: 12, display: "grid", placeItems: "center", background: "var(--raise)" }}>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect width="18" height="7" x="3" y="3" rx="1" /><rect width="9" height="7" x="3" y="14" rx="1" /><rect width="5" height="7" x="16" y="14" rx="1" /></svg>
+  </span>;
+}
+
+/** Album properties (Ctrl+Shift+P): every print setting, live. */
+function PropsDialog({ preset, setPreset, onClose }: { preset: Preset; setPreset: (p: Preset) => void; onClose: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => { ref.current?.showModal(); }, []);
+  return (
+    <dialog ref={ref} className="dlg dlg-lg" onClose={onClose} aria-labelledby="props-t">
+      <header className="dlg-h"><h1 id="props-t">Properti album</h1><span className="grow" /><span className="caption">Ctrl+Shift+P</span></header>
+      <div className="dlg-b"><PresetForm preset={preset} setPreset={setPreset} /></div>
+      <footer className="dlg-f">
+        <span className="caption">Perubahan langsung terlihat. Mengubah ukuran halaman menyesuaikan semua bingkai secara proporsional.</span>
+        <span className="grow" />
+        <Btn label="Selesai" kind="primary" onClick={() => ref.current?.close()} />
+      </footer>
+    </dialog>
   );
 }

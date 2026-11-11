@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Design } from "../App";
 import { coverMm, coverParts, DEFAULT_COVER, drawCover, fromThumb, type Cover } from "../lib/cover";
+import { Icon } from "../lib/icons";
+import { useCommands } from "../lib/keys";
 import type { Photo } from "../lib/photos";
 import { CENTER, type Placement, type Preset } from "../lib/print";
 import { FONTS } from "../lib/layout";
+import { ColorField } from "./Editor";
+import { Btn, IconBtn, NumField, Row, Section, Seg, StatusBar } from "./Shell";
 
 type Props = {
   photos: Photo[];
@@ -11,18 +15,20 @@ type Props = {
   commit: (d: Design, replace?: boolean) => void;
   preset: Preset;
   setPreset: (p: Preset) => void;
+  panels: boolean;
 };
 
 const pct = (n: number) => `${n * 100}%`;
-const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
-/** The cover: pick photos for front and back, set the title, spine and board wrap. */
-export function Sampul({ photos, design, commit, preset, setPreset }: Props) {
+/** The cover (Figma page 06): photos for front and back, title, spine and board wrap. */
+export function Sampul({ photos, design, commit, preset, setPreset, panels }: Props) {
   const cover = design.cover ?? DEFAULT_COVER;
   const byId = useMemo(() => new Map(photos.map((p) => [p.id, p])), [photos]);
   const [img, setImg] = useState("");
   const [all, setAll] = useState(false);
   const [side, setSide] = useState<"front" | "back">("front");
+  const [guides, setGuides] = useState(true);
+  const [over, setOver] = useState<"" | "front" | "back">("");
   const sliding = useRef(false);
 
   const set = (patch: Partial<Cover>, replace = false) => commit({ ...design, cover: { ...cover, ...patch } }, replace);
@@ -37,123 +43,116 @@ export function Sampul({ photos, design, commit, preset, setPreset }: Props) {
         const canvas = await drawCover(cover, byId, preset, 40, fromThumb);
         const blob = await canvas.convertToBlob({ type: "image/jpeg", quality: 0.85 });
         if (!alive) return;
-        // Swap in the new render, then free the old one (never blank the picture while redrawing).
         setImg((old) => { if (old) URL.revokeObjectURL(old); return URL.createObjectURL(blob); });
       } catch (e) { console.error("cover preview", e); }
     }, 120);
     return () => { alive = false; clearTimeout(t); };
   }, [cover, byId, preset]);
 
-  const list = useMemo(() => {
-    const picked = photos.filter((p) => p.pick === true);
-    return all || !picked.length ? photos : picked;
-  }, [photos, all]);
+  const list = useMemo(() => { const picked = photos.filter((p) => p.pick === true); return all || !picked.length ? photos : picked; }, [photos, all]);
   const sheet = coverMm(preset), parts = coverParts(preset);
   const box = (r: { x: number; y: number; w: number; h: number }) => ({ left: pct(r.x / sheet.w), top: pct(r.y / sheet.h), width: pct(r.w / sheet.w), height: pct(r.h / sheet.h) });
   const placeKey = side === "front" ? "frontPlace" : "backPlace";
   const pl: Placement = cover[placeKey] ?? CENTER;
   const chosen = side === "front" ? cover.front : cover.back;
-
-  const drop = (zone: "front" | "back", id: string) => {
-    if (!byId.has(id)) return;
-    setSide(zone);
-    set(zone === "front" ? { front: id, frontPlace: CENTER } : { back: id, backPlace: CENTER });
-  };
+  const drop = (zone: "front" | "back", id: string) => { if (!byId.has(id)) return; setSide(zone); set(zone === "front" ? { front: id, frontPlace: CENTER } : { back: id, backPlace: CENTER }); };
+  useCommands({ "s.side": { run: () => setSide((s) => (s === "front" ? "back" : "front")) } });
+  const aspect = sheet.w / sheet.h;
+  const slider = (value: number, min: number, max: number, on: (v: number) => void, show: string) => (
+    <div className="slider"><input type="range" min={min} max={max} step={0.01} value={value} onChange={(e) => on(+e.target.value)} onPointerUp={endSlide} onKeyUp={endSlide} onBlur={endSlide} /><span className="val">{show}</span></div>
+  );
 
   return (
-    <div className="work">
-      <aside className="panel" aria-label="Foto">
-        <h2>Foto</h2>
-        <div className="seg" role="group" aria-label="Foto yang ditampilkan">
-          <button type="button" className="btn" aria-pressed={!all} onClick={() => setAll(false)}>Dipilih</button>
-          <button type="button" className="btn" aria-pressed={all} onClick={() => setAll(true)}>Semua</button>
-        </div>
-        <div className="tray">
-          {list.map((p) => (
-            <button key={p.id} type="button" className="thumb" title={p.name} aria-label={`Pakai ${p.name} untuk sampul ${side === "front" ? "depan" : "belakang"}`}
-              aria-current={p.id === chosen} draggable
-              onDragStart={(e) => { e.dataTransfer.setData("text/plain", p.id); e.dataTransfer.effectAllowed = "copy"; }}
-              onClick={() => drop(side, p.id)}>
-              {p.thumb && <img src={p.thumb} alt="" loading="lazy" draggable={false} />}
-            </button>
-          ))}
-        </div>
-        <p className="dim">Klik foto untuk sisi yang aktif, atau seret ke sampul depan/belakang.</p>
-      </aside>
-
-      <main className="stage dark">
-        <div className="sheetwrap">
-          <div className="pagenos"><span>Belakang</span><span>Punggung {preset.spineMm} mm</span><span>Depan</span></div>
-          <div className="sheet" style={{ aspectRatio: `${sheet.w} / ${sheet.h}`, background: cover.bg }}>
-            {img && <img className="coverimg" src={img} alt="Pratinjau sampul" />}
-            {(["back", "front"] as const).map((z) => (
-              <button key={z} type="button" className="zone" aria-pressed={side === z} aria-label={z === "front" ? "Sampul depan" : "Sampul belakang"}
-                style={box(parts[z])} onClick={() => setSide(z)}
-                onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); drop(z, e.dataTransfer.getData("text/plain")); }} />
-            ))}
-            <div className="trim" style={{ inset: `${pct(sheet.edge / sheet.h)} ${pct(sheet.edge / sheet.w)}` }} />
-            <div className="spine" style={box(parts.spine)} />
+    <>
+      <div className={`work ${panels ? "" : "no-panels"}`}>
+        <aside className="side" aria-label="Foto">
+          <div className="tabs-h" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <Seg full items={[{ v: "pick", label: "Dipilih" }, { v: "all", label: "Semua" }]} value={all ? "all" : "pick"} onChange={(v) => setAll(v === "all")} />
+            <span className="caption">Klik foto = pasang di sisi {side === "front" ? "depan" : "belakang"}. Seret ke depan/belakang.</span>
           </div>
-          <p className="dim">Garis merah: tepi potong. {preset.wrapMm > 0 ? `Di luar garis ada ${preset.wrapMm} mm lipatan ke balik papan sampul.` : ""}</p>
-        </div>
-      </main>
+          <div className="scroll">
+            <div className="tray">
+              {list.slice(0, 600).map((p) => (
+                <button key={p.id} type="button" className={`pt bare ${p.id === chosen ? "cur" : ""}`} title={p.name} draggable aria-label={`Pakai ${p.name}`}
+                  onDragStart={(e) => { e.dataTransfer.setData("text/plain", p.id); e.dataTransfer.effectAllowed = "copy"; }}
+                  onClick={() => drop(side, p.id)}>
+                  {p.thumb && <img src={p.thumb} alt="" loading="lazy" draggable={false} />}
+                </button>
+              ))}
+            </div>
+          </div>
+        </aside>
 
-      <aside className="panel" aria-label="Pengaturan sampul">
-        <h2>Sisi {side === "front" ? "depan" : "belakang"}</h2>
-        <div className="seg" role="group" aria-label="Sisi">
-          <button type="button" className="btn" aria-pressed={side === "front"} onClick={() => setSide("front")}>Depan</button>
-          <button type="button" className="btn" aria-pressed={side === "back"} onClick={() => setSide("back")}>Belakang</button>
-        </div>
-        {side === "front" && (
-          <label className="field">Gaya foto depan
-            <select value={cover.frontStyle} onChange={(e) => set({ frontStyle: e.target.value as Cover["frontStyle"] })}>
-              <option value="full">Penuh sampai tepi</option>
-              <option value="frame">Berbingkai, judul di bawah</option>
-            </select>
-          </label>
-        )}
-        {chosen ? (
-          <>
-            <label className="field">Perbesar<input type="range" min={1} max={3} step={0.01} value={pl.z} onChange={(e) => slide({ [placeKey]: { ...pl, z: +e.target.value } })} onPointerUp={endSlide} onKeyUp={endSlide} onBlur={endSlide} /></label>
-            <label className="field">Geser mendatar<input type="range" min={0} max={1} step={0.01} value={pl.x} onChange={(e) => slide({ [placeKey]: { ...pl, x: +e.target.value } })} onPointerUp={endSlide} onKeyUp={endSlide} onBlur={endSlide} /></label>
-            <label className="field">Geser tegak<input type="range" min={0} max={1} step={0.01} value={pl.y} onChange={(e) => slide({ [placeKey]: { ...pl, y: +e.target.value } })} onPointerUp={endSlide} onKeyUp={endSlide} onBlur={endSlide} /></label>
-            <button type="button" className="btn" onClick={() => set(side === "front" ? { front: undefined } : { back: undefined })}>Lepas foto</button>
-          </>
-        ) : <p className="dim">Belum ada foto di sisi ini.</p>}
+        <main className="center">
+          <div className="optbar">
+            <Seg items={[{ v: "back", label: "Belakang" }, { v: "front", label: "Depan" }]} value={side} onChange={setSide} label="Sisi" />
+            <span className="vdiv" />
+            <IconBtn icon="grid-3x3" tip="Garis bantu" on={guides} onClick={() => setGuides(!guides)} />
+            <span className="grow" /><span className="caption">S = tukar sisi · ukuran mengikuti properti album</span>
+            <span className="vdiv" /><IconBtn icon="panel-left" cmd="app.panels" />
+          </div>
+          <div className="canvas" style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "56px 40px" }}>
+            <div className="sheetbox" style={{ width: `min(100%, calc((100vh - 300px) * ${aspect}))` }}>
+              <div className="pagenos">
+                <span style={{ width: pct(parts.back.w / sheet.w), textAlign: "center" }}>Belakang</span>
+                <span>Punggung {preset.spineMm} mm</span>
+                <span style={{ width: pct(parts.front.w / sheet.w), textAlign: "center" }}>Depan</span>
+              </div>
+              <div className="sheet" style={{ aspectRatio: `${sheet.w} / ${sheet.h}`, background: cover.bg }}>
+                {img && <img className="coverimg" src={img} alt="Pratinjau sampul" />}
+                {(["back", "front"] as const).map((zn) => (
+                  <button key={zn} type="button" className={`zone ${side === zn ? "on" : ""} ${over === zn ? "over" : ""}`} aria-pressed={side === zn} aria-label={zn === "front" ? "Sampul depan" : "Sampul belakang"}
+                    style={box(parts[zn])} onClick={() => setSide(zn)}
+                    onDragOver={(e) => { e.preventDefault(); setOver(zn); }} onDragLeave={() => setOver("")}
+                    onDrop={(e) => { e.preventDefault(); setOver(""); drop(zn, e.dataTransfer.getData("text/plain")); }} />
+                ))}
+                {guides && <>
+                  {preset.wrapMm > 0 && <div style={{ position: "absolute", inset: 0, pointerEvents: "none", boxShadow: `inset 0 0 0 ${(preset.wrapMm / sheet.w) * 100}cqw rgba(0,0,0,0.28)` }} />}
+                  <div className="trim" style={{ inset: `${pct(sheet.edge / sheet.h)} ${pct(sheet.edge / sheet.w)}` }} />
+                  <div className="spine" style={box(parts.spine)} />
+                </>}
+              </div>
+            </div>
+            {guides && <div className="canvas-ovl leg"><span><i style={{ background: "var(--bleed)" }} />Tepi papan</span><span><i style={{ background: "var(--safe)" }} />Punggung</span>{preset.wrapMm > 0 && <span><i style={{ background: "#555", height: 8 }} />Lipatan {preset.wrapMm} mm</span>}</div>}
+          </div>
+        </main>
 
-        <h2>Tulisan</h2>
-        <label className="field">Judul<input type="text" value={cover.title} placeholder="mis. Ayu & Made" onChange={(e) => set({ title: e.target.value }, true)} /></label>
-        <label className="field">Keterangan<input type="text" value={cover.subtitle} placeholder="mis. 12 Juni 2026 · Ubud" onChange={(e) => set({ subtitle: e.target.value }, true)} /></label>
-        <div className="two">
-          <label className="field">Huruf judul
-            <select value={cover.titleFont ?? "Cormorant Garamond"} onChange={(e) => set({ titleFont: e.target.value })}>
-              {FONTS.map((f) => <option key={f.family} value={f.family}>{f.family}</option>)}
-            </select>
-          </label>
-          <label className="field">Huruf keterangan
-            <select value={cover.subFont ?? "Montserrat"} onChange={(e) => set({ subFont: e.target.value })}>
-              {FONTS.map((f) => <option key={f.family} value={f.family}>{f.family}</option>)}
-            </select>
-          </label>
-        </div>
-        <div className="two">
-          <label className="field">Posisi
-            <select value={cover.textPos} disabled={cover.frontStyle === "frame"} onChange={(e) => set({ textPos: e.target.value as Cover["textPos"] })}>
-              <option value="atas">Atas</option><option value="tengah">Tengah</option><option value="bawah">Bawah</option>
-            </select>
-          </label>
-          <label className="field">Warna tulisan<input type="color" value={cover.textColor} onChange={(e) => set({ textColor: e.target.value }, true)} /></label>
-        </div>
-        <label className="check"><input type="checkbox" checked={cover.spineText} onChange={(e) => set({ spineText: e.target.checked })} /> Judul di punggung</label>
-        <label className="field">Warna sampul<input type="color" value={cover.bg} onChange={(e) => set({ bg: e.target.value }, true)} /></label>
-
-        <h2>Ukuran sampul</h2>
-        <div className="two">
-          <label className="field">Punggung (mm)<input type="number" min={0} max={80} value={preset.spineMm} onChange={(e) => setPreset({ ...preset, spineMm: clamp(+e.target.value || 0, 0, 80) })} /></label>
-          <label className="field">Lipatan papan (mm)<input type="number" min={0} max={30} value={preset.wrapMm} onChange={(e) => setPreset({ ...preset, wrapMm: clamp(+e.target.value || 0, 0, 30) })} /></label>
-        </div>
-        <p className="dim">Punggung dan lipatan papan berbeda tiap percetakan dan jumlah halaman; tanyakan angkanya. Hardcover biasanya dilipat 15–18 mm.</p>
-      </aside>
-    </div>
+        <aside className="props" aria-label="Pengaturan sampul">
+          <div className="scroll">
+            <Section id="s-photo" title={`Foto ${side === "front" ? "depan" : "belakang"}`}>
+              {side === "front" && <Row label="Gaya"><select value={cover.frontStyle} onChange={(e) => set({ frontStyle: e.target.value as Cover["frontStyle"] })}>
+                <option value="full">Penuh sampai tepi</option><option value="frame">Berbingkai, judul di bawah</option></select></Row>}
+              {chosen ? (
+                <>
+                  <Row label="Perbesar">{slider(pl.z, 1, 3, (v) => slide({ [placeKey]: { ...pl, z: v } }), `${Math.round(pl.z * 100)}%`)}</Row>
+                  <Row label="Geser datar">{slider(pl.x, 0, 1, (v) => slide({ [placeKey]: { ...pl, x: v } }), `${Math.round(pl.x * 100)}%`)}</Row>
+                  <Row label="Geser tegak">{slider(pl.y, 0, 1, (v) => slide({ [placeKey]: { ...pl, y: v } }), `${Math.round(pl.y * 100)}%`)}</Row>
+                  <Btn label="Lepas foto" icon="x" full onClick={() => set(side === "front" ? { front: undefined } : { back: undefined })} />
+                </>
+              ) : <p className="caption">Belum ada foto di sisi ini. Klik foto di panel kiri.</p>}
+            </Section>
+            <Section id="s-text" title="Tulisan">
+              <Row label="Judul"><input type="text" value={cover.title} placeholder="mis. Ayu & Made" onChange={(e) => set({ title: e.target.value }, true)} style={{ width: "100%" }} /></Row>
+              <Row label="Keterangan"><input type="text" value={cover.subtitle} placeholder="mis. 12 Juni 2026 · Ubud" onChange={(e) => set({ subtitle: e.target.value }, true)} style={{ width: "100%" }} /></Row>
+              <Row label="Huruf judul"><select value={cover.titleFont ?? "Cormorant Garamond"} onChange={(e) => set({ titleFont: e.target.value })} style={{ fontFamily: `"${cover.titleFont ?? "Cormorant Garamond"}"` }}>
+                {FONTS.map((f) => <option key={f.family} value={f.family} style={{ fontFamily: f.family }}>{f.family}</option>)}</select></Row>
+              <Row label="Huruf ket."><select value={cover.subFont ?? "Montserrat"} onChange={(e) => set({ subFont: e.target.value })} style={{ fontFamily: `"${cover.subFont ?? "Montserrat"}"` }}>
+                {FONTS.map((f) => <option key={f.family} value={f.family} style={{ fontFamily: f.family }}>{f.family}</option>)}</select></Row>
+              <Row label="Posisi"><Seg full value={cover.textPos} onChange={(v) => set({ textPos: v })} items={[{ v: "atas", label: "Atas" }, { v: "tengah", label: "Tengah" }, { v: "bawah", label: "Bawah" }]} /></Row>
+              <Row label="Warna"><ColorField value={cover.textColor} onChange={(v) => set({ textColor: v }, true)} /></Row>
+              <label className="ck"><input type="checkbox" checked={cover.spineText} onChange={(e) => set({ spineText: e.target.checked })} />Judul di punggung</label>
+            </Section>
+            <Section id="s-size" title="Bahan & ukuran">
+              <Row label="Warna sampul"><ColorField value={cover.bg} onChange={(v) => set({ bg: v }, true)} /></Row>
+              <Row label="Punggung"><NumField value={preset.spineMm} min={0} max={80} unit="mm" onChange={(v) => setPreset({ ...preset, spineMm: v })} /></Row>
+              <Row label="Lipatan papan"><NumField value={preset.wrapMm} min={0} max={30} unit="mm" onChange={(v) => setPreset({ ...preset, wrapMm: v })} /></Row>
+              <div className="note"><Icon name="info" size={14} />Punggung dan lipatan berbeda tiap percetakan dan jumlah halaman; tanyakan angkanya. Hardcover umumnya dilipat 15–18 mm.</div>
+            </Section>
+          </div>
+        </aside>
+      </div>
+      <StatusBar left={`Sampul · ${Math.round(sheet.w)} × ${Math.round(sheet.h)} mm (belakang ${preset.pageWmm} + punggung ${preset.spineMm} + depan ${preset.pageWmm}${preset.wrapMm ? ` + lipatan ${preset.wrapMm}` : ""} + bleed ${preset.bleedMm})`}
+        right={<span className="dimtext">Sisi {side === "front" ? "depan" : "belakang"}</span>} />
+    </>
   );
 }
