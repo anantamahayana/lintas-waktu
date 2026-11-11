@@ -4,6 +4,7 @@ import { lowResWarnings, pageNo, toSpreads } from "../lib/export";
 import { addPage, applyTpl, clearFrame, countsFor, isEmpty, joinPages, layPages, removePhoto, replacePhoto, setCount, shuffleTemplates, splitPages, swapPhotos, templatesFor, type LaidPage, type Tpl } from "../lib/layout";
 import type { Photo } from "../lib/photos";
 import { CENTER, cellRectMm, effectiveDpi, spreadMm, type Placement, type Preset } from "../lib/print";
+import { PresetForm } from "./PresetForm";
 import { TemplateEditor } from "./TemplateEditor";
 
 type Props = {
@@ -42,6 +43,9 @@ export function Editor({ photos, design, commit, undo, redo, canUndo, canRedo, p
   const { album, place } = design;
   const { byId, pages } = useLaidPages(photos, design, preset, custom);
   const [making, setMaking] = useState(false);
+  const [props, setProps] = useState(false);
+  const propsRef = useRef<HTMLDialogElement>(null);
+  useEffect(() => { if (props) propsRef.current?.showModal(); }, [props]);
   const spreads = useMemo(() => toSpreads(pages), [pages]);
   const [si, setSi] = useState(0);
   const [sel, setSel] = useState("");
@@ -120,6 +124,9 @@ export function Editor({ photos, design, commit, undo, redo, canUndo, canRedo, p
       <div className="tools">
         <button type="button" className="btn" disabled={!canUndo} onClick={undo}>Urungkan</button>
         <button type="button" className="btn" disabled={!canRedo} onClick={redo}>Ulangi</button>
+        <span className="sep" aria-hidden="true" />
+        <button type="button" className="btn" onClick={() => setProps(true)}>Properti album</button>
+        <span className="dim">{preset.pageWmm / 10} × {preset.pageHmm / 10} cm · {preset.binding === "layflat" ? "layflat" : "jilid biasa"}</span>
         <span className="sep" aria-hidden="true" />
         <label className="check"><input type="checkbox" checked={guides} onChange={(e) => setGuides(e.target.checked)} /> Garis potong &amp; zona aman</label>
         <span className="right" />
@@ -256,6 +263,14 @@ export function Editor({ photos, design, commit, undo, redo, canUndo, canRedo, p
           )}
         </aside>
       </div>
+      {props && (
+        <dialog ref={propsRef} className="dialog" onClose={() => setProps(false)} aria-labelledby="props-title">
+          <h1 id="props-title">Properti album</h1>
+          <p className="dim">Perubahan langsung terlihat di editor dan bisa dikembalikan dengan mengubah nilainya lagi.</p>
+          <div className="dlg-body"><PresetForm preset={preset} setPreset={setPreset} /></div>
+          <div className="dlg-actions"><button type="button" className="btn primary" onClick={() => propsRef.current?.close()}>Selesai</button></div>
+        </dialog>
+      )}
       {making && (
         <TemplateEditor preset={preset} custom={custom} setCustom={setCustom} startSpread={joined} onClose={() => setMaking(false)}
           onUse={(t) => { if (selPage && !!t.spread === joined) setAlbum(applyTpl(album, selPage.index, t)); }} />

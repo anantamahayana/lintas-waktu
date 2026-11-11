@@ -151,3 +151,5 @@ body { overflow: hidden; }
 details.more > summary { cursor: pointer; padding: 6px 0; color: var(--dim); }
 details.more[open] > summary { margin-bottom: 8px; }
 .form-stack { display: flex; flex-direction: column; gap: 14px; }
+
+.dlg-body { max-height: 65vh; overflow-y: auto; margin: 14px 0; padding-right: 4px; }
