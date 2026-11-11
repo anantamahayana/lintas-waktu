@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyTpl, autoCounts, gridTpl, joinPages, layPages, MAX_PER_PAGE, newAlbum, pickTpl, removePhoto, replacePhoto, setCount, setCustomTemplates, shuffleTemplates, splitPages, swapPhotos, TEMPLATES, templatesFor, validTpl, type Tpl } from "./layout";
+import { addPage, applyTpl, autoCounts, clearFrame, emptyAlbum, isEmpty, gridTpl, joinPages, layPages, MAX_PER_PAGE, newAlbum, pickTpl, removePhoto, replacePhoto, setCount, setCustomTemplates, shuffleTemplates, splitPages, swapPhotos, TEMPLATES, templatesFor, validTpl, type Tpl } from "./layout";
 import { toSpreads } from "./export";
 import { jpegSize } from "./photos";
 import { cellRectMm, cropRect, DEFAULT_PRESET, effectiveDpi, setJpegDpi, spreadMm, spreadPx } from "./print";
@@ -144,6 +144,32 @@ describe("joined pages (layflat)", () => {
     expect(r.x + r.w).toBeGreaterThan(fold);
     const full = cellRectMm({ ...p, marginPct: 0 }, "both", 1, 1, [0, 0, 1, 1]);
     expect(full).toEqual({ x: 0, y: 0, ...spreadMm(p) });
+  });
+});
+
+describe("albums filled by hand", () => {
+  it("starts as empty frames; photos replace them, clearing keeps the frame", () => {
+    let a = emptyAlbum(4, 1);
+    expect(a.order.every(isEmpty)).toBe(true);
+    expect(new Set(a.order).size).toBe(4);
+    a = replacePhoto(a, a.order[1], "p1");
+    expect(a.order[1]).toBe("p1");
+    a = setCount(a, 0, 3);
+    expect(a.pages).toHaveLength(4); // growing adds frames, it does not eat other pages
+    expect(a.order).toHaveLength(6);
+    expect(sum(a.pages.map((p) => p.n))).toBe(a.order.length);
+    a = setCount(a, 0, 1); // shrinking drops the empty frames, the photo stays put
+    expect(a.order).toHaveLength(4);
+    expect(a.order[1]).toBe("p1");
+    a = addPage(a, 2);
+    expect(a.order).toHaveLength(6);
+    expect(new Set(a.order).size).toBe(6);
+    expect(sum(a.pages.map((p) => p.n))).toBe(6);
+    const before = a.order.length;
+    a = clearFrame(a, "p1");
+    expect(a.order).toHaveLength(before);
+    expect(a.order).not.toContain("p1");
+    expect(new Set(a.order).size).toBe(before);
   });
 });
 

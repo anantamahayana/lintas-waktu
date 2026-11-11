@@ -11,13 +11,14 @@ type Props = {
   setTarget: (n: number) => void;
   hasAlbum: boolean;
   onBuild: () => void;
+  onBuildEmpty: () => void;
   onOpenEditor: () => void;
 };
 
 const typing = (e: KeyboardEvent) => e.target instanceof HTMLElement && /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName);
 
 /** Fast culling: look at one photo at a time and decide with the keyboard. */
-export function Kurasi({ photos, setPhotos, curId, setCurId, target, setTarget, hasAlbum, onBuild, onOpenEditor }: Props) {
+export function Kurasi({ photos, setPhotos, curId, setCurId, target, setTarget, hasAlbum, onBuild, onBuildEmpty, onOpenEditor }: Props) {
   const [filter, setFilter] = useState<Filter>("all");
   const [grid, setGrid] = useState(false);
   const [full, setFull] = useState("");
@@ -129,6 +130,16 @@ export function Kurasi({ photos, setPhotos, curId, setCurId, target, setTarget, 
             <button type="button" className="btn primary" disabled={!cur} onClick={() => mark({ pick: true }, true)}>Pilih (P)</button>
             <button type="button" className="btn" disabled={!cur} onClick={() => mark({ pick: false }, true)}>Lewati (X)</button>
           </div>
+          <div className="two">
+            <button type="button" className="btn" disabled={!list.length} title="Pilih semua foto di saringan ini"
+              onClick={() => { const ids = new Set(list.map((p) => p.id)); setPhotos((ps) => ps.map((p) => (ids.has(p.id) ? { ...p, pick: true } : p))); }}>
+              Pilih semua ({list.length})
+            </button>
+            <button type="button" className="btn" disabled={!picked}
+              onClick={() => { if (confirm(`Batalkan pilihan untuk ${picked} foto?`)) setPhotos((ps) => ps.map((p) => (p.pick === true ? { ...p, pick: null } : p))); }}>
+              Batalkan semua
+            </button>
+          </div>
           <div className="five">
             {[1, 2, 3, 4, 5].map((n) => (
               <button key={n} type="button" className="btn" disabled={!cur} aria-pressed={cur?.stars === n} aria-label={`Bintang ${n}`}
@@ -149,9 +160,10 @@ export function Kurasi({ photos, setPhotos, curId, setCurId, target, setTarget, 
 
           <div className="push">
             {hasAlbum && <button type="button" className="btn" onClick={onOpenEditor}>Buka album yang ada</button>}
+            {!hasAlbum && <button type="button" className="btn" onClick={onBuildEmpty}>Album kosong, isi sendiri</button>}
             <button type="button" className="btn primary" disabled={!picked}
               onClick={() => { if (!hasAlbum || confirm("Album yang ada akan disusun ulang dari foto terpilih. Lanjutkan?")) onBuild(); }}>
-              {hasAlbum ? "Susun ulang" : "Susun album"} dari {picked} foto
+              {hasAlbum ? "Susun ulang" : "Susun otomatis"} dari {picked} foto
             </button>
           </div>
         </aside>

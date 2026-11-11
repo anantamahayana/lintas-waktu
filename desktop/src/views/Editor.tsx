@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { Design } from "../App";
 import { lowResWarnings, pageNo, toSpreads } from "../lib/export";
-import { applyTpl, countsFor, joinPages, layPages, removePhoto, replacePhoto, setCount, shuffleTemplates, splitPages, swapPhotos, templatesFor, type LaidPage, type Tpl } from "../lib/layout";
+import { addPage, applyTpl, clearFrame, countsFor, isEmpty, joinPages, layPages, removePhoto, replacePhoto, setCount, shuffleTemplates, splitPages, swapPhotos, templatesFor, type LaidPage, type Tpl } from "../lib/layout";
 import type { Photo } from "../lib/photos";
 import { CENTER, cellRectMm, effectiveDpi, spreadMm, type Placement, type Preset } from "../lib/print";
 import { TemplateEditor } from "./TemplateEditor";
@@ -17,6 +17,7 @@ type Props = {
   preset: Preset;
   setPreset: (p: Preset) => void;
   onRebuild: () => void;
+  canRebuild: boolean;
   onExport: () => void;
   custom: Tpl[];
   setCustom: (list: Tpl[]) => void;
@@ -37,7 +38,7 @@ export function useLaidPages(photos: Photo[], design: Design, preset: Preset, cu
   return { byId, pages };
 }
 
-export function Editor({ photos, design, commit, undo, redo, canUndo, canRedo, preset, setPreset, onRebuild, onExport, custom, setCustom }: Props) {
+export function Editor({ photos, design, commit, undo, redo, canUndo, canRedo, preset, setPreset, onRebuild, canRebuild, onExport, custom, setCustom }: Props) {
   const { album, place } = design;
   const { byId, pages } = useLaidPages(photos, design, preset, custom);
   const [making, setMaking] = useState(false);
@@ -52,7 +53,10 @@ export function Editor({ photos, design, commit, undo, redo, canUndo, canRedo, p
   const spread = spreads[s];
   const sheet = spreadMm(preset);
   const inAlbum = useMemo(() => new Set(album.order), [album.order]);
-  const tray = useMemo(() => photos.filter((p) => p.pick === true && !inAlbum.has(p.id)), [photos, inAlbum]);
+  const anyPicked = useMemo(() => photos.some((p) => p.pick === true), [photos]);
+  const [trayAll, setTrayAll] = useState(!anyPicked);
+  const tray = useMemo(() => photos.filter((p) => (trayAll || p.pick === true) && !inAlbum.has(p.id)), [photos, inAlbum, trayAll]);
+  const blanks = useMemo(() => album.order.filter(isEmpty).length, [album.order]);
   const warnings = useMemo(() => lowResWarnings(pages, byId, place, preset), [pages, byId, place, preset]);
 
   const selPage: LaidPage | null = (sel && pages.find((p) => p.ids.includes(sel))) || spread?.left || (spread?.right?.side === 1 ? spread.right : null);
@@ -93,12 +97,14 @@ export function Editor({ photos, design, commit, undo, redo, canUndo, canRedo, p
     const box: CSSProperties = { left: pct(r.x / sheet.w), top: pct(r.y / sheet.h), width: pct(r.w / sheet.w), height: pct(r.h / sheet.h) };
     const pos = `${pl.x * 100}% ${pl.y * 100}%`;
     return (
-      <button key={id} type="button" className="cell" style={box} aria-pressed={sel === id} aria-label={`Foto ${ph?.name ?? id}, halaman ${pageNo(pg)}`}
-        draggable onClick={() => setSel(id)}
+      <button key={id} type="button" className={ph ? "cell" : "cell blank"} style={box} aria-pressed={sel === id}
+        aria-label={ph ? `Foto ${ph.name}, halaman ${pageNo(pg)}` : `Bingkai kosong ${k + 1}, halaman ${pageNo(pg)}`}
+        draggable={!!ph} onClick={() => setSel(id)}
         onDragStart={(e) => { e.dataTransfer.setData("text/plain", id); e.dataTransfer.effectAllowed = "move"; }}
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => { e.preventDefault(); drop(id, e.dataTransfer.getData("text/plain")); }}>
         {ph?.thumb && <img src={ph.thumb} alt="" draggable={false} style={{ objectPosition: pos, transformOrigin: pos, transform: `scale(${pl.z})` }} />}
+        {!ph && <span>Seret foto ke sini</span>}
       </button>
     );
   };
@@ -118,24 +124,30 @@ export function Editor({ photos, design, commit, undo, redo, canUndo, canRedo, p
         <label className="check"><input type="checkbox" checked={guides} onChange={(e) => setGuides(e.target.checked)} /> Garis potong &amp; zona aman</label>
         <span className="right" />
         <button type="button" className="btn" onClick={() => { setAlbum(shuffleTemplates(album, pages, seed)); setSeed(seed + 1); }}>Acak ulang album</button>
-        <button type="button" className="btn" onClick={() => { if (confirm("Susun ulang dari awal? Tata letak sekarang masih bisa dikembalikan dengan Urungkan.")) onRebuild(); }}>Susun ulang</button>
+        <button type="button" className="btn" onClick={() => { setAlbum(addPage(addPage(album))); setSi(spreads.length); setSel(""); }}>Tambah spread kosong</button>
+        <button type="button" className="btn" disabled={!canRebuild} title={canRebuild ? undefined : "Pilih foto dulu di Kurasi"}
+          onClick={() => { if (confirm("Susun otomatis dari foto terpilih? Tata letak sekarang masih bisa dikembalikan dengan Urungkan.")) onRebuild(); }}>Susun otomatis</button>
         <button type="button" className="btn primary" onClick={onExport}>Ekspor</button>
       </div>
 
       <div className="work">
         <aside className="panel" aria-label="Foto yang belum dipakai">
           <h2>Belum dipakai · {tray.length}</h2>
-          {tray.length === 0 ? <p className="dim">Semua foto terpilih sudah ada di album.</p> : (
+          <div className="seg" role="group" aria-label="Foto yang ditampilkan">
+            <button type="button" className="btn" aria-pressed={!trayAll} onClick={() => setTrayAll(false)}>Dipilih</button>
+            <button type="button" className="btn" aria-pressed={trayAll} onClick={() => setTrayAll(true)}>Semua foto</button>
+          </div>
+          {tray.length === 0 ? <p className="dim">{trayAll ? "Semua foto sudah ada di album." : "Semua foto terpilih sudah ada di album."}</p> : (
             <div className="tray">
               {tray.map((p) => (
                 <div key={p.id} className="thumb" draggable title={p.name}
                   onDragStart={(e) => { e.dataTransfer.setData("text/plain", p.id); e.dataTransfer.effectAllowed = "move"; }}>
-                  {p.thumb && <img src={p.thumb} alt={p.name} draggable={false} />}
+                  {p.thumb && <img src={p.thumb} alt={p.name} draggable={false} loading="lazy" />}
                 </div>
               ))}
             </div>
           )}
-          <p className="dim">Seret foto ke bingkai untuk menggantinya. Seret antar bingkai untuk menukar.</p>
+          <p className="dim">Seret foto ke bingkai untuk mengisi atau menggantinya. Seret antar bingkai untuk menukar.</p>
         </aside>
 
         <main className="stage dark">
@@ -231,7 +243,15 @@ export function Editor({ photos, design, commit, undo, redo, canUndo, canRedo, p
                 <input type="range" min={0} max={1} step={0.01} value={selPl.y} onChange={(e) => setPlace(sel, { y: +e.target.value })} onPointerUp={endSlide} onKeyUp={endSlide} onBlur={endSlide} />
               </label>
               {selDpi > 0 && <div className={selDpi < (preset.dpi * 2) / 3 ? "warn" : "dim"}>{selDpi} dpi pada ukuran ini (target {preset.dpi})</div>}
-              <button type="button" className="btn" onClick={() => { setAlbum(removePhoto(album, sel)); setSel(""); }}>Keluarkan dari album</button>
+              <button type="button" className="btn" onClick={() => { setAlbum(clearFrame(album, sel)); setSel(""); }}>Kosongkan bingkai</button>
+              <button type="button" className="btn" onClick={() => { setAlbum(removePhoto(album, sel)); setSel(""); }}>Hapus bingkai</button>
+            </>
+          )}
+          {selOnSpread && isEmpty(sel) && (
+            <>
+              <h2>Bingkai kosong</h2>
+              <p className="dim">Seret foto dari kiri ke bingkai ini.</p>
+              <button type="button" className="btn" onClick={() => { setAlbum(removePhoto(album, sel)); setSel(""); }}>Hapus bingkai</button>
             </>
           )}
         </aside>
@@ -242,7 +262,8 @@ export function Editor({ photos, design, commit, undo, redo, canUndo, canRedo, p
       )}
       <footer className="status">
         <span>Spread {s + 1} dari {spreads.length}</span><span>{spreads.length * 2} halaman</span>
-        <span>{album.order.length} foto di album</span>
+        <span>{album.order.length - blanks} foto di album</span>
+        {blanks > 0 && <span>{blanks} bingkai kosong</span>}
         {warnings.length > 0 && <span className="warn">{warnings.length} foto beresolusi rendah</span>}
         <span className="right">← → pindah spread · Ctrl+Z urungkan</span>
       </footer>

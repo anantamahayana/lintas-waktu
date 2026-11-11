@@ -70,6 +70,31 @@ export type PageCfg = { n: number; tpl?: string; locked?: boolean; joined?: bool
 /** The album: photo ids in reading order, cut into pages by each page's `n`. */
 export type Album = { order: string[]; pages: PageCfg[] };
 
+/** An id that starts with this is a frame with no photo in it yet (albums filled by hand). */
+const EMPTY = "~";
+export const isEmpty = (id: string) => id.startsWith(EMPTY);
+function freshEmpties(order: string[], count: number): string[] {
+  let next = order.reduce((m, id) => (isEmpty(id) ? Math.max(m, +id.slice(1) + 1 || 0) : m), 0);
+  return Array.from({ length: count }, () => EMPTY + next++);
+}
+
+/** An album of empty frames, to be filled by dragging photos in. */
+export function emptyAlbum(pages: number, perPage = 1): Album {
+  return { order: freshEmpties([], pages * perPage), pages: Array.from({ length: pages }, () => ({ n: perPage })) };
+}
+
+/** Add a page of empty frames at the end. */
+export function addPage(album: Album, n = 1): Album {
+  return { order: [...album.order, ...freshEmpties(album.order, n)], pages: [...album.pages, { n }] };
+}
+
+/** Take the photo out but keep its frame (the photo goes back to the tray). */
+export function clearFrame(album: Album, id: string): Album {
+  if (!album.order.includes(id) || isEmpty(id)) return album;
+  const [blank] = freshEmpties(album.order, 1);
+  return { ...album, order: album.order.map((x) => (x === id ? blank : x)) };
+}
+
 /** Spread `nPhotos` evenly over `pages` pages (1 to 4 each); adds pages when they do not fit. */
 export function autoCounts(nPhotos: number, pages: number): number[] {
   if (nPhotos <= 0) return [];
@@ -125,10 +150,22 @@ function settle(pages: PageCfg[], i: number, diff: number): PageCfg[] | null {
 export function setCount(album: Album, i: number, n: number): Album {
   const pages = album.pages.map((p) => ({ ...p }));
   if (!pages[i] || pages[i].tail || n < 1 || n > MAX_CELLS) return album;
-  const diff = pages[i].n - n;
+  let diff = pages[i].n - n;
+  let order = album.order;
+  const start = pages.slice(0, i).reduce((s, p) => s + p.n, 0), end = start + pages[i].n;
+  if (diff < 0 && order.some(isEmpty)) {
+    // An album filled by hand: a page that grows gets new empty frames instead of taking other pages' photos.
+    order = [...order.slice(0, end), ...freshEmpties(order, -diff), ...order.slice(end)];
+    diff = 0;
+  } else if (diff > 0) {
+    // A page that shrinks gives up its empty frames first.
+    const drop = new Set(order.slice(start, end).filter(isEmpty).slice(-diff));
+    order = order.filter((id) => !drop.has(id));
+    diff -= drop.size;
+  }
   pages[i] = { ...pages[i], n, tpl: undefined };
   const out = settle(pages, i, diff);
-  return out ? { ...album, pages: out } : album;
+  return out ? { order, pages: out } : album;
 }
 
 /** Use a template on page `i`, changing the page's photo count to fit it. */

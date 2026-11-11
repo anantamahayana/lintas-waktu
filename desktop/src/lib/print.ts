@@ -41,6 +41,15 @@ export const DEFAULT_PRESET: Preset = {
   pattern: "Album",
 };
 
+/** Starting points offered when a project is made; every value can be changed afterwards. */
+export const STARTS: { id: string; label: string; preset: Partial<Preset> }[] = [
+  { id: "a4l", label: "A4 mendatar · layflat", preset: { pageWmm: 297, pageHmm: 210 } },
+  { id: "a4p", label: "A4 tegak · layflat", preset: { pageWmm: 210, pageHmm: 297 } },
+  { id: "25", label: "25 × 25 cm · layflat", preset: { pageWmm: 250, pageHmm: 250 } },
+  { id: "30", label: "30 × 30 cm · layflat", preset: { pageWmm: 300, pageHmm: 300 } },
+  { id: "a4l-b", label: "A4 mendatar · jilid biasa", preset: { pageWmm: 297, pageHmm: 210, binding: "biasa" } },
+];
+
 export type Rect = { x: number; y: number; w: number; h: number };
 
 export const mmToPx = (mm: number, dpi: number) => (mm / 25.4) * dpi;
