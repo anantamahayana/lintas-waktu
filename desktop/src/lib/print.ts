@@ -15,6 +15,9 @@ export type Preset = {
   bg: string;
   /** "layflat": pages open flat, a photo may cross the fold. "biasa": part of the fold is lost in the binding. */
   binding: "layflat" | "biasa";
+  /** Cover: spine width, and how far the printed cover folds round the board (hardcover), both in mm. */
+  spineMm: number;
+  wrapMm: number;
   /** File name stem for exports: `<pattern>_01.jpg`. */
   pattern: string;
 };
@@ -38,6 +41,8 @@ export const DEFAULT_PRESET: Preset = {
   gapPct: 2,
   bg: "#ffffff",
   binding: "layflat",
+  spineMm: 10,
+  wrapMm: 0,
   pattern: "Album",
 };
 

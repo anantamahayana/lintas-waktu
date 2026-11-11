@@ -20,7 +20,10 @@ Aplikasi Windows untuk memilih foto, menyusun album, dan mengekspor file cetak. 
   dengan bleed dan dpi tertulis di file; peringatan foto beresolusi rendah.
 - Pilihan dan desain **tersimpan otomatis** per proyek.
 
-Belum ada: sampul, PDF pratinjau, proof ke galeri klien, papan status produksi, preset bernama.
+- **Sampul**: foto depan/belakang, judul, keterangan, judul di punggung, lebar punggung dan lipatan papan; ikut diekspor.
+- **PDF pratinjau** untuk klien (WhatsApp): kecil, tanpa bleed, bernomor halaman.
+
+Belum ada: proof ke galeri klien, papan status produksi, preset bernama.
 
 ## Menjalankan
 ```

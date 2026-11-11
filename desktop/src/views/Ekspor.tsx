@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import type { Design } from "../App";
-import { exportAlbum, lowResWarnings, spreadFileName, toSpreads } from "../lib/export";
+import { coverFileName, exportAlbum, hasCover, lowResWarnings, proofPdf, saveFile, spreadFileName, toSpreads } from "../lib/export";
+import { coverMm } from "../lib/cover";
+import { mmToPx } from "../lib/print";
 import type { Tpl } from "../lib/layout";
 import type { Photo } from "../lib/photos";
 import { spreadPx, type Preset } from "../lib/print";
@@ -22,13 +24,28 @@ export function Ekspor({ photos, design, preset, setPreset, custom }: Props) {
   const [msg, setMsg] = useState("");
 
   const px = spreadPx(preset);
+  const cover = design.cover ?? null;
+  const withCover = !!cover && hasCover(cover);
+  const cm = coverMm(preset);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const runPdf = async () => {
+    setPdfBusy(true); setDone(0); setMsg("");
+    try {
+      const pdf = await proofPdf(cover, spreads, byId, design.place, preset, setDone);
+      await saveFile(pdf, `${(preset.pattern || "Album").replace(/[\\/:*?"<>|]+/g, "-")} - pratinjau.pdf`);
+      setMsg(`PDF pratinjau siap (${(pdf.size / 1048576).toFixed(1)} MB). Kirim ke klien lewat WhatsApp; nomor halaman tertulis di bawah tiap spread.`);
+    } catch (e) {
+      setMsg(e instanceof DOMException && e.name === "AbortError" ? "Dibatalkan." : `PDF gagal: ${e instanceof Error ? e.message : String(e)}`);
+    } finally { setPdfBusy(false); }
+  };
   const run = async () => {
     setBusy(true); setDone(0); setMsg("");
     try {
-      const where = await exportAlbum(spreads, byId, design.place, preset, setDone);
-      setMsg(where === "folder" ? `${spreads.length} file tersimpan di folder yang dipilih.`
-        : where === "zip" ? `${spreads.length} file disimpan dalam satu file .zip. Ekstrak dulu sebelum dikirim ke percetakan.`
-        : `${spreads.length} file diunduh ke folder Unduhan.`);
+      const where = await exportAlbum(spreads, byId, design.place, preset, setDone, cover);
+      const n = spreads.length + (withCover ? 1 : 0);
+      setMsg(where === "folder" ? `${n} file tersimpan di folder yang dipilih.`
+        : where === "zip" ? `${n} file disimpan dalam satu file .zip. Ekstrak dulu sebelum dikirim ke percetakan.`
+        : `${n} file diunduh ke folder Unduhan.`);
     } catch (e) {
       setMsg(e instanceof DOMException && e.name === "AbortError" ? "Ekspor dibatalkan." : `Ekspor gagal: ${e instanceof Error ? e.message : String(e)}`);
     } finally { setBusy(false); }
@@ -54,7 +71,8 @@ export function Ekspor({ photos, design, preset, setPreset, custom }: Props) {
       <aside className="panel wide" aria-label="Ekspor">
         <h2>Ringkasan ekspor</h2>
         <dl>
-          <dt>Isi</dt><dd>{spreads.length} spread · {spreads.length * 2} halaman</dd>
+          <dt>Isi</dt><dd>{withCover ? "Sampul + " : ""}{spreads.length} spread · {spreads.length * 2} halaman</dd>
+          {withCover && <><dt>Sampul</dt><dd>{Math.round(mmToPx(cm.w, preset.dpi)).toLocaleString("id-ID")} × {Math.round(mmToPx(cm.h, preset.dpi)).toLocaleString("id-ID")} · {coverFileName(preset)}</dd></>}
           <dt>Piksel</dt><dd>{px.w.toLocaleString("id-ID")} × {px.h.toLocaleString("id-ID")} per spread</dd>
           <dt>Bleed</dt><dd>{preset.bleedMm} mm, sudah termasuk</dd>
           <dt>Format</dt><dd>JPG per spread · sRGB · {preset.dpi} dpi</dd>
@@ -72,12 +90,15 @@ export function Ekspor({ photos, design, preset, setPreset, custom }: Props) {
             </ul>
           </div>
         )}
-        <button type="button" className="btn primary big" disabled={busy || !spreads.length} onClick={run}>
-          {busy ? `Mengekspor ${done} dari ${spreads.length}…` : "Ekspor file cetak"}
+        <button type="button" className="btn primary big" disabled={busy || pdfBusy || !spreads.length} onClick={run}>
+          {busy ? `Mengekspor ${done} dari ${spreads.length + (withCover ? 1 : 0)}…` : "Ekspor file cetak"}
         </button>
-        {busy && <progress max={spreads.length} value={done} aria-label="Kemajuan ekspor" />}
+        <button type="button" className="btn big" disabled={busy || pdfBusy || !spreads.length} onClick={runPdf}>
+          {pdfBusy ? `Membuat PDF ${done} dari ${spreads.length}…` : "PDF pratinjau untuk klien"}
+        </button>
+        {(busy || pdfBusy) && <progress max={spreads.length + (busy && withCover ? 1 : 0)} value={done} aria-label="Kemajuan" />}
         {msg && <p role="status">{msg}</p>}
-        <p className="dim">File dibuat dari foto asli resolusi penuh. Sampul, PDF pratinjau, dan proof ke galeri klien belum tersedia di versi ini.</p>
+        <p className="dim">File cetak dibuat dari foto asli resolusi penuh{withCover ? ", termasuk sampul" : ""}. PDF pratinjau berukuran kecil, tanpa bleed, dengan nomor halaman.{withCover ? "" : " Sampul diatur di tab Sampul."}</p>
       </aside>
     </div>
   );

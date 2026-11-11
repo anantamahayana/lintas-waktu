@@ -7,10 +7,12 @@ import { Beranda, type ProjectMeta } from "./views/Beranda";
 import { Editor } from "./views/Editor";
 import { Ekspor } from "./views/Ekspor";
 import { Kurasi } from "./views/Kurasi";
+import { Sampul } from "./views/Sampul";
+import type { Cover } from "./lib/cover";
 
-type Tab = "kurasi" | "editor" | "ekspor";
+type Tab = "kurasi" | "editor" | "sampul" | "ekspor";
 /** What undo/redo steps through: the album and how each photo sits in its frame. */
-export type Design = { album: Album; place: Record<string, Placement> };
+export type Design = { album: Album; place: Record<string, Placement>; cover?: Cover };
 type Saved = { v: 2; name: string; folder: string; marks: Record<string, [boolean | null, number]>; design: Design | null; preset: Preset; target: number };
 /** What the folder picker is being opened for. */
 type Pending = { kind: "new"; name: string; preset: Preset } | { kind: "open"; meta: ProjectMeta };
@@ -111,13 +113,13 @@ export function App() {
   const redo = useCallback(() => setHist((h) => (h.future.length && h.now ? { past: [...h.past, h.now], now: h.future[0], future: h.future.slice(1) } : h)), []);
 
   const build = useCallback(() => {
-    commit({ album: newAlbum(picked.map((p) => p.id), preset.pages), place: {} });
+    commit({ album: newAlbum(picked.map((p) => p.id), preset.pages), place: {}, cover: hist.now?.cover });
     setTab("editor");
-  }, [commit, picked, preset.pages]);
+  }, [commit, picked, preset.pages, hist.now?.cover]);
   const buildEmpty = useCallback(() => {
-    commit({ album: emptyAlbum(preset.pages), place: {} });
+    commit({ album: emptyAlbum(preset.pages), place: {}, cover: hist.now?.cover });
     setTab("editor");
-  }, [commit, preset.pages]);
+  }, [commit, preset.pages, hist.now?.cover]);
 
   const goHome = () => { run.current++; setProject(null); setPhotos([]); setFolder(""); };
   const remove = (p: ProjectMeta) => {
@@ -145,9 +147,9 @@ export function App() {
         <button type="button" className="btn" onClick={goHome}>Beranda</button>
         <strong>{project.name}</strong>
         <nav aria-label="Ruang kerja">
-          {(["kurasi", "editor", "ekspor"] as const).map((t) => (
+          {(["kurasi", "editor", "sampul", "ekspor"] as const).map((t) => (
             <button key={t} type="button" className="tab" aria-current={tab === t ? "page" : undefined} onClick={() => setTab(t)}>
-              {t === "kurasi" ? "Kurasi" : t === "editor" ? "Editor" : "Ekspor"}
+              {t === "kurasi" ? "Kurasi" : t === "editor" ? "Editor" : t === "sampul" ? "Sampul" : "Ekspor"}
             </button>
           ))}
         </nav>
@@ -173,6 +175,9 @@ export function App() {
       {tab === "editor" && design && (
         <Editor photos={photos} design={design} commit={commit} undo={undo} redo={redo} canUndo={hist.past.length > 0} canRedo={hist.future.length > 0}
           preset={preset} setPreset={setPreset} onRebuild={build} canRebuild={picked.length > 0} onExport={() => setTab("ekspor")} custom={custom} setCustom={setCustom} />
+      )}
+      {tab === "sampul" && design && (
+        <Sampul photos={photos} design={design} commit={commit} preset={preset} setPreset={setPreset} />
       )}
       {tab === "ekspor" && design && (
         <Ekspor photos={photos} design={design} preset={preset} setPreset={setPreset} custom={custom} />

@@ -3,6 +3,8 @@ import { addPage, applyTpl, autoCounts, clearFrame, emptyAlbum, isEmpty, gridTpl
 import { toSpreads } from "./export";
 import { jpegSize } from "./photos";
 import { crc32, zip } from "./zip";
+import { coverMm, coverParts } from "./cover";
+import { pdfFromJpegs } from "./pdf";
 import { cellRectMm, cropRect, DEFAULT_PRESET, effectiveDpi, setJpegDpi, spreadMm, spreadPx } from "./print";
 
 const ids = (n: number) => Array.from({ length: n }, (_, i) => `p${i}`);
@@ -278,5 +280,29 @@ describe("zip", () => {
     expect(v.getUint32(end, true)).toBe(0x06054b50);
     expect(v.getUint16(end + 10, true)).toBe(2);
     expect(v.getUint32(v.getUint32(end + 16, true), true)).toBe(0x02014b50);
+  });
+});
+
+describe("cover and proof pdf", () => {
+  it("cover sheet = back + spine + front, plus bleed and board wrap on the outside", () => {
+    const p = { ...DEFAULT_PRESET, spineMm: 12, wrapMm: 15 };
+    const m = coverMm(p), parts = coverParts(p);
+    expect(m.w).toBe(2 * 297 + 12 + 2 * (3 + 15));
+    expect(m.h).toBe(210 + 2 * 18);
+    expect(parts.back.w + parts.spine.w + parts.front.w).toBeCloseTo(m.w, 9);
+    expect(parts.trimFront).toEqual({ x: 18 + 297 + 12, y: 18, w: 297, h: 210 });
+  });
+  it("pdf has one page per jpeg and a valid trailer", async () => {
+    const jpg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 16, 0x4a, 0x46, 0x49, 0x46, 0, 1, 1, 0, 0, 72, 0, 72, 0, 0,
+      0xff, 0xc0, 0, 17, 8, 0x01, 0x00, 0x02, 0x00, 3, 0xff, 0xd9]);
+    const text = new TextDecoder("latin1").decode(await pdfFromJpegs([jpg, jpg]).arrayBuffer());
+    expect(text.startsWith("%PDF-1.4")).toBe(true);
+    expect(text).toContain("/Count 2");
+    expect((text.match(/\/Type \/Page /g) ?? []).length).toBe(2);
+    const xref = +text.slice(text.lastIndexOf("startxref") + 10).trim().split("\n")[0];
+    expect(text.slice(xref, xref + 4)).toBe("xref");
+    // every offset in the table points at the object it names
+    const rows = text.slice(xref).split("\n").slice(3, 3 + 7);
+    rows.forEach((r, k) => expect(text.slice(+r.slice(0, 10), +r.slice(0, 10) + 8)).toBe(`${k + 1} 0 obj`.padEnd(8, "\n").slice(0, 8)));
   });
 });

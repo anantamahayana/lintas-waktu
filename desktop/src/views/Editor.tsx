@@ -82,11 +82,11 @@ export function Editor({ photos, design, commit, undo, redo, canUndo, canRedo, p
     return () => window.removeEventListener("keydown", on);
   }, [undo, redo, spreads.length]);
 
-  const setAlbum = (a: typeof album) => { if (a !== album) commit({ album: a, place }); };
+  const setAlbum = (a: typeof album) => { if (a !== album) commit({ ...design, album: a }); };
   const setPage = (i: number, patch: Partial<{ locked: boolean }>) =>
     setAlbum({ ...album, pages: album.pages.map((p, j) => (j === i ? { ...p, ...patch } : p)) });
   const setPlace = (id: string, patch: Partial<Placement>) => {
-    commit({ album, place: { ...place, [id]: { ...(place[id] ?? CENTER), ...patch } } }, sliding.current);
+    commit({ ...design, place: { ...place, [id]: { ...(place[id] ?? CENTER), ...patch } } }, sliding.current);
     sliding.current = true;
   };
   const endSlide = () => { sliding.current = false; };
