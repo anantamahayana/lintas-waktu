@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { ask, tell } from "../lib/ask";
 import type { Design } from "../App";
 import { lowResWarnings, pageNo, toSpreads } from "../lib/export";
 import { addPage, applyTpl, clearFrame, countsFor, isEmpty, joinPages, layPages, removePhoto, replacePhoto, setCount, shuffleTemplates, splitPages, swapPhotos, templatesFor, type LaidPage, type Tpl } from "../lib/layout";
@@ -89,6 +90,18 @@ export function Editor({ photos, design, commit, undo, redo, canUndo, canRedo, p
     sliding.current = true;
   };
   const endSlide = () => { sliding.current = false; };
+  /** Shuffle templates; say why when nothing can change (a page of one photo has only one built-in layout). */
+  const shuffle = (only?: number) => {
+    const next = shuffleTemplates(album, pages, seed, only);
+    setSeed(seed + 1);
+    if (next.pages.every((p, i) => p.tpl === album.pages[i].tpl)) {
+      void tell(only === undefined
+        ? "Tidak ada yang bisa diacak: semua halaman terkunci atau belum berisi bingkai."
+        : "Halaman ini tidak bisa diacak: halamannya terkunci atau tidak ada tata letak lain untuk jumlah foto ini.");
+      return;
+    }
+    setAlbum(next);
+  };
   const drop = (onto: string, dragged: string) => {
     if (!dragged || dragged === onto) return;
     setAlbum(inAlbum.has(dragged) ? swapPhotos(album, onto, dragged) : replacePhoto(album, onto, dragged));
@@ -130,10 +143,10 @@ export function Editor({ photos, design, commit, undo, redo, canUndo, canRedo, p
         <span className="sep" aria-hidden="true" />
         <label className="check"><input type="checkbox" checked={guides} onChange={(e) => setGuides(e.target.checked)} /> Garis potong &amp; zona aman</label>
         <span className="right" />
-        <button type="button" className="btn" onClick={() => { setAlbum(shuffleTemplates(album, pages, seed)); setSeed(seed + 1); }}>Acak ulang album</button>
+        <button type="button" className="btn" onClick={() => shuffle()}>Acak ulang album</button>
         <button type="button" className="btn" onClick={() => { setAlbum(addPage(addPage(album))); setSi(spreads.length); setSel(""); }}>Tambah spread kosong</button>
         <button type="button" className="btn" disabled={!canRebuild} title={canRebuild ? undefined : "Pilih foto dulu di Kurasi"}
-          onClick={() => { if (confirm("Susun otomatis dari foto terpilih? Tata letak sekarang masih bisa dikembalikan dengan Urungkan.")) onRebuild(); }}>Susun otomatis</button>
+          onClick={async () => { if (await ask("Susun otomatis dari foto terpilih? Tata letak sekarang masih bisa dikembalikan dengan Urungkan.")) onRebuild(); }}>Susun otomatis</button>
         <button type="button" className="btn primary" onClick={onExport}>Ekspor</button>
       </div>
 
@@ -215,7 +228,7 @@ export function Editor({ photos, design, commit, undo, redo, canUndo, canRedo, p
               </div>
               <button type="button" className="btn" onClick={() => setMaking(true)}>Buat template sendiri…</button>
               <div className="two">
-                <button type="button" className="btn" disabled={!!selPage.cfg.locked} onClick={() => { setAlbum(shuffleTemplates(album, pages, seed, selPage.index)); setSeed(seed + 1); }}>Acak halaman</button>
+                <button type="button" className="btn" disabled={!!selPage.cfg.locked} onClick={() => shuffle(selPage.index)}>Acak halaman</button>
                 <button type="button" className="btn" aria-pressed={!!selPage.cfg.locked} onClick={() => setPage(selPage.index, { locked: !selPage.cfg.locked })}>
                   {selPage.cfg.locked ? "Terkunci" : "Kunci"}
                 </button>

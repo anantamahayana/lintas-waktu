@@ -82,12 +82,19 @@ describe("templates", () => {
           taken.add(`${x},${y}`);
         }
       }
-      expect(taken.size).toBe(t.cols * t.rows);
+      if (!t.airy) expect(taken.size).toBe(t.cols * t.rows);
     }
   });
   it("auto pick follows photo shape", () => {
     expect(pickTpl([0.67, 0.67], 1.4).id).toBe("2-cols");
     expect(pickTpl([2.4, 2.4], 1.4).id).toBe("2-rows");
+  });
+  it("one-photo pages can be shuffled too", () => {
+    const a = newAlbum(ids(3), 20);
+    const laid = layPages(a, () => 1.5, SHAPE);
+    expect(laid[0].tpl!.id).toBe("1-full"); // auto layout fills the page
+    const b = shuffleTemplates(a, laid, 3);
+    expect(b.pages.every((p, i) => p.tpl && p.tpl !== laid[i].tpl!.id)).toBe(true);
   });
   it("shuffle changes unlocked pages only", () => {
     const a = { order: ids(6), pages: [{ n: 3 }, { n: 3, locked: true }] };

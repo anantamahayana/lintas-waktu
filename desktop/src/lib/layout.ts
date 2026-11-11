@@ -4,10 +4,15 @@ import type { GridCell } from "./print";
  * A layout template: `n` frames on a small grid. `spread` templates cover both pages as one
  * sheet (a photo may cross the fold: for layflat binding). `custom` ones are made by the user.
  */
-export type Tpl = { id: string; n: number; label: string; cols: number; rows: number; cells: GridCell[]; spread?: boolean; custom?: boolean };
+export type Tpl = { id: string; n: number; label: string; cols: number; rows: number; cells: GridCell[]; spread?: boolean; custom?: boolean; airy?: boolean };
 
 export const TEMPLATES: Tpl[] = [
   { id: "1-full", n: 1, label: "Satu foto", cols: 1, rows: 1, cells: [[0, 0, 1, 1]] },
+  // One photo with deliberate white space around it (the empty grid squares stay blank).
+  { id: "1-pad-c", n: 1, label: "Satu foto di tengah, ruang putih", cols: 6, rows: 6, cells: [[1, 1, 4, 4]], airy: true },
+  { id: "1-pad-l", n: 1, label: "Satu foto di kiri", cols: 3, rows: 1, cells: [[0, 0, 2, 1]], airy: true },
+  { id: "1-pad-r", n: 1, label: "Satu foto di kanan", cols: 3, rows: 1, cells: [[1, 0, 2, 1]], airy: true },
+  { id: "1-pad-t", n: 1, label: "Satu foto di atas", cols: 1, rows: 3, cells: [[0, 0, 1, 2]], airy: true },
   { id: "2-cols", n: 2, label: "Dua berdampingan", cols: 2, rows: 1, cells: [[0, 0, 1, 1], [1, 0, 1, 1]] },
   { id: "2-rows", n: 2, label: "Dua bertumpuk", cols: 1, rows: 2, cells: [[0, 0, 1, 1], [0, 1, 1, 1]] },
   { id: "3-left", n: 3, label: "Besar kiri, dua kanan", cols: 2, rows: 2, cells: [[0, 0, 1, 2], [1, 0, 1, 1], [1, 1, 1, 1]] },
@@ -18,6 +23,7 @@ export const TEMPLATES: Tpl[] = [
   { id: "4-top", n: 4, label: "Besar atas, tiga bawah", cols: 3, rows: 3, cells: [[0, 0, 3, 2], [0, 2, 1, 1], [1, 2, 1, 1], [2, 2, 1, 1]] },
   // Two pages as one sheet.
   { id: "s1-full", n: 1, spread: true, label: "Satu foto dua halaman", cols: 1, rows: 1, cells: [[0, 0, 1, 1]] },
+  { id: "s1-pad", n: 1, spread: true, label: "Satu foto lebar di tengah, ruang putih", cols: 8, rows: 6, cells: [[1, 1, 6, 4]], airy: true },
   { id: "s2-wide", n: 2, spread: true, label: "Lebar melintasi lipatan, satu di kanan", cols: 3, rows: 1, cells: [[0, 0, 2, 1], [2, 0, 1, 1]] },
   { id: "s2-wide-r", n: 2, spread: true, label: "Satu di kiri, lebar melintasi lipatan", cols: 3, rows: 1, cells: [[0, 0, 1, 1], [1, 0, 2, 1]] },
   { id: "s3-wide", n: 3, spread: true, label: "Lebar melintasi lipatan, dua di kanan", cols: 3, rows: 2, cells: [[0, 0, 2, 2], [2, 0, 1, 1], [2, 1, 1, 1]] },
@@ -237,7 +243,7 @@ export function replacePhoto(album: Album, inAlbum: string, fromTray: string): A
 
 /** Best built-in template for these photos: the one whose frames are closest in shape to the photos, in order. */
 export function pickTpl(aspects: number[], contentAspect: number, gapFrac = 0, spread = false): Tpl {
-  const options = TEMPLATES.filter((t) => t.n === aspects.length && !!t.spread === spread);
+  const options = TEMPLATES.filter((t) => t.n === aspects.length && !!t.spread === spread && !t.airy);
   if (!options.length) return templatesFor(aspects.length, spread)[0] ?? gridTpl(aspects.length, spread);
   let best = options[0], bestCost = Infinity;
   for (const t of options) {

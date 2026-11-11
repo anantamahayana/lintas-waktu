@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ask } from "../lib/ask";
 import { DEFAULT_PRESET, STARTS, type Preset } from "../lib/print";
 import { PresetForm } from "./PresetForm";
 
@@ -65,7 +66,7 @@ export function Beranda({ projects, onCreate, onOpen, onDelete }: Props) {
                 <span className="dim">Folder "{p.folder}" · {new Date(p.updated).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}</span>
               </button>
               <button type="button" className="btn" aria-label={`Hapus proyek ${p.name}`}
-                onClick={() => { if (confirm(`Hapus proyek "${p.name}"? Foto di laptop tidak ikut terhapus.`)) onDelete(p); }}>Hapus</button>
+                onClick={async () => { if (await ask(`Hapus proyek "${p.name}"? Foto di laptop tidak ikut terhapus.`, "Hapus")) onDelete(p); }}>Hapus</button>
             </div>
           ))}
           {projects.length > 0 && <p className="dim">Saat membuka proyek, pilih lagi folder fotonya: aplikasi tidak menyimpan salinan foto.</p>}

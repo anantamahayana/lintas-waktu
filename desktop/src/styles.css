@@ -153,3 +153,5 @@ details.more[open] > summary { margin-bottom: 8px; }
 .form-stack { display: flex; flex-direction: column; gap: 14px; }
 
 .dlg-body { max-height: 65vh; overflow-y: auto; margin: 14px 0; padding-right: 4px; }
+.dialog.small { width: min(440px, 92vw); }
+.dialog.small p { line-height: 1.5; }

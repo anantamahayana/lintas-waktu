@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { ask } from "../lib/ask";
 import type { Photo } from "../lib/photos";
 
 type Filter = "all" | "picked" | "unseen" | "stars";
@@ -136,7 +137,7 @@ export function Kurasi({ photos, setPhotos, curId, setCurId, target, setTarget, 
               Pilih semua ({list.length})
             </button>
             <button type="button" className="btn" disabled={!picked}
-              onClick={() => { if (confirm(`Batalkan pilihan untuk ${picked} foto?`)) setPhotos((ps) => ps.map((p) => (p.pick === true ? { ...p, pick: null } : p))); }}>
+              onClick={async () => { if (await ask(`Batalkan pilihan untuk ${picked} foto?`)) setPhotos((ps) => ps.map((p) => (p.pick === true ? { ...p, pick: null } : p))); }}>
               Batalkan semua
             </button>
           </div>
@@ -162,7 +163,7 @@ export function Kurasi({ photos, setPhotos, curId, setCurId, target, setTarget, 
             {hasAlbum && <button type="button" className="btn" onClick={onOpenEditor}>Buka album yang ada</button>}
             {!hasAlbum && <button type="button" className="btn" onClick={onBuildEmpty}>Album kosong, isi sendiri</button>}
             <button type="button" className="btn primary" disabled={!picked}
-              onClick={() => { if (!hasAlbum || confirm("Album yang ada akan disusun ulang dari foto terpilih. Lanjutkan?")) onBuild(); }}>
+              onClick={async () => { if (!hasAlbum || (await ask("Album yang ada akan disusun ulang dari foto terpilih. Lanjutkan?"))) onBuild(); }}>
               {hasAlbum ? "Susun ulang" : "Susun otomatis"} dari {picked} foto
             </button>
           </div>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ask, tell } from "./lib/ask";
 import { emptyAlbum, newAlbum, setCustomTemplates, type Album, type Tpl } from "./lib/layout";
 import { photosFromFiles, readAll, type Photo } from "./lib/photos";
 import { DEFAULT_PRESET, type Placement, type Preset } from "./lib/print";
@@ -45,14 +46,14 @@ export function App() {
   setCustomTemplates(custom); // the layout code looks templates up by id
   const setCustom = useCallback((list: Tpl[]) => { setCustomState(list); store(TPL_KEY, list); }, []);
 
-  const ask = (p: Pending) => { pending.current = p; picker.current?.click(); };
+  const pickFolder = (p: Pending) => { pending.current = p; picker.current?.click(); };
 
-  const open = useCallback((files: FileList | null) => {
+  const open = useCallback(async (files: FileList | null) => {
     const why = pending.current;
     pending.current = null;
     if (!why || !files || !files.length) return;
     const { folder, photos } = photosFromFiles(files);
-    if (!photos.length) { alert("Tidak ada foto JPG, PNG, atau WebP di folder itu."); return; }
+    if (!photos.length) { void tell("Tidak ada foto JPG, PNG, atau WebP di folder itu."); return; }
 
     let id: string, name: string;
     if (why.kind === "new") {
@@ -63,7 +64,7 @@ export function App() {
       setTarget(80);
     } else {
       const saved = load<Saved | null>(projectKey(why.meta.id), null);
-      if (folder !== why.meta.folder && !confirm(`Proyek ini dibuat dari folder "${why.meta.folder}", yang dipilih "${folder}". Pilihan dan tata letak hanya pulih untuk foto dengan nama yang sama. Lanjutkan?`)) return;
+      if (folder !== why.meta.folder && !(await ask(`Proyek ini dibuat dari folder "${why.meta.folder}", yang dipilih "${folder}". Pilihan dan tata letak hanya pulih untuk foto dengan nama yang sama. Lanjutkan?`))) return;
       id = why.meta.id; name = why.meta.name;
       const have = new Set(photos.map((p) => p.id));
       // Photos are matched by their path inside the folder; the folder's own name may have changed.
@@ -124,13 +125,13 @@ export function App() {
     setProjects((list) => { const next = list.filter((x) => x.id !== p.id); store(INDEX_KEY, next); return next; });
   };
 
-  const folderInput = <input ref={picker} type="file" multiple hidden onChange={(e) => { open(e.target.files); e.target.value = ""; }} {...{ webkitdirectory: "" }} />;
+  const folderInput = <input ref={picker} type="file" multiple hidden onChange={(e) => { const f = e.target.files; void open(f).finally(() => { e.target.value = ""; }); }} {...{ webkitdirectory: "" }} />;
 
   if (!project) {
     return (
       <>
         {folderInput}
-        <Beranda projects={projects} onCreate={(name, preset) => ask({ kind: "new", name, preset })} onOpen={(meta) => ask({ kind: "open", meta })} onDelete={remove} />
+        <Beranda projects={projects} onCreate={(name, preset) => pickFolder({ kind: "new", name, preset })} onOpen={(meta) => pickFolder({ kind: "open", meta })} onDelete={remove} />
       </>
     );
   }
