@@ -3,6 +3,8 @@ import { addPage, applyTpl, autoCounts, clearFrame, emptyAlbum, isEmpty, gridTpl
 import { toSpreads } from "./export";
 import { jpegSize } from "./photos";
 import { crc32, zip } from "./zip";
+import { burstLeaders, bursts, windowRows } from "./cull";
+import type { Photo } from "./photos";
 import { coverMm, coverParts } from "./cover";
 import { pdfFromJpegs } from "./pdf";
 import { cellRectMm, cropRect, DEFAULT_PRESET, effectiveDpi, setJpegDpi, spreadMm, spreadPx } from "./print";
@@ -304,5 +306,26 @@ describe("cover and proof pdf", () => {
     // every offset in the table points at the object it names
     const rows = text.slice(xref).split("\n").slice(3, 3 + 7);
     rows.forEach((r, k) => expect(text.slice(+r.slice(0, 10), +r.slice(0, 10) + 8)).toBe(`${k + 1} 0 obj`.padEnd(8, "\n").slice(0, 8)));
+  });
+});
+
+describe("culling helpers", () => {
+  const ph = (id: string, time: number, extra: Partial<Photo> = {}): Photo => ({ id, name: id, time, w: 1, h: 1, pick: null, stars: 0, ...extra });
+  it("groups bursts by time gap and camera", () => {
+    const ps = [ph("a", 0), ph("b", 800), ph("c", 1500), ph("d", 5000), ph("e", 5300, { camera: "Z6" })];
+    const { groupOf, size } = bursts(ps);
+    expect([groupOf.get("a"), groupOf.get("b"), groupOf.get("c")]).toEqual(["a", "a", "a"]);
+    expect(groupOf.get("d")).toBe("d");
+    expect(groupOf.get("e")).toBe("e"); // different camera: not the same burst
+    expect(size.get("a")).toBe(3);
+    const leaders = burstLeaders([ps[0], { ...ps[1], stars: 3 }, ps[2], ps[3], ps[4]], groupOf);
+    expect([...leaders].sort()).toEqual(["b", "d", "e"]);
+  });
+  it("windows rows for a virtual grid", () => {
+    expect(windowRows(0, 500, 110, 1000)).toEqual({ first: 0, count: 8 });
+    const w = windowRows(11000, 500, 110, 1000);
+    expect(w.first).toBe(97);
+    expect(w.first + w.count).toBeLessThanOrEqual(1000);
+    expect(windowRows(0, 500, 110, 2)).toEqual({ first: 0, count: 2 });
   });
 });
