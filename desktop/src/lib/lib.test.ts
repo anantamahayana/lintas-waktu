@@ -4,6 +4,9 @@ import { toSpreads } from "./export";
 import { jpegSize } from "./photos";
 import { crc32, zip } from "./zip";
 import { burstLeaders, bursts, windowRows } from "./cull";
+import { boxToMm, currentBoxes, frameRectMm, mmToBox } from "./frames";
+import { moveSheet, sheetsOf, snap } from "./layout";
+import { wrap } from "./paint";
 import type { Photo } from "./photos";
 import { coverMm, coverParts } from "./cover";
 import { pdfFromJpegs } from "./pdf";
@@ -327,5 +330,51 @@ describe("culling helpers", () => {
     expect(w.first).toBe(97);
     expect(w.first + w.count).toBeLessThanOrEqual(1000);
     expect(windowRows(0, 500, 110, 2)).toEqual({ first: 0, count: 2 });
+  });
+});
+
+describe("hand-placed frames, text and sheet moves", () => {
+  it("boxes and millimetres convert both ways, and a page's current frames match its template", () => {
+    const p = DEFAULT_PRESET;
+    const r = { x: 50, y: 40, w: 100, h: 60 };
+    for (const side of [0, 1, "both"] as const) {
+      const back = boxToMm(p, side, mmToBox(p, side, r));
+      for (const k of ["x", "y", "w", "h"] as const) expect(back[k]).toBeCloseTo(r[k], 9);
+    }
+    const laid = layPages(newAlbum(ids(6), 2), () => 1.5, SHAPE);
+    const boxes = currentBoxes(p, laid[1]);
+    const free = { ...laid[1], cfg: { ...laid[1].cfg, free: boxes } };
+    boxes.forEach((_, k) => {
+      const a = frameRectMm(p, laid[1], k), b = frameRectMm(p, free, k);
+      expect(b.x).toBeCloseTo(a.x, 9); expect(b.w).toBeCloseTo(a.w, 9);
+    });
+  });
+  it("changing a page's template or photo count drops hand-placed frames", () => {
+    let a = newAlbum(ids(6), 2);
+    a = { ...a, pages: a.pages.map((pg, i) => (i === 0 ? { ...pg, free: [{ x: 0, y: 0, w: 0.5, h: 0.5 }, { x: 0.5, y: 0, w: 0.5, h: 0.5 }, { x: 0, y: 0.5, w: 1, h: 0.5 }] } : pg)) };
+    expect(setCount(a, 0, 2).pages[0].free).toBeUndefined();
+  });
+  it("moving a sheet carries its pages and photos", () => {
+    const a = newAlbum(ids(8), 8); // 1 photo per page, 4 sheets
+    const laid = layPages(a, () => 1.5, SHAPE);
+    expect(sheetsOf(laid)).toEqual([[0, 1], [2, 3], [4, 5], [6, 7]]);
+    const b = moveSheet(a, laid, 3, 0);
+    expect(b.order).toEqual(["p6", "p7", "p0", "p1", "p2", "p3", "p4", "p5"]);
+    expect(b.pages).toHaveLength(8);
+    const j = joinPages(newAlbum(ids(6), 6), 2); // pages 2+3 joined
+    const lj = layPages(j, () => 1.5, SHAPE);
+    const m = moveSheet(j, lj, 1, 0);
+    expect(m.pages[0].joined).toBe(true);
+    expect(m.pages[1].tail).toBe(true);
+    expect(sum(m.pages.map((x) => x.n))).toBe(m.order.length);
+  });
+  it("snaps to the nearest guide within tolerance", () => {
+    expect(snap(10.8, [0, 10, 12], 1)).toEqual({ v: 10, at: 10 });
+    expect(snap(10.8, [0, 20], 1)).toEqual({ v: 10.8, at: null });
+  });
+  it("wraps text at spaces and line breaks", () => {
+    const m = { measureText: (s: string) => ({ width: s.length * 10 }) as TextMetrics };
+    expect(wrap(m, "Ayu dan Made menikah", 100)).toEqual(["Ayu dan", "Made", "menikah"]);
+    expect(wrap(m, "a\nb", 100)).toEqual(["a", "b"]);
   });
 });

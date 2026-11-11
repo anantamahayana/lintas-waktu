@@ -134,3 +134,8 @@ export function setJpegDpi(bytes: Uint8Array, dpi: number): boolean {
   bytes[16] = dpi >> 8; bytes[17] = dpi & 0xff;
   return true;
 }
+
+/** A page's trim box on its sheet, in mm. `side` "both" is the two pages of a joined sheet. */
+export function pageBoxMm(p: Preset, side: 0 | 1 | "both"): Rect {
+  return { x: p.bleedMm + (side === 1 ? p.pageWmm : 0), y: p.bleedMm, w: (side === "both" ? 2 : 1) * p.pageWmm, h: p.pageHmm };
+}

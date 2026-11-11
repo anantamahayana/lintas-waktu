@@ -71,7 +71,41 @@ export function validTpl(cols: number, rows: number, cells: GridCell[]): boolean
  * One page: how many photos it takes, an optional fixed template, and whether shuffles may touch it.
  * `joined` makes this page and the next one sheet; that next page is its `tail` and holds nothing.
  */
-export type PageCfg = { n: number; tpl?: string; locked?: boolean; joined?: boolean; tail?: boolean };
+export type PageCfg = {
+  n: number; tpl?: string; locked?: boolean; joined?: boolean; tail?: boolean;
+  /** Frames placed by hand, as fractions of the page's trim box (may reach into the bleed). Overrides the template. */
+  free?: Box[];
+  /** Text on the page. */
+  texts?: TextBox[];
+  /** This page's own background colour, and a line round every photo. */
+  bg?: string;
+  stroke?: { mm: number; color: string };
+};
+
+/** A rectangle as fractions of the page (or, for a joined sheet, of both pages). */
+export type Box = { x: number; y: number; w: number; h: number };
+export type TextBox = Box & {
+  id: string;
+  text: string;
+  font: string;
+  /** Size in millimetres of paper, so it prints the same at any dpi. */
+  sizeMm: number;
+  color: string;
+  align: "left" | "center" | "right";
+  bold?: boolean;
+  italic?: boolean;
+  /** Letter spacing in em. */
+  tracking?: number;
+};
+
+export const FONTS: { family: string; label: string }[] = [
+  { family: "Cormorant Garamond", label: "Cormorant Garamond (serif)" },
+  { family: "Playfair Display", label: "Playfair Display (serif tebal)" },
+  { family: "Lora", label: "Lora (serif)" },
+  { family: "Marcellus", label: "Marcellus (judul klasik)" },
+  { family: "Montserrat", label: "Montserrat (sans)" },
+  { family: "Great Vibes", label: "Great Vibes (tulisan tangan)" },
+];
 
 /** The album: photo ids in reading order, cut into pages by each page's `n`. */
 export type Album = { order: string[]; pages: PageCfg[] };
@@ -169,7 +203,7 @@ export function setCount(album: Album, i: number, n: number): Album {
     order = order.filter((id) => !drop.has(id));
     diff -= drop.size;
   }
-  pages[i] = { ...pages[i], n, tpl: undefined };
+  pages[i] = { ...pages[i], n, tpl: undefined, free: undefined };
   const out = settle(pages, i, diff);
   return out ? { order, pages: out } : album;
 }
@@ -180,7 +214,7 @@ export function applyTpl(album: Album, i: number, tpl: Tpl): Album {
   if (!page || page.tail || !!page.joined !== !!tpl.spread) return album;
   const a = page.n === tpl.n ? album : setCount(album, i, tpl.n);
   if (a.pages[i]?.n !== tpl.n) return album;
-  return { ...a, pages: a.pages.map((p, j) => (j === i ? { ...p, tpl: tpl.id } : p)) };
+  return { ...a, pages: a.pages.map((p, j) => (j === i ? { ...p, tpl: tpl.id, free: undefined } : p)) };
 }
 
 /** Make page `i` and the page after it one sheet. The second page's photos move to later pages. */
@@ -219,7 +253,7 @@ export function removePhoto(album: Album, id: string): Album {
   for (const p of album.pages) {
     if (dropTail && p.tail) { dropTail = false; continue; }
     if (at >= seen && at < seen + p.n) {
-      if (p.n > 1) pages.push({ ...p, n: p.n - 1, tpl: undefined });
+      if (p.n > 1) pages.push({ ...p, n: p.n - 1, tpl: undefined, free: p.free?.filter((_, k) => k !== at - seen) });
       else dropTail = !!p.joined;
     } else pages.push(p);
     seen += p.n;
@@ -296,10 +330,46 @@ export function rng(seed: number) {
 export function shuffleTemplates(album: Album, current: LaidPage[], seed: number, only?: number): Album {
   const r = rng(seed);
   const pages = album.pages.map((p, i) => {
-    if (p.locked || p.tail || (only !== undefined && only !== i) || p.n === 0) return p;
+    if (p.locked || p.tail || p.free || (only !== undefined && only !== i) || p.n === 0) return p;
     const options = templatesFor(p.n, !!p.joined).filter((t) => t.id !== current[i]?.tpl?.id);
     if (!options.length) return p;
-    return { ...p, tpl: options[Math.floor(r() * options.length)].id };
+    return { ...p, tpl: options[Math.floor(r() * options.length)].id, free: undefined };
   });
   return { ...album, pages };
+}
+
+/** Pages that print together: one sheet each (two facing pages, or one joined pair). */
+export function sheetsOf(laid: LaidPage[]): number[][] {
+  const out: number[][] = [];
+  for (const pg of laid) (out[pg.spread] ??= []).push(pg.index);
+  return out.map((x) => x ?? []);
+}
+
+/**
+ * Move sheet `from` to position `to` (both sheet numbers), taking its pages and photos along.
+ * Facing pages stay facing; a single page left alone by the move faces a blank page.
+ */
+export function moveSheet(album: Album, laid: LaidPage[], from: number, to: number): Album {
+  const sheets = sheetsOf(laid);
+  if (from === to || !sheets[from] || to < 0 || to >= sheets.length) return album;
+  const starts: number[] = [];
+  let at = 0;
+  for (const p of album.pages) { starts.push(at); at += p.n; }
+  const chunk = (idx: number[]) => ({ pages: idx.map((i) => album.pages[i]), ids: idx.flatMap((i) => album.order.slice(starts[i], starts[i] + album.pages[i].n)) });
+  const parts = sheets.map(chunk);
+  const [moved] = parts.splice(from, 1);
+  parts.splice(to, 0, moved);
+  return { order: parts.flatMap((c) => c.ids), pages: parts.flatMap((c) => c.pages) };
+}
+
+/** Change one page's settings (anything but its photo count). */
+export function patchPage(album: Album, i: number, patch: Partial<PageCfg>): Album {
+  return { ...album, pages: album.pages.map((p, j) => (j === i ? { ...p, ...patch } : p)) };
+}
+
+/** Snap a value to the nearest guide within `tol`; returns the value and the guide used. */
+export function snap(v: number, guides: number[], tol: number): { v: number; at: number | null } {
+  let best: number | null = null;
+  for (const g of guides) if (Math.abs(g - v) <= tol && (best === null || Math.abs(g - v) < Math.abs(best - v))) best = g;
+  return best === null ? { v, at: null } : { v: best, at: best };
 }

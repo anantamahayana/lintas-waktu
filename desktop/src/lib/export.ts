@@ -3,8 +3,10 @@ import type { Photo } from "./photos";
 import { drawCover, fromFile, renderCover, type Cover, type Source } from "./cover";
 import { pdfFromJpegs } from "./pdf";
 import { isNative, join, pickFolder, writeBytes } from "./platform";
+import { frameRectMm } from "./frames";
+import { drawPageExtras, loadFonts, pageBgRectMm } from "./paint";
 import { zip } from "./zip";
-import { CENTER, cellRectMm, cropRect, effectiveDpi, mmToPx, setJpegDpi, spreadMm, type Placement, type Preset } from "./print";
+import { CENTER, cropRect, effectiveDpi, mmToPx, setJpegDpi, spreadMm, type Placement, type Preset } from "./print";
 
 export type Spread = { left: LaidPage | null; right: LaidPage | null };
 
@@ -29,11 +31,10 @@ export function lowResWarnings(pages: LaidPage[], byId: Map<string, Photo>, plac
   const out: Warning[] = [];
   for (const pg of pages) {
     if (!pg.tpl || pg.side === "tail") continue;
-    const side = pg.side;
     pg.ids.forEach((id, k) => {
       const ph = byId.get(id);
       if (!ph || !ph.w) return;
-      const rect = cellRectMm(p, side, pg.tpl!.cols, pg.tpl!.rows, pg.tpl!.cells[k]);
+      const rect = frameRectMm(p, pg, k);
       const dpi = effectiveDpi(ph.w, ph.h, rect, place[id] ?? CENTER);
       if (dpi < (p.dpi * 2) / 3) out.push({ page: pageNo(pg), id, dpi: Math.round(dpi) });
     });
@@ -50,12 +51,19 @@ export async function drawSpread(spread: Spread, byId: Map<string, Photo>, place
   ctx.fillRect(0, 0, w, h);
   ctx.imageSmoothingQuality = "high";
   for (const pg of [spread.left, spread.right]) {
-    if (!pg || !pg.tpl || pg.side === "tail") continue;
-    const side = pg.side;
-    for (let k = 0; k < pg.ids.length; k++) {
+    if (!pg || pg.side === "tail" || !pg.cfg.bg) continue;
+    const r = pageBgRectMm(p, pg.side);
+    ctx.fillStyle = pg.cfg.bg;
+    ctx.fillRect(Math.round(mmToPx(r.x, dpi)), 0, Math.round(mmToPx(r.x + r.w, dpi)) - Math.round(mmToPx(r.x, dpi)), h);
+  }
+  await loadFonts([spread.left, spread.right].filter(Boolean) as LaidPage[]);
+  for (const pg of [spread.left, spread.right]) {
+    if (!pg || pg.side === "tail") continue;
+    const rects = pg.tpl ? pg.ids.map((_, k) => frameRectMm(p, pg, k)) : [];
+    for (let k = 0; k < pg.ids.length && pg.tpl; k++) {
       const ph = byId.get(pg.ids[k]);
       if (!ph) continue;
-      const r = cellRectMm(p, side, pg.tpl.cols, pg.tpl.rows, pg.tpl.cells[k]);
+      const r = frameRectMm(p, pg, k);
       const bmp = await src(ph);
       const c = cropRect(bmp.width, bmp.height, r.w, r.h, place[ph.id] ?? CENTER);
       const dx = Math.round(mmToPx(r.x, dpi)), dy = Math.round(mmToPx(r.y, dpi));
@@ -63,6 +71,7 @@ export async function drawSpread(spread: Spread, byId: Map<string, Photo>, place
       ctx.drawImage(bmp, c.sx, c.sy, c.sw, c.sh, dx, dy, dw, dh);
       bmp.close();
     }
+    drawPageExtras(ctx, p, pg, rects.filter((_, k) => byId.has(pg.ids[k])), dpi);
   }
   return canvas;
 }
