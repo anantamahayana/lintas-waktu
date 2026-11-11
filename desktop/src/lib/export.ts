@@ -1,5 +1,6 @@
 import type { LaidPage } from "./layout";
 import type { Photo } from "./photos";
+import { zip } from "./zip";
 import { CENTER, cellRectMm, cropRect, effectiveDpi, mmToPx, setJpegDpi, spreadPx, type Placement, type Preset } from "./print";
 
 export type Spread = { left: LaidPage | null; right: LaidPage | null };
@@ -70,16 +71,33 @@ export const spreadFileName = (p: Preset, i: number) =>
   `${(p.pattern || "Album").replace(/[\\/:*?"<>|]+/g, "-")}_${String(i + 1).padStart(2, "0")}.jpg`;
 
 type DirHandle = { getFileHandle(name: string, o: { create: boolean }): Promise<{ createWritable(): Promise<{ write(b: Blob): Promise<void>; close(): Promise<void> }> }> };
+type Downloads = { save(r: { filename: string; data: Blob }): Promise<unknown> };
+
+/** The hosted preview's save service, when the page runs inside claude.ai; null anywhere else. */
+async function hostDownloads(): Promise<Downloads | null> {
+  const c = (window as unknown as { claude?: { use(name: string): Promise<unknown> } }).claude;
+  if (!c?.use) return null;
+  try { return (await c.use("downloads")) as Downloads | null; } catch { return null; }
+}
+
+export type ExportResult = "folder" | "zip" | "downloads";
 
 /**
- * Write every spread into a folder the user picks. Where the folder picker is not
- * available, each file is offered as a normal download instead.
+ * Write every spread into a folder the user picks. Where a folder cannot be picked (an embedded
+ * preview forbids it), all spreads go into one .zip offered through the host's save dialog, or,
+ * failing that, each file is offered as a normal download.
  */
 export async function exportAlbum(
   spreads: Spread[], byId: Map<string, Photo>, place: Record<string, Placement>, p: Preset, onProgress: (done: number) => void,
-): Promise<"folder" | "downloads"> {
+): Promise<ExportResult> {
   const picker = (window as unknown as { showDirectoryPicker?: (o: object) => Promise<DirHandle> }).showDirectoryPicker;
-  const dir = picker ? await picker.call(window, { mode: "readwrite" }) : null;
+  let dir: DirHandle | null = null;
+  if (picker) {
+    try { dir = await picker.call(window, { mode: "readwrite" }); }
+    catch (e) { if (e instanceof DOMException && e.name === "AbortError") throw e; /* not allowed here: fall through */ }
+  }
+  const host = dir ? null : await hostDownloads();
+  const zipped: { name: string; data: Uint8Array }[] = [];
   for (let i = 0; i < spreads.length; i++) {
     const blob = await renderSpread(spreads[i], byId, place, p);
     const name = spreadFileName(p, i);
@@ -87,6 +105,8 @@ export async function exportAlbum(
       const w = await (await dir.getFileHandle(name, { create: true })).createWritable();
       await w.write(blob);
       await w.close();
+    } else if (host) {
+      zipped.push({ name, data: new Uint8Array(await blob.arrayBuffer()) });
     } else {
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
@@ -96,5 +116,16 @@ export async function exportAlbum(
     }
     onProgress(i + 1);
   }
-  return dir ? "folder" : "downloads";
+  if (dir) return "folder";
+  if (host) {
+    const stem = (p.pattern || "Album").replace(/[\\/:*?"<>|]+/g, "-");
+    try { await host.save({ filename: `${stem}.zip`, data: zip(zipped) }); }
+    catch (e) {
+      const code = (e as { code?: string }).code;
+      if (code === "declined") throw new DOMException("declined", "AbortError");
+      throw new Error(code ?? String(e));
+    }
+    return "zip";
+  }
+  return "downloads";
 }

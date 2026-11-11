@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { addPage, applyTpl, autoCounts, clearFrame, emptyAlbum, isEmpty, gridTpl, joinPages, layPages, MAX_PER_PAGE, newAlbum, pickTpl, removePhoto, replacePhoto, setCount, setCustomTemplates, shuffleTemplates, splitPages, swapPhotos, TEMPLATES, templatesFor, validTpl, type Tpl } from "./layout";
 import { toSpreads } from "./export";
 import { jpegSize } from "./photos";
+import { crc32, zip } from "./zip";
 import { cellRectMm, cropRect, DEFAULT_PRESET, effectiveDpi, setJpegDpi, spreadMm, spreadPx } from "./print";
 
 const ids = (n: number) => Array.from({ length: n }, (_, i) => `p${i}`);
@@ -262,5 +263,20 @@ describe("jpeg headers", () => {
   it("reads the stored size", () => {
     expect(jpegSize(jfif())).toEqual({ w: 6000, h: 4000 });
     expect(jpegSize(new Uint8Array([1, 2, 3]))).toBeNull();
+  });
+});
+
+describe("zip", () => {
+  it("crc32 matches the standard check value", () => {
+    expect(crc32(new TextEncoder().encode("123456789"))).toBe(0xcbf43926);
+  });
+  it("writes a readable archive layout", async () => {
+    const z = new Uint8Array(await zip([{ name: "a_01.jpg", data: new Uint8Array([1, 2, 3]) }, { name: "a_02.jpg", data: new Uint8Array([4]) }]).arrayBuffer());
+    const v = new DataView(z.buffer);
+    expect(v.getUint32(0, true)).toBe(0x04034b50);
+    const end = z.length - 22;
+    expect(v.getUint32(end, true)).toBe(0x06054b50);
+    expect(v.getUint16(end + 10, true)).toBe(2);
+    expect(v.getUint32(v.getUint32(end + 16, true), true)).toBe(0x02014b50);
   });
 });

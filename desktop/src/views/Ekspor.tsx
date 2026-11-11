@@ -26,7 +26,9 @@ export function Ekspor({ photos, design, preset, setPreset, custom }: Props) {
     setBusy(true); setDone(0); setMsg("");
     try {
       const where = await exportAlbum(spreads, byId, design.place, preset, setDone);
-      setMsg(where === "folder" ? `${spreads.length} file tersimpan di folder yang dipilih.` : `${spreads.length} file diunduh ke folder Unduhan.`);
+      setMsg(where === "folder" ? `${spreads.length} file tersimpan di folder yang dipilih.`
+        : where === "zip" ? `${spreads.length} file disimpan dalam satu file .zip. Ekstrak dulu sebelum dikirim ke percetakan.`
+        : `${spreads.length} file diunduh ke folder Unduhan.`);
     } catch (e) {
       setMsg(e instanceof DOMException && e.name === "AbortError" ? "Ekspor dibatalkan." : `Ekspor gagal: ${e instanceof Error ? e.message : String(e)}`);
     } finally { setBusy(false); }
