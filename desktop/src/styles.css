@@ -219,3 +219,19 @@ details.more[open] > summary { margin-bottom: 8px; }
 .minitext { position: absolute; background: repeating-linear-gradient(0deg, rgba(31, 30, 28, 0.35) 0 2px, transparent 2px 5px); }
 .ov-label { font-size: 12px; }
 .textedit { width: 100%; font: inherit; padding: 8px; color: var(--text); background: var(--bg); border: 1px solid var(--edge); border-radius: 6px; resize: vertical; }
+
+/* Production board */
+.home-head { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; justify-content: space-between; }
+.home-head .seg { min-width: 280px; }
+.board-wrap { flex: 1 1 100%; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.board-sum { display: flex; flex-wrap: wrap; gap: 6px 20px; }
+.board { display: grid; grid-template-columns: repeat(7, minmax(180px, 1fr)); gap: 10px; overflow-x: auto; padding-bottom: 8px; }
+.bcol { min-height: 240px; display: flex; flex-direction: column; gap: 8px; padding: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+.bcol.drop { outline: 2px solid var(--focus); }
+.bcol h2 { display: flex; justify-content: space-between; margin: 0 0 4px; }
+.pcard { display: flex; flex-direction: column; gap: 8px; padding: 10px; background: var(--raise); border: 1px solid var(--edge); border-radius: 6px; cursor: grab; }
+.home-in { max-width: 1400px; }
+.notedot { display: inline-block; width: 7px; height: 7px; margin-left: 5px; border-radius: 50%; background: var(--warn); vertical-align: middle; }
+.ov-note { display: block; text-align: left; font-size: 12px; color: var(--warn); }
+.ov-note.done { color: var(--dim); text-decoration: line-through; }
+.flash { animation: flash 1.2s ease-out; } @keyframes flash { from { color: #fff; } to { color: var(--dim); } }

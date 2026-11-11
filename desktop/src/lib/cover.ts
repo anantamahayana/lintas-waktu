@@ -15,6 +15,8 @@ export type Cover = {
   textColor: string;
   textPos: "atas" | "tengah" | "bawah";
   spineText: boolean;
+  titleFont?: string;
+  subFont?: string;
 };
 
 export const DEFAULT_COVER: Cover = {
@@ -54,6 +56,7 @@ async function drawPhoto(ctx: OffscreenCanvasRenderingContext2D, ph: Photo, r: R
 
 /** Draw the cover sheet at `dpi`. Text uses the system's serif and sans fonts. */
 export async function drawCover(cover: Cover, byId: Map<string, Photo>, p: Preset, dpi: number, src: Source): Promise<OffscreenCanvas> {
+  await Promise.all([cover.titleFont ?? "Cormorant Garamond", cover.subFont ?? "Montserrat"].map((f) => document.fonts.load(`40px "${f}"`).catch(() => [])));
   const { w, h } = coverMm(p);
   const canvas = new OffscreenCanvas(Math.round(mmToPx(w, dpi)), Math.round(mmToPx(h, dpi)));
   const ctx = canvas.getContext("2d")!;
@@ -78,12 +81,12 @@ export async function drawCover(cover: Cover, byId: Map<string, Photo>, p: Prese
   const baseY = framedText ? px(t.y + t.h * 0.82)
     : cover.textPos === "atas" ? px(t.y + t.h * 0.16) : cover.textPos === "tengah" ? px(t.y + t.h / 2) : px(t.y + t.h * 0.84);
   if (cover.title) {
-    ctx.font = `${titleSize}px Georgia, "Times New Roman", serif`;
+    ctx.font = `${titleSize}px "${cover.titleFont ?? "Cormorant Garamond"}", Georgia, serif`;
     ctx.textBaseline = "alphabetic";
     ctx.fillText(cover.title, cx, baseY, px(t.w * 0.84));
   }
   if (cover.subtitle) {
-    ctx.font = `${subSize}px "Segoe UI", Arial, sans-serif`;
+    ctx.font = `${subSize}px "${cover.subFont ?? "Montserrat"}", "Segoe UI", Arial, sans-serif`;
     ctx.textBaseline = "top";
     ctx.fillText(cover.subtitle.toUpperCase().split("").join(" "), cx, baseY + subSize * 0.9, px(t.w * 0.84));
   }
@@ -92,7 +95,7 @@ export async function drawCover(cover: Cover, byId: Map<string, Photo>, p: Prese
     ctx.save();
     ctx.translate(px(s.x + s.w / 2), px(h / 2));
     ctx.rotate(Math.PI / 2);
-    ctx.font = `${px(p.spineMm * 0.45)}px Georgia, "Times New Roman", serif`;
+    ctx.font = `${px(p.spineMm * 0.45)}px "${cover.titleFont ?? "Cormorant Garamond"}", Georgia, serif`;
     ctx.textBaseline = "middle";
     // The spine shows the cover colour, so pick dark or light text against that.
     const hex = cover.bg.replace("#", ""), lum = (0.299 * parseInt(hex.slice(0, 2), 16) + 0.587 * parseInt(hex.slice(2, 4), 16) + 0.114 * parseInt(hex.slice(4, 6), 16)) / 255;

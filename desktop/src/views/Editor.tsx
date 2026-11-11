@@ -68,6 +68,7 @@ export function Editor({ photos, design, commit, undo, redo, canUndo, canRedo, p
   const tray = useMemo(() => photos.filter((p) => (trayAll || p.pick === true) && !inAlbum.has(p.id)), [photos, inAlbum, trayAll]);
   const blanks = useMemo(() => album.order.filter(isEmpty).length, [album.order]);
   const warnings = useMemo(() => lowResWarnings(pages, byId, place, preset), [pages, byId, place, preset]);
+  const openNotes = album.pages.filter((p) => p.note && !p.noteDone).length;
 
   const textPage = selText ? pages[selText.page] : null;
   const selPage: LaidPage | null = textPage || (sel && pages.find((p) => p.ids.includes(sel))) || spread?.left || (spread?.right?.side === 1 ? spread.right : null);
@@ -227,6 +228,7 @@ export function Editor({ photos, design, commit, undo, redo, canUndo, canRedo, p
               <button key={i} type="button" role="tab" aria-selected={i === s} className="spreadtab" onClick={() => { setSi(i); setSel(""); setSelText(null); }}>
                 {i * 2 + 1}–{i * 2 + 2}
                 {sp.left?.side === "both" ? " · sambung" : ""}{(sp.left?.cfg.locked || sp.right?.cfg.locked) ? " · kunci" : ""}
+                {[sp.left, sp.right].some((x) => x?.cfg.note && !x.cfg.noteDone) && <span className="notedot" title="Ada catatan revisi" />}
               </button>
             ))}
           </div>
@@ -294,6 +296,13 @@ export function Editor({ photos, design, commit, undo, redo, canUndo, canRedo, p
               <button type="button" className="btn" aria-pressed={!!selPage.cfg.locked} onClick={() => setPage(selPage.index, { locked: !selPage.cfg.locked })}>
                 {selPage.cfg.locked ? "Terkunci (klik untuk membuka)" : "Kunci halaman"}
               </button>
+
+              <h2>Catatan revisi</h2>
+              <textarea className="textedit" rows={2} placeholder="mis. ganti foto kanan dengan yang tertawa" aria-label="Catatan revisi halaman ini"
+                value={selPage.cfg.note ?? ""} onChange={(e) => setPage(selPage.index, { note: e.target.value || undefined, noteDone: false }, sliding.current)} onFocus={() => { sliding.current = false; }} onBlur={endSlide} />
+              {selPage.cfg.note && (
+                <label className="check"><input type="checkbox" checked={!!selPage.cfg.noteDone} onChange={(e) => setPage(selPage.index, { noteDone: e.target.checked })} /> Sudah dikerjakan</label>
+              )}
 
               <h2>Gaya halaman</h2>
               <div className="two">
@@ -372,6 +381,7 @@ export function Editor({ photos, design, commit, undo, redo, canUndo, canRedo, p
         <span>{album.order.length - blanks} foto di album</span>
         {blanks > 0 && <span>{blanks} bingkai kosong</span>}
         {warnings.length > 0 && <span className="warn">{warnings.length} foto beresolusi rendah</span>}
+        {openNotes > 0 && <span className="warn">{openNotes} catatan revisi belum selesai</span>}
         <span className="right">PageUp/PageDown pindah spread · panah geser 0,5 mm (Shift 5 mm) · Ctrl+Z urungkan</span>
       </footer>
     </>

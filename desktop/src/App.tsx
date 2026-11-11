@@ -5,7 +5,7 @@ import { emptyAlbum, newAlbum, setCustomTemplates, type Album, type Tpl } from "
 import { photosFromFiles, readAll, type Photo } from "./lib/photos";
 import { isNative, pickFolder, pickProjectFile, preparePhotos, ready, scanFolder, exists } from "./lib/platform";
 import { DEFAULT_PRESET, type Placement, type Preset } from "./lib/print";
-import { listProjects, loadProject, loadProjectFile, projectsDir, removeProject, saveProject, type ProjectMeta, type Saved } from "./lib/projects";
+import { listProjects, loadProject, loadProjectFile, projectsDir, removeProject, saveProject, updateMeta, type ProjectMeta, type Saved } from "./lib/projects";
 import { Beranda } from "./views/Beranda";
 import { Editor } from "./views/Editor";
 import { Ekspor } from "./views/Ekspor";
@@ -39,6 +39,7 @@ export function App() {
   const [preset, setPreset] = useState<Preset>(DEFAULT_PRESET);
   const [hist, setHist] = useState<{ past: Design[]; now: Design | null; future: Design[] }>({ past: [], now: null, future: [] });
   const [saveError, setSaveError] = useState("");
+  const [savedFlash, setSavedFlash] = useState(0);
   const run = useRef(0);
   const picker = useRef<HTMLInputElement>(null);
   const pending = useRef<Pending | null>(null);
@@ -187,6 +188,19 @@ export function App() {
   const undo = useCallback(() => setHist((h) => (h.past.length && h.now ? { past: h.past.slice(0, -1), now: h.past[h.past.length - 1], future: [h.now, ...h.future] } : h)), []);
   const redo = useCallback(() => setHist((h) => (h.future.length && h.now ? { past: [...h.past, h.now], now: h.future[0], future: h.future.slice(1) } : h)), []);
 
+  // Window title and workspace shortcuts: Ctrl+1..4 switch tabs, Ctrl+S confirms the (automatic) save.
+  useEffect(() => { document.title = meta ? `${meta.name} · LW Album` : "LW Album"; }, [meta]);
+  useEffect(() => {
+    const on = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || !metaRef.current) return;
+      const tabs: Tab[] = ["kurasi", "editor", "sampul", "ekspor"];
+      if (e.key >= "1" && e.key <= "4") { e.preventDefault(); setTab(tabs[+e.key - 1]); }
+      else if (e.key.toLowerCase() === "s") { e.preventDefault(); setSavedFlash(Date.now()); }
+    };
+    window.addEventListener("keydown", on);
+    return () => window.removeEventListener("keydown", on);
+  }, []);
+
   const build = useCallback(() => {
     commit({ album: newAlbum(picked.map((p) => p.id), preset.pages), place: {}, cover: hist.now?.cover });
     setTab("editor");
@@ -211,7 +225,8 @@ export function App() {
           onCreate={(name, p) => (isNative ? void createNative(name, p) : askFolder({ kind: "new", name, preset: p }))}
           onOpen={(m) => (isNative ? void openNative(m) : void loadProject(m).then((s) => s && askFolder({ kind: "open", saved: s })))}
           onOpenFile={isNative ? () => void openFile() : undefined}
-          onDelete={(m) => void remove(m)} />
+          onDelete={(m) => void remove(m)}
+          onUpdate={(m, patch) => void updateMeta(m, patch).then(refresh).catch((e) => void tell(`Gagal menyimpan: ${e}`))} />
       </>
     );
   }
@@ -235,7 +250,7 @@ export function App() {
           {folderName(meta.folder)} · {photos.length.toLocaleString("id-ID")} foto
           {read < photos.length ? ` · membaca ${read.toLocaleString("id-ID")}` : ""}
         </span>
-        <span className={saveError ? "warn" : "dim"} title={saveError || meta.file || undefined}>{saveError ? "Gagal menyimpan" : "Tersimpan"}</span>
+        <span key={savedFlash} className={saveError ? "warn" : savedFlash ? "dim flash" : "dim"} title={saveError || meta.file || "Tersimpan otomatis"}>{saveError ? "Gagal menyimpan" : "Tersimpan"}</span>
       </header>
 
       {tab === "kurasi" && (

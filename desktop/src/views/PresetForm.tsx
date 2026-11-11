@@ -1,4 +1,56 @@
+import { useState } from "react";
+import { ask, tell } from "../lib/ask";
+import { saveFile } from "../lib/export";
 import { SIZES, type Preset } from "../lib/print";
+
+/** Named print settings (e.g. one per printer), shared by every project on this computer. */
+const KEY = "lwalbum:presets";
+type Named = { name: string; preset: Preset };
+const loadNamed = (): Named[] => { try { const v = JSON.parse(localStorage.getItem(KEY) ?? "[]"); return Array.isArray(v) ? v : []; } catch { return []; } };
+const storeNamed = (list: Named[]) => { try { localStorage.setItem(KEY, JSON.stringify(list)); } catch { /* storage full */ } };
+/** The fields a preset carries: everything about the print, not the file name of one album. */
+const strip = ({ pattern: _p, ...rest }: Preset) => { void _p; return rest; };
+
+function PresetLibrary({ preset, setPreset }: { preset: Preset; setPreset: (p: Preset) => void }) {
+  const [list, setList] = useState<Named[]>(loadNamed);
+  const [pick, setPick] = useState("");
+  const [newName, setNewName] = useState("");
+  const save = (next: Named[]) => { setList(next); storeNamed(next); };
+  return (
+    <fieldset>
+      <legend>Preset tersimpan</legend>
+      <label className="field">Pakai preset
+        <select value={pick} onChange={(e) => { setPick(e.target.value); const n = list.find((x) => x.name === e.target.value); if (n) setPreset({ ...preset, ...n.preset, pattern: preset.pattern }); }}>
+          <option value="">Pilih…</option>
+          {list.map((n) => <option key={n.name} value={n.name}>{n.name}</option>)}
+        </select>
+      </label>
+      <label className="field">Nama preset baru<input type="text" value={newName} placeholder="mis. Percetakan X · A4 layflat" onChange={(e) => setNewName(e.target.value)} /></label>
+      <div className="field">Kelola
+        <div className="two">
+          <button type="button" className="btn" disabled={!newName.trim()} onClick={() => {
+            const name = newName.trim();
+            save([...list.filter((x) => x.name !== name), { name, preset: strip(preset) as Preset }]); setPick(name); setNewName("");
+          }}>Simpan sebagai preset</button>
+          <button type="button" className="btn" disabled={!pick} onClick={async () => { if (await ask(`Hapus preset "${pick}"?`, "Hapus")) { save(list.filter((x) => x.name !== pick)); setPick(""); } }}>Hapus</button>
+          <button type="button" className="btn" disabled={!list.length} onClick={() => void saveFile(new Blob([JSON.stringify(list, null, 2)], { type: "application/json" }), "preset-lw-album.json").catch(() => {})}>Ekspor ke file</button>
+          <label className="btn">Impor dari file
+            <input type="file" accept=".json" hidden onChange={async (e) => {
+              const f = e.target.files?.[0]; e.target.value = "";
+              if (!f) return;
+              try {
+                const got = JSON.parse(await f.text()) as Named[];
+                if (!Array.isArray(got) || !got.every((x) => x.name && x.preset)) throw new Error("bukan file preset");
+                save([...list.filter((x) => !got.some((g) => g.name === x.name)), ...got]);
+                void tell(`${got.length} preset diimpor.`);
+              } catch (err) { void tell(`File itu tidak bisa dibaca: ${err instanceof Error ? err.message : err}`); }
+            }} />
+          </label>
+        </div>
+      </div>
+    </fieldset>
+  );
+}
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
@@ -13,6 +65,7 @@ export function PresetForm({ preset, setPreset }: { preset: Preset; setPreset: (
   });
   return (
     <div className="form-stack">
+      <PresetLibrary preset={preset} setPreset={setPreset} />
       <fieldset>
         <legend>Ukuran</legend>
         <label className="field">Ukuran halaman

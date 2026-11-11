@@ -80,6 +80,9 @@ export type PageCfg = {
   /** This page's own background colour, and a line round every photo. */
   bg?: string;
   stroke?: { mm: number; color: string };
+  /** Revision note from the client for this page (not printed). */
+  note?: string;
+  noteDone?: boolean;
 };
 
 /** A rectangle as fractions of the page (or, for a joined sheet, of both pages). */

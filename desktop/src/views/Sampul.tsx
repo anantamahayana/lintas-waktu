@@ -3,6 +3,7 @@ import type { Design } from "../App";
 import { coverMm, coverParts, DEFAULT_COVER, drawCover, fromThumb, type Cover } from "../lib/cover";
 import type { Photo } from "../lib/photos";
 import { CENTER, type Placement, type Preset } from "../lib/print";
+import { FONTS } from "../lib/layout";
 
 type Props = {
   photos: Photo[];
@@ -123,6 +124,18 @@ export function Sampul({ photos, design, commit, preset, setPreset }: Props) {
         <h2>Tulisan</h2>
         <label className="field">Judul<input type="text" value={cover.title} placeholder="mis. Ayu & Made" onChange={(e) => set({ title: e.target.value }, true)} /></label>
         <label className="field">Keterangan<input type="text" value={cover.subtitle} placeholder="mis. 12 Juni 2026 · Ubud" onChange={(e) => set({ subtitle: e.target.value }, true)} /></label>
+        <div className="two">
+          <label className="field">Huruf judul
+            <select value={cover.titleFont ?? "Cormorant Garamond"} onChange={(e) => set({ titleFont: e.target.value })}>
+              {FONTS.map((f) => <option key={f.family} value={f.family}>{f.family}</option>)}
+            </select>
+          </label>
+          <label className="field">Huruf keterangan
+            <select value={cover.subFont ?? "Montserrat"} onChange={(e) => set({ subFont: e.target.value })}>
+              {FONTS.map((f) => <option key={f.family} value={f.family}>{f.family}</option>)}
+            </select>
+          </label>
+        </div>
         <div className="two">
           <label className="field">Posisi
             <select value={cover.textPos} disabled={cover.frontStyle === "frame"} onChange={(e) => set({ textPos: e.target.value as Cover["textPos"] })}>

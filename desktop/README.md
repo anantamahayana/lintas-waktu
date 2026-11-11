@@ -29,7 +29,12 @@ Kode yang menyentuh file ada di `src/lib/platform.ts` (sisi web) dan `src-tauri/
 - **Sampul**: foto depan/belakang, judul, keterangan, judul di punggung, lebar punggung dan lipatan papan; ikut diekspor.
 - **PDF pratinjau** untuk klien (WhatsApp): kecil, tanpa bleed, bernomor halaman.
 
-Belum ada: proof ke galeri klien, papan status produksi, preset bernama.
+- **Kurasi ribuan foto**: kisi virtual, zoom 100%, banding 2–4 foto, burst, saringan jam/kamera; RAW di aplikasi Windows.
+- **Editor bebas**: geser/ubah ukuran bingkai dengan magnet, teks (6 font), latar dan garis per halaman, salin/tempel tata letak,
+  tampilan semua spread dengan seret untuk mengubah urutan, catatan revisi per halaman.
+- **Papan produksi** di beranda; **preset cetak bernama** (bisa diekspor/impor).
+
+Belum ada: proof lewat galeri klien (butuh perubahan API dan situs), profil warna percetakan (ICC), pembaruan otomatis.
 
 ## Menjalankan
 ```

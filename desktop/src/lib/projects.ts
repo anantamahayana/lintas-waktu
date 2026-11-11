@@ -19,7 +19,34 @@ export type ProjectMeta = {
   size: string;
   /** Windows app: the project file. */
   file?: string;
+  /** Production tracking. */
+  status?: Status;
+  client?: string;
+  due?: string;
+  printer?: string;
+  cost?: number;
+  price?: number;
+  resi?: string;
+  notes?: string;
 };
+
+export const STATUSES = [
+  { id: "desain", label: "Desain" },
+  { id: "proof", label: "Proof ke klien" },
+  { id: "revisi", label: "Revisi" },
+  { id: "disetujui", label: "Disetujui" },
+  { id: "cetak", label: "Di percetakan" },
+  { id: "kirim", label: "Dikirim" },
+  { id: "selesai", label: "Diterima" },
+] as const;
+export type Status = (typeof STATUSES)[number]["id"];
+
+/** Change a project's tracking fields without opening it. */
+export async function updateMeta(meta: ProjectMeta, patch: Partial<ProjectMeta>): Promise<ProjectMeta> {
+  const s = await loadProject(meta);
+  if (!s) throw new Error("Proyek tidak bisa dibaca");
+  return saveProject({ ...s, meta: { ...s.meta, ...patch, file: meta.file } });
+}
 
 export type Saved = {
   v: 3;

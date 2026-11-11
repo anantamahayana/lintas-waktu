@@ -58,6 +58,7 @@ export function Overview({ spreads, preset, byId, place, current, onOpen, onMove
             onDrop={(e) => { e.preventDefault(); if (dragging !== null && dragging !== i) onMove(dragging, i); setDragging(null); setOver(null); }}>
             {mini(sp)}
             <span className="ov-label">{i * 2 + 1}–{i * 2 + 2}{sp.left?.side === "both" ? " · sambung" : ""}</span>
+            {[sp.left, sp.right].map((x) => x?.cfg.note && <span key={x.index} className={x.cfg.noteDone ? "ov-note done" : "ov-note"}>{x.cfg.noteDone ? "✓ " : ""}{x.cfg.note}</span>)}
           </button>
         ))}
       </div>
