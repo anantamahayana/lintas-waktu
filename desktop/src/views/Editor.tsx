@@ -1,28 +1,37 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { ask, tell } from "../lib/ask";
 import type { Design } from "../App";
 import { lowResWarnings, pageNo, toSpreads } from "../lib/export";
-import { applyTpl, countsFor, joinPages, layPages, removePhoto, replacePhoto, setCount, shuffleTemplates, splitPages, swapPhotos, templatesFor, type LaidPage, type Tpl } from "../lib/layout";
+import { align, bounds, distribute, mainAxis, matchSize, spaceBy, type AlignMode, type Axis } from "../lib/align";
+import { currentBoxes, frameRectMm, mmToBox } from "../lib/frames";
+import { Icon } from "../lib/icons";
+import { runCommand, useCommands } from "../lib/keys";
+import { addEmptyFrames, addPage, applyTpl, clearFrame, clearPage, deletePage, insertPage, countsFor, FONTS, isEmpty, joinPages, layPages, moveSheet, patchPage, removePhoto, replacePhoto, setCount, shuffleTemplates, splitPages, swapPhotos, templatesFor, type Album, type Box, type LaidPage, type PageCfg, type TextBox, type Tpl } from "../lib/layout";
 import type { Photo } from "../lib/photos";
-import { CENTER, cellRectMm, effectiveDpi, spreadMm, type Placement, type Preset } from "../lib/print";
-import { TemplateEditor } from "./TemplateEditor";
+import { CENTER, effectiveDpi, pageBoxMm, spreadMm, type Placement, type Preset, type Rect } from "../lib/print";
+import { MiniSheet, Overview } from "./Overview";
+import { Btn, IconBtn, NumField, Row, Section, Seg, StatusBar } from "./Shell";
+import { proofHasCover, RevisionPanel } from "./Proof";
+import { proofs, signedIn, type ProofInfo, type ProofNote } from "../lib/proofs";
+import { Sheet, type TextSel } from "./Sheet";
 
 type Props = {
   photos: Photo[];
   design: Design;
   commit: (d: Design, replace?: boolean) => void;
-  undo: () => void;
-  redo: () => void;
   canUndo: boolean;
-  canRedo: boolean;
   preset: Preset;
   setPreset: (p: Preset) => void;
-  onRebuild: () => void;
-  onExport: () => void;
   custom: Tpl[];
-  setCustom: (list: Tpl[]) => void;
+  panels: boolean;
+  /** Lets the template editor (owned by the app) put a new template on the selected page. */
+  registerTemplateUse: (fn: ((t: Tpl) => void) | null) => void;
+  /** The project's id: its online proof is found by it. */
+  projectKey?: string;
+  onSendProof?: () => void;
+  /** Bumped after a proof was sent, so the Revisi tab reloads. */
+  proofTick?: number;
 };
-
-const pct = (n: number) => `${n * 100}%`;
 
 /** Shared by the editor and the export screen: lay the album out for a preset. */
 export function useLaidPages(photos: Photo[], design: Design, preset: Preset, custom: Tpl[]) {
@@ -37,215 +46,694 @@ export function useLaidPages(photos: Photo[], design: Design, preset: Preset, cu
   return { byId, pages };
 }
 
-export function Editor({ photos, design, commit, undo, redo, canUndo, canRedo, preset, setPreset, onRebuild, onExport, custom, setCustom }: Props) {
+const PX_PER_MM = 96 / 25.4;
+const STEPS = [0.1, 0.15, 0.2, 0.25, 0.33, 0.5, 0.67, 0.75, 1, 1.5, 2, 3, 4];
+type Tool = "select" | "hand";
+
+/** Layout editor (Figma page 05): tool rail, photo tray, canvas with options bar and filmstrip, properties. */
+export function Editor({ photos, design, commit, preset, setPreset, custom, panels, registerTemplateUse, projectKey, onSendProof, proofTick = 0 }: Props) {
   const { album, place } = design;
   const { byId, pages } = useLaidPages(photos, design, preset, custom);
-  const [making, setMaking] = useState(false);
   const spreads = useMemo(() => toSpreads(pages), [pages]);
+  const [overview, setOverview] = useState(false);
   const [si, setSi] = useState(0);
   const [sel, setSel] = useState("");
+  const [selText, setSelText] = useState<TextSel>(null);
   const [guides, setGuides] = useState(true);
   const [seed, setSeed] = useState(1);
+  const [clip, setClip] = useState<Pick<PageCfg, "tpl" | "free" | "texts" | "bg" | "stroke"> & { n: number; spread: boolean } | null>(null);
+  const [tab, setTab] = useState<"props" | "album" | "revisi">("props");
+  // ---- online proof (tab Revisi) ----
+  const [proof, setProof] = useState<ProofInfo | null>(null);
+  const [proofBusy, setProofBusy] = useState(false);
+  const [proofErr, setProofErr] = useState("");
+  const [tool, setTool] = useState<Tool>("select");
+  const [spaceHand, setSpaceHand] = useState(false);
+  const [zoom, setZoom] = useState<number | "fit">("fit");
+  const [view, setView] = useState({ w: 800, h: 600 });
+  const [stripDrag, setStripDrag] = useState<{ from: number; over: number } | null>(null);
   const sliding = useRef(false);
+  const textArea = useRef<HTMLTextAreaElement>(null);
+  const canvas = useRef<HTMLDivElement>(null);
+  const pan = useRef<{ x: number; y: number; sl: number; st: number } | null>(null);
+  const [grabbing, setGrabbing] = useState(false);
+  /** Frame whose photo is being moved inside it (double-click a photo, Enter to finish). */
+  const [cropId, setCropId] = useState("");
+  /** A page picked by clicking its empty paper (side of spread `spread`); may be a blank slot with no page yet. */
+  const [pick, setPick] = useState<{ spread: number; side: 0 | 1 } | null>(null);
+  useEffect(() => { if (cropId && cropId !== sel) setCropId(""); }, [sel, cropId]);
+  /** Other selected frames besides `sel` (Shift+click, box select, Ctrl+A); `sel` is the one clicked last. */
+  const [more, setMore] = useState<string[]>([]);
+  useEffect(() => { if (!sel && more.length) setMore([]); }, [sel, more.length]);
+  /** What "align" lines frames up against. */
+  const [alignTo, setAlignTo] = useState<"sel" | "page" | "safe">("sel");
+  const [gapMm, setGapMm] = useState<number | null>(null);
 
   const s = Math.min(si, Math.max(0, spreads.length - 1));
   const spread = spreads[s];
-  const sheet = spreadMm(preset);
   const inAlbum = useMemo(() => new Set(album.order), [album.order]);
-  const tray = useMemo(() => photos.filter((p) => p.pick === true && !inAlbum.has(p.id)), [photos, inAlbum]);
+  const anyPicked = useMemo(() => photos.some((p) => p.pick === true), [photos]);
+  const [trayAll, setTrayAll] = useState(!anyPicked);
+  const [q, setQ] = useState("");
+  const tray = useMemo(() => photos.filter((p) => (trayAll || p.pick === true) && !inAlbum.has(p.id) && (!q || p.name.toLowerCase().includes(q.toLowerCase()))), [photos, inAlbum, trayAll, q]);
+  const blanks = useMemo(() => album.order.filter(isEmpty).length, [album.order]);
   const warnings = useMemo(() => lowResWarnings(pages, byId, place, preset), [pages, byId, place, preset]);
+  const lowres = useMemo(() => new Map(warnings.map((w) => [w.id, w.dpi])), [warnings]);
+  const warnPages = useMemo(() => new Set(warnings.map((w) => w.page)), [warnings]);
+  const openNotes = album.pages.filter((p) => p.note && !p.noteDone).length;
 
-  const selPage: LaidPage | null = (sel && pages.find((p) => p.ids.includes(sel))) || spread?.left || (spread?.right?.side === 1 ? spread.right : null);
+  const textPage = selText ? pages[selText.page] : null;
+  const pickOn = pick && pick.spread === s ? pick : null;
+  const pickPage: LaidPage | null = !pickOn || !spread ? null
+    : pickOn.side === 0 || spread.left?.side === "both" ? spread.left : spread.right?.side === 1 ? spread.right : null;
+  /** The clicked side of this spread has no page yet (e.g. the last right page of an odd album). */
+  const blankPick = !!pickOn && !pickPage && !sel && !selText;
+  const selPage: LaidPage | null = textPage || (sel && pages.find((p) => p.ids.includes(sel))) || pickPage || (blankPick ? null : spread?.left || (spread?.right?.side === 1 ? spread.right : null));
+  /** Where a page put in the blank slot goes in the album. */
+  const blankAt = blankPick && spread ? (spread.left ? spread.left.index + 1 : spread.right ? spread.right.index : album.pages.length) : -1;
   const joined = selPage?.side === "both";
   const selPhoto = sel ? byId.get(sel) : undefined;
   const selOnSpread = !!sel && !!selPage && (selPage === spread?.left || selPage === spread?.right);
+  const crop = cropId && cropId === sel && selOnSpread ? cropId : "";
+  // ---- several frames ----
+  const sheetPages = spread ? [spread.left, spread.right].filter((p): p is LaidPage => !!p && p.side !== "tail" && !!p.tpl) : [];
+  const onSheet = new Set(sheetPages.flatMap((p) => p.ids));
+  /** Selected frames, the one clicked last first. */
+  const group = selOnSpread ? [sel, ...more.filter((id) => id !== sel && onSheet.has(id))] : [];
+  const multi = group.length > 1;
+  const pageOfId = (id: string) => sheetPages.find((p) => p.ids.includes(id));
+  const rectOf = (id: string): Rect => { const pg = pageOfId(id)!; return frameRectMm(preset, pg, pg.ids.indexOf(id)); };
+  const tb: TextBox | undefined = selText ? pages[selText.page]?.cfg.texts?.find((x) => x.id === selText.id) : undefined;
 
-  useEffect(() => {
-    const on = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLElement && /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
-      const k = e.key.toLowerCase();
-      if ((e.ctrlKey || e.metaKey) && k === "z") { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
-      else if ((e.ctrlKey || e.metaKey) && k === "y") { e.preventDefault(); redo(); }
-      else if (k === "arrowright") setSi((i) => Math.min(spreads.length - 1, i + 1));
-      else if (k === "arrowleft") setSi((i) => Math.max(0, i - 1));
-    };
-    window.addEventListener("keydown", on);
-    return () => window.removeEventListener("keydown", on);
-  }, [undo, redo, spreads.length]);
-
-  const setAlbum = (a: typeof album) => { if (a !== album) commit({ album: a, place }); };
-  const setPage = (i: number, patch: Partial<{ locked: boolean }>) =>
-    setAlbum({ ...album, pages: album.pages.map((p, j) => (j === i ? { ...p, ...patch } : p)) });
+  const setAlbum = (a: Album, replace = false) => { if (a !== album) commit({ ...design, album: a }, replace); };
+  const setPage = (i: number, patch: Partial<PageCfg>, replace = false) => setAlbum(patchPage(album, i, patch), replace);
   const setPlace = (id: string, patch: Partial<Placement>) => {
-    commit({ album, place: { ...place, [id]: { ...(place[id] ?? CENTER), ...patch } } }, sliding.current);
+    commit({ ...design, place: { ...place, [id]: { ...(place[id] ?? CENTER), ...patch } } }, sliding.current);
     sliding.current = true;
   };
   const endSlide = () => { sliding.current = false; };
+  const setText = (page: number, id: string, patch: Partial<TextBox>, replace = false) =>
+    setPage(page, { texts: (album.pages[page].texts ?? []).map((x) => (x.id === id ? { ...x, ...patch } : x)) }, replace);
+  const textSlide = (patch: Partial<TextBox>) => { if (selText) { setText(selText.page, selText.id, patch, sliding.current); sliding.current = true; } };
+  /** Editor spread of a proof image (the first image is the cover when it was sent with one). */
+  const spreadOfProof = (i: number) => i - (proof && proofHasCover(proof.id) ? 1 : 0);
+  const proofLabel = (i: number) => { const k = spreadOfProof(i); return k < 0 ? "Sampul" : `Hal. ${k * 2 + 1}–${k * 2 + 2}`; };
+  const loadProof = async () => {
+    if (!projectKey) return;
+    if (!signedIn()) { setProofErr("Masuk ke server lewat Kirim proof ke klien untuk melihat catatan."); return; }
+    setProofBusy(true); setProofErr("");
+    try {
+      const p = await proofs.find(projectKey);
+      setProof(p);
+      if (p) {
+        // New client notes go into each page's revision note too (once per note, remembered on this computer).
+        const key = `lwalbum:proofImported:${p.id}`;
+        let seen: number[] = [];
+        try { seen = JSON.parse(localStorage.getItem(key) ?? "[]"); } catch { /* none yet */ }
+        const fresh = p.notes.filter((n) => !n.done && !seen.includes(n.id));
+        let a = album;
+        for (const n of fresh) {
+          const k = n.spread - (proofHasCover(p.id) ? 1 : 0), sp2 = spreads[k], pg = sp2?.left ?? (sp2?.right?.side === 1 ? sp2.right : null);
+          if (!pg) continue;
+          const old = a.pages[pg.index].note;
+          a = patchPage(a, pg.index, { note: `${old ? `${old}\n` : ""}[Klien] ${n.author}: ${n.text}`, noteDone: false });
+        }
+        if (a !== album) setAlbum(a);
+        try { localStorage.setItem(key, JSON.stringify([...seen, ...fresh.map((n) => n.id)])); } catch { /* ignore */ }
+      }
+    } catch (e) { setProofErr(e instanceof Error ? e.message : String(e)); }
+    finally { setProofBusy(false); }
+  };
+  const markProofNote = async (n: ProofNote, done: boolean) => {
+    if (!proof) return;
+    try { const m = await proofs.mark(proof.id, n.id, done); setProof({ ...proof, notes: proof.notes.map((x) => (x.id === m.id ? m : x)) }); }
+    catch (e) { setProofErr(e instanceof Error ? e.message : String(e)); }
+  };
+  const loadRef = useRef(loadProof);
+  loadRef.current = loadProof;
+  useEffect(() => { if (tab === "revisi") void loadRef.current(); }, [tab, proofTick]);
+  const deselect = () => { setSel(""); setMore([]); setSelText(null); setPick(null); };
+  /** Put frames at new places (sheet mm); every page touched becomes hand-placed. One undo step. */
+  const setRects = (m: Map<string, Rect>, replace = false) => {
+    let a = album;
+    for (const pg of sheetPages) {
+      if (!pg.ids.some((id) => m.has(id))) continue;
+      const boxes = currentBoxes(preset, pg).map((b, k) => { const r = m.get(pg.ids[k]); return r ? mmToBox(preset, pg.side as 0 | 1 | "both", r) : b; });
+      a = patchPage(a, pg.index, { free: boxes });
+    }
+    setAlbum(a, replace);
+  };
+  const selectFrame = (id: string, add?: boolean) => {
+    setSelText(null); setPick(null);
+    if (add && sel && id && onSheet.has(id)) {
+      if (group.includes(id)) { const rest = group.filter((x) => x !== id); setSel(rest[0] ?? ""); setMore(rest.slice(1)); }
+      else { setMore(group); setSel(id); }
+    } else { setSel(id); setMore([]); }
+    if (id) setTab("props");
+  };
+  const selectMany = (ids: string[], add = false) => {
+    const all = add ? [...new Set([...group, ...ids])] : ids;
+    setSelText(null); setPick(null);
+    setSel(all[0] ?? ""); setMore(all.slice(1));
+    if (all.length) setTab("props");
+  };
+  const marginMm = (preset.marginPct / 100) * preset.pageWmm;
+  const refRects = (rs: Rect[]): Rect | Rect[] => {
+    if (alignTo === "sel") return bounds(rs);
+    const inset = alignTo === "safe" ? preset.safeMm : marginMm;
+    return group.map((id) => { const t = pageBoxMm(preset, pageOfId(id)!.side as 0 | 1 | "both"); return { x: t.x + inset, y: t.y + inset, w: t.w - 2 * inset, h: t.h - 2 * inset }; });
+  };
+  const apply = (out: Rect[]) => setRects(new Map(group.map((id, i) => [id, out[i]])));
+  const doAlign = (mode: AlignMode) => { const rs = group.map(rectOf); apply(align(rs, mode, refRects(rs))); };
+  const doDistribute = (a: Axis) => apply(distribute(group.map(rectOf), a));
+  const gapNow = gapMm ?? Math.round((preset.gapPct / 100) * preset.pageWmm * 10) / 10;
+  const doSpace = () => { const rs = group.map(rectOf); apply(spaceBy(rs, mainAxis(rs), gapNow)); };
+  const doMatch = (what: "w" | "h" | "both") => apply(matchSize(group.map(rectOf), what, 0));
+  const canAlign = multi || (group.length === 1 && alignTo !== "sel");
+
+  // ---- zoom & pan ----
+  useLayoutEffect(() => {
+    const el = canvas.current;
+    if (!el) return;
+    const measure = () => setView({ w: el.clientWidth, h: el.clientHeight });
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [overview, panels]);
+  const sheetMm = spreadMm(preset);
+  const fitW = Math.max(200, Math.min(view.w - 96, (view.h - 112) * (sheetMm.w / sheetMm.h)));
+  const fitZ = fitW / (sheetMm.w * PX_PER_MM);
+  const z = zoom === "fit" ? fitZ : zoom;
+  const sheetW = sheetMm.w * PX_PER_MM * z;
+  const zoomTo = (next: number | "fit") => setZoom(next === "fit" ? "fit" : Math.min(4, Math.max(0.1, next)));
+  const stepZoom = (d: 1 | -1) => { const i = d > 0 ? STEPS.findIndex((x) => x > z + 0.001) : STEPS.length - 1 - [...STEPS].reverse().findIndex((x) => x < z - 0.001); zoomTo(STEPS[Math.max(0, Math.min(STEPS.length - 1, i))] ?? z); };
+  const hand = tool === "hand" || spaceHand;
+
+  /** Nudge the selected frame or text by `dx`, `dy` millimetres. */
+  const nudge = (dx: number, dy: number) => {
+    if (selText && tb && textPage) {
+      const k = (textPage.side === "both" ? 2 : 1) * preset.pageWmm;
+      setText(selText.page, selText.id, { x: tb.x + dx / k, y: tb.y + dy / preset.pageHmm }, sliding.current);
+      return;
+    }
+    if (crop && selRect) {
+      // Crop mode: arrows slide the photo inside its frame by the same distance on paper.
+      const ph = byId.get(crop), pl = place[crop] ?? CENTER;
+      if (!ph?.w) return;
+      const a = ph.w / ph.h, fa = selRect.w / selRect.h, z = Math.max(1, pl.z);
+      const w = (a > fa ? a / fa : 1) * z, h = (a > fa ? 1 : fa / a) * z;
+      setPlace(crop, { x: w > 1 ? Math.min(1, Math.max(0, pl.x - dx / selRect.w / (w - 1))) : pl.x, y: h > 1 ? Math.min(1, Math.max(0, pl.y - dy / selRect.h / (h - 1))) : pl.y });
+      return;
+    }
+    if (multi) {
+      setRects(new Map(group.map((id) => { const r = rectOf(id); return [id, { ...r, x: r.x + dx, y: r.y + dy }]; })), sliding.current);
+      return;
+    }
+    if (sel && selPage && selOnSpread) {
+      const k = (selPage.side === "both" ? 2 : 1) * preset.pageWmm, i = selPage.ids.indexOf(sel);
+      const boxes: Box[] = selPage.ids.map((_, j) => {
+        const r = frameRectMm(preset, selPage, j), base = preset.bleedMm + (selPage.side === 1 ? preset.pageWmm : 0);
+        return { x: (r.x - base) / k, y: (r.y - preset.bleedMm) / preset.pageHmm, w: r.w / k, h: r.h / preset.pageHmm };
+      });
+      boxes[i] = { ...boxes[i], x: boxes[i].x + dx / k, y: boxes[i].y + dy / preset.pageHmm };
+      setPage(selPage.index, { free: boxes }, sliding.current);
+    }
+  };
+  // Arrow presses close together are one undo step.
+  const nudgeTimer = useRef(0);
+  const nudgeKey = (combo: string) => {
+    const step = combo.startsWith("Shift+") ? 5 : 0.5, k = combo.replace("Shift+", "");
+    const d: Record<string, [number, number]> = { Left: [-step, 0], Right: [step, 0], Up: [0, -step], Down: [0, step] };
+    if (!d[k]) return;
+    nudge(...d[k]);
+    sliding.current = true;
+    clearTimeout(nudgeTimer.current);
+    nudgeTimer.current = window.setTimeout(() => { sliding.current = false; }, 500);
+  };
+
+  /** Shuffle templates; say why when nothing can change. */
+  const shuffle = (only?: number) => {
+    const next = shuffleTemplates(album, pages, seed, only);
+    setSeed(seed + 1);
+    if (next.pages.every((p, i) => p.tpl === album.pages[i].tpl)) {
+      void tell(only === undefined
+        ? "Tidak ada yang bisa diacak: semua halaman terkunci, diatur manual, atau belum berisi bingkai."
+        : "Halaman ini tidak bisa diacak: terkunci, diatur manual, atau tidak ada tata letak lain untuk jumlah foto ini.", "Tidak bisa diacak");
+      return;
+    }
+    setAlbum(next);
+  };
   const drop = (onto: string, dragged: string) => {
-    if (!dragged || dragged === onto) return;
+    if (!dragged || dragged === onto || dragged.startsWith("spread:")) return;
     setAlbum(inAlbum.has(dragged) ? swapPhotos(album, onto, dragged) : replacePhoto(album, onto, dragged));
-    setSel(inAlbum.has(dragged) ? dragged : dragged);
+    setSel(dragged); setSelText(null);
+  };
+  const addText = () => {
+    const pg = selPage ?? pages[0];
+    if (!pg) return;
+    const t: TextBox = { id: Date.now().toString(36), text: "Teks baru", font: "Cormorant Garamond", sizeMm: 8, color: "#1f1e1c", align: "center", x: 0.15, y: 0.42, w: 0.7, h: 0.12 };
+    setPage(pg.index, { texts: [...(pg.cfg.texts ?? []), t] });
+    setSel(""); setSelText({ page: pg.index, id: t.id }); setTab("props");
+    setTimeout(() => textArea.current?.select(), 50);
+  };
+  const dupText = () => {
+    if (!tb || !selText) return;
+    const t = { ...tb, id: Date.now().toString(36), x: tb.x + 0.02, y: tb.y + 0.02 };
+    setPage(selText.page, { texts: [...(album.pages[selText.page].texts ?? []), t] });
+    setSelText({ page: selText.page, id: t.id });
+  };
+  const copyLayout = () => selPage && setClip({ tpl: selPage.tpl?.id, free: selPage.cfg.free, texts: selPage.cfg.texts, bg: selPage.cfg.bg, stroke: selPage.cfg.stroke, n: selPage.ids.length, spread: joined });
+  const pasteLayout = () => {
+    if (!clip || !selPage) return;
+    if (clip.spread !== joined) { void tell(clip.spread ? "Tata letak yang disalin untuk panorama dua halaman; tempel ke spread yang juga panorama." : "Tata letak yang disalin untuk satu halaman; tempel ke halaman biasa, bukan panorama."); return; }
+    let a = clip.n === selPage.ids.length ? album : setCount(album, selPage.index, clip.n);
+    if (a.pages[selPage.index]?.n !== clip.n) { void tell("Tata letak tidak bisa ditempel: jumlah foto halaman ini tidak bisa diubah (halaman lain terkunci)."); return; }
+    a = patchPage(a, selPage.index, { tpl: clip.tpl, free: clip.free, texts: clip.texts?.map((x) => ({ ...x, id: x.id + Date.now().toString(36) })), bg: clip.bg, stroke: clip.stroke });
+    setAlbum(a);
+  };
+  const deleteSel = () => {
+    if (selText && tb) { setPage(selText.page, { texts: (album.pages[selText.page].texts ?? []).filter((x) => x.id !== tb.id) }); setSelText(null); return; }
+    if (multi) { setAlbum(group.reduce((a, id) => removePhoto(a, id), album)); deselect(); return; }
+    if (sel && selOnSpread) { setAlbum(removePhoto(album, sel)); setSel(""); }
+  };
+  const deleteSpread = async () => {
+    if (!spread) return;
+    const pgs = [spread.left, spread.right].filter((p): p is LaidPage => !!p && p.side !== "tail");
+    if (!pgs.length) return;
+    const photosIn = pgs.flatMap((p) => p.ids).filter((id) => !isEmpty(id)).length;
+    if (photosIn && !(await ask(`Spread halaman ${s * 2 + 1}–${s * 2 + 2} dihapus. ${photosIn} foto kembali ke panel Foto. Bisa diurungkan (Ctrl+Z).`, "Hapus spread", "Batal", { title: "Hapus spread?", danger: true }))) return;
+    setAlbum([...pgs].sort((a, b) => b.index - a.index).reduce((a, p) => deletePage(a, p.index), album)); deselect();
+    setSi(Math.max(0, s - (s >= spreads.length - 1 ? 1 : 0)));
+  };
+  const toggleJoin = () => { if (!selPage) return; setAlbum(joined ? splitPages(album, selPage.index) : joinPages(album, selPage.side === 1 ? selPage.index - 1 : selPage.index)); setSel(""); };
+  /** A new empty frame (placeholder) on the page; other pages keep their photos. */
+  const addFrame = () => {
+    if (blankPick) { fillBlank(1); return; }
+    if (!selPage) return;
+    const a = addEmptyFrames(album, selPage.index);
+    if (a === album) void tell("Bingkai tidak bisa ditambah di halaman ini (maksimal 12 bingkai).");
+    else { setAlbum(a); setSel(""); setPick({ spread: s, side: selPage.side === 1 ? 1 : 0 }); }
+  };
+  /** Turn the blank slot into a page of `n` placeholders. */
+  const fillBlank = (n: number) => { if (blankAt < 0) return; setAlbum(insertPage(album, blankAt, n)); };
+  const addPageAfter = () => {
+    if (blankPick) { fillBlank(1); return; }
+    if (!selPage) return;
+    setAlbum(insertPage(album, selPage.index + (joined ? 2 : 1), 1));
+  };
+  const clearSelPage = () => { if (selPage) { setAlbum(clearPage(album, selPage.index)); setSel(""); } };
+  const deleteSelPage = async () => {
+    if (!selPage) return;
+    const n = selPage.ids.filter((id) => !isEmpty(id)).length;
+    if (n && !(await ask(`${joined ? "Panorama" : "Halaman"} ${pageLabel.replace("halaman ", "")} dihapus. ${n} foto kembali ke panel Foto; halaman sesudahnya bergeser maju. Bisa diurungkan (Ctrl+Z).`, "Hapus halaman", "Batal", { title: "Hapus halaman?", danger: true }))) return;
+    setAlbum(deletePage(album, selPage.index)); deselect();
   };
 
-  const cell = (pg: LaidPage, k: number) => {
-    const id = pg.ids[k], ph = byId.get(id), pl = place[id] ?? CENTER;
-    const r = cellRectMm(preset, pg.side as 0 | 1 | "both", pg.tpl!.cols, pg.tpl!.rows, pg.tpl!.cells[k]);
-    const box: CSSProperties = { left: pct(r.x / sheet.w), top: pct(r.y / sheet.h), width: pct(r.w / sheet.w), height: pct(r.h / sheet.h) };
-    const pos = `${pl.x * 100}% ${pl.y * 100}%`;
-    return (
-      <button key={id} type="button" className="cell" style={box} aria-pressed={sel === id} aria-label={`Foto ${ph?.name ?? id}, halaman ${pageNo(pg)}`}
-        draggable onClick={() => setSel(id)}
-        onDragStart={(e) => { e.dataTransfer.setData("text/plain", id); e.dataTransfer.effectAllowed = "move"; }}
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={(e) => { e.preventDefault(); drop(id, e.dataTransfer.getData("text/plain")); }}>
-        {ph?.thumb && <img src={ph.thumb} alt="" draggable={false} style={{ objectPosition: pos, transformOrigin: pos, transform: `scale(${pl.z})` }} />}
-      </button>
-    );
-  };
+  const keyState = { selText, sel, tb };
+  void keyState;
+  useCommands({
+    "e.select": { run: () => setTool("select"), checked: tool === "select" && !spaceHand },
+    "e.hand": { run: (c) => { if (c === "Space") setSpaceHand(true); else setTool(tool === "hand" ? "select" : "hand"); }, up: () => setSpaceHand(false), checked: hand, enabled: !overview },
+    "e.text": { run: addText, enabled: !overview && !!pages.length },
+    "e.frame": { run: addFrame, enabled: !overview && (!!selPage || blankPick) },
+    "e.addPage": { run: addPageAfter, enabled: !overview && (!!selPage || blankPick) },
+    "e.clearPage": { run: clearSelPage, enabled: !overview && !!selPage?.ids.some((id) => !isEmpty(id)) },
+    "e.deletePage": { run: () => void deleteSelPage(), enabled: !overview && !!selPage },
+    "e.nudge": { run: nudgeKey, enabled: !overview && (!!selText || selOnSpread) },
+    "e.prev": { run: () => { setSi(Math.max(0, s - 1)); deselect(); }, enabled: s > 0 },
+    "e.next": { run: () => { setSi(Math.min(spreads.length - 1, s + 1)); deselect(); }, enabled: s < spreads.length - 1 },
+    "e.overview": { run: () => setOverview((o) => !o), checked: overview },
+    "e.shuffle": { run: () => selPage && shuffle(selPage.index), enabled: !!selPage && !selPage.cfg.locked },
+    "e.shuffleAll": { run: () => shuffle() },
+    "e.lock": { run: () => selPage && setPage(selPage.index, { locked: !selPage.cfg.locked }), enabled: !!selPage, checked: !!selPage?.cfg.locked },
+    "e.join": { run: toggleJoin, enabled: !!selPage, checked: joined },
+    "e.delete": { run: deleteSel, enabled: !!tb || selOnSpread },
+    "e.edit": { run: () => { if (tb) { setTab("props"); setTimeout(() => textArea.current?.focus(), 30); } else setCropId(crop ? "" : sel); }, enabled: !!tb || (selOnSpread && !!selPhoto?.thumb) },
+    "e.dup": { run: dupText, enabled: !!tb },
+    "e.copyLayout": { run: copyLayout, enabled: !!selPage },
+    "e.pasteLayout": { run: pasteLayout, enabled: !!clip && !!selPage },
+    "e.newSpread": { run: () => { setAlbum(addPage(addPage(album))); setSi(spreads.length); deselect(); } },
+    "e.deleteSpread": { run: () => void deleteSpread(), enabled: !!spread && spreads.length > 1 && !!(spread.left || spread.right) },
+    "e.guides": { run: () => setGuides((g) => !g), checked: guides },
+    "e.zoomIn": { run: () => stepZoom(1), enabled: !overview },
+    "e.zoomOut": { run: () => stepZoom(-1), enabled: !overview },
+    "e.fit": { run: () => zoomTo("fit"), enabled: !overview },
+    "e.actual": { run: () => zoomTo(1), enabled: !overview },
+    "e.selectAll": { run: () => selectMany([...onSheet]), enabled: !overview && onSheet.size > 0 },
+    "e.alignLeft": { run: () => doAlign("left"), enabled: canAlign },
+    "e.alignHCenter": { run: () => doAlign("hcenter"), enabled: canAlign },
+    "e.alignRight": { run: () => doAlign("right"), enabled: canAlign },
+    "e.alignTop": { run: () => doAlign("top"), enabled: canAlign },
+    "e.alignVCenter": { run: () => doAlign("vcenter"), enabled: canAlign },
+    "e.alignBottom": { run: () => doAlign("bottom"), enabled: canAlign },
+    "e.distH": { run: () => doDistribute("x"), enabled: group.length > 2 },
+    "e.distV": { run: () => doDistribute("y"), enabled: group.length > 2 },
+    "e.esc": { run: () => { if (crop) setCropId(""); else if (overview) setOverview(false); else deselect(); } },
+  });
+  const useRef2 = useRef<(t: Tpl) => void>(() => {});
+  useRef2.current = (t: Tpl) => { if (selPage && !!t.spread === joined) setAlbum(applyTpl(album, selPage.index, t)); };
+  useEffect(() => { registerTemplateUse((t) => useRef2.current(t)); return () => registerTemplateUse(null); }, [registerTemplateUse]);
 
-  const selRect = selOnSpread && selPage?.tpl && selPhoto
-    ? cellRectMm(preset, selPage.side as 0 | 1 | "both", selPage.tpl.cols, selPage.tpl.rows, selPage.tpl.cells[selPage.ids.indexOf(sel)])
-    : null;
+  const selRect = selOnSpread && selPage?.tpl && selPhoto ? frameRectMm(preset, selPage, selPage.ids.indexOf(sel)) : null;
   const selDpi = selRect && selPhoto?.w ? Math.round(effectiveDpi(selPhoto.w, selPhoto.h, selRect, place[sel] ?? CENTER)) : 0;
   const selPl = place[sel] ?? CENTER;
+  const pageLabel = selPage ? (joined ? `halaman ${pageNo(selPage)}–${pageNo(selPage) + 1}` : `halaman ${pageNo(selPage)}`) : "";
+  const slider = (value: number, min: number, max: number, step: number, on: (v: number) => void, show: string) => (
+    <div className="slider"><input type="range" min={min} max={max} step={step} value={value} onChange={(e) => on(+e.target.value)} onPointerUp={endSlide} onKeyUp={endSlide} onBlur={endSlide} /><span className="val">{show}</span></div>
+  );
 
+  // ---------- options bar (context) ----------
+  const optbar = (
+    <div className="optbar">
+      {multi ? (
+        <>
+          <span className="ctx"><Icon name="layers" size={14} />{group.length} bingkai</span><span className="vdiv" />
+          <IconBtn icon="align-start-vertical" cmd="e.alignLeft" /><IconBtn icon="align-center-vertical" cmd="e.alignHCenter" /><IconBtn icon="align-end-vertical" cmd="e.alignRight" />
+          <span className="vdiv" />
+          <IconBtn icon="align-start-horizontal" cmd="e.alignTop" /><IconBtn icon="align-center-horizontal" cmd="e.alignVCenter" /><IconBtn icon="align-end-horizontal" cmd="e.alignBottom" />
+          <span className="vdiv" />
+          <IconBtn icon="align-horizontal-distribute-center" cmd="e.distH" /><IconBtn icon="align-vertical-distribute-center" cmd="e.distV" />
+          <span className="vdiv" />
+          <span className="lbl">Rata ke</span>
+          <Seg value={alignTo} onChange={setAlignTo} items={[{ v: "sel", label: "Seleksi" }, { v: "page", label: "Halaman", tip: "Tepi halaman dengan margin" }, { v: "safe", label: "Area aman" }]} />
+          <span className="vdiv" /><IconBtn icon="trash-2" cmd="e.delete" />
+          <span className="grow" /><span className="caption">Shift+klik = tambah/kurangi</span>
+        </>
+      ) : tb && selText ? (
+        <>
+          <span className="ctx"><Icon name="type" size={14} />Teks</span><span className="vdiv" />
+          <select value={tb.font} onChange={(e) => setText(selText.page, tb.id, { font: e.target.value })} style={{ width: 190, fontFamily: `"${tb.font}"` }} aria-label="Huruf">
+            {FONTS.map((f) => <option key={f.family} value={f.family} style={{ fontFamily: f.family }}>{f.family}</option>)}
+          </select>
+          <NumField value={tb.sizeMm} min={1} max={80} step={0.5} unit="mm" width={78} label="Ukuran huruf" onChange={(v) => setText(selText.page, tb.id, { sizeMm: v })} />
+          <span className="vdiv" />
+          <IconBtn icon="bold" tip="Tebal" on={!!tb.bold} onClick={() => setText(selText.page, tb.id, { bold: !tb.bold })} />
+          <IconBtn icon="italic" tip="Miring" on={!!tb.italic} onClick={() => setText(selText.page, tb.id, { italic: !tb.italic })} />
+          <span className="vdiv" />
+          {(["left", "center", "right"] as const).map((a) => <IconBtn key={a} icon={`align-${a}`} tip={a === "left" ? "Rata kiri" : a === "center" ? "Tengah" : "Rata kanan"} on={tb.align === a} onClick={() => setText(selText.page, tb.id, { align: a })} />)}
+          <span className="vdiv" />
+          <input type="color" value={tb.color} aria-label="Warna teks" data-tip="Warna teks" onChange={(e) => textSlide({ color: e.target.value })} onBlur={endSlide} />
+          <span className="grow" /><span className="caption">Enter = edit · Esc = selesai</span>
+        </>
+      ) : selOnSpread && selPhoto ? (
+        <>
+          <span className="ctx"><Icon name="image" size={14} />{crop ? "Atur foto di bingkai" : "Bingkai foto"}</span><span className="vdiv" />
+          <Btn label={crop ? "Selesai" : "Atur foto"} icon={crop ? "check" : "crop"} kind={crop ? "primary" : "secondary"} cmd="e.edit" tip={crop ? "Selesai mengatur (Enter / Esc)" : "Geser foto di dalam bingkai dengan mouse (klik dua kali foto / Enter)"} />
+          <span className="vdiv" />
+          <span className="lbl">Perbesar</span>{slider(selPl.z, 1, 3, 0.01, (v) => setPlace(sel, { z: v }), `${Math.round(selPl.z * 100)}%`)}
+          <span className="vdiv" />
+          <IconBtn icon="rotate-ccw" tip="Atur ulang posisi foto" onClick={() => commit({ ...design, place: { ...place, [sel]: CENTER } })} />
+          <IconBtn icon="x" tip="Kosongkan bingkai (foto kembali ke panel)" onClick={() => { setAlbum(clearFrame(album, sel)); setSel(""); }} />
+          <IconBtn icon="trash-2" cmd="e.delete" />
+          <span className="grow" /><span className="caption">{crop ? "Seret foto · roda mouse/sudut = perbesar · panah = geser" : <>{pageLabel}{selPage?.tpl ? ` · ${selPage.cfg.free ? "manual" : selPage.tpl.label}` : ""}</>}</span>
+        </>
+      ) : selOnSpread && isEmpty(sel) ? (
+        <>
+          <span className="ctx"><Icon name="square-dashed" size={14} />Bingkai kosong</span><span className="caption">Seret foto dari panel kiri ke bingkai ini.</span>
+          <span className="grow" /><IconBtn icon="trash-2" cmd="e.delete" />
+        </>
+      ) : (
+        <>
+          <span className="ctx"><Icon name="book-open" size={14} />Spread {s + 1}</span><span className="vdiv" />
+          <Btn label="Teks" icon="type" kind="ghost" cmd="e.text" />
+          <Btn label="Acak halaman" icon="shuffle" kind="ghost" cmd="e.shuffle" />
+          <Btn label={joined ? "Pisahkan" : "Panorama"} icon={joined ? "unlink-2" : "link-2"} kind="ghost" cmd="e.join" />
+          <span className="grow" /><span className="caption">Klik foto atau teks untuk mengeditnya</span>
+        </>
+      )}
+      <span className="vdiv" /><IconBtn icon="panel-left" cmd="app.panels" />
+    </div>
+  );
+
+  // ---------- canvas ----------
+  const canvasEl = spread ? (
+    <div className="canvas-wrap">
+      <div ref={canvas} className={`canvas ${hand ? "panning" : ""} ${grabbing ? "grabbing" : ""}`}
+        onWheel={(e) => { if (e.ctrlKey) { e.preventDefault(); stepZoom(e.deltaY < 0 ? 1 : -1); } }}
+        onPointerDown={(e) => { if (!hand || !canvas.current) return; pan.current = { x: e.clientX, y: e.clientY, sl: canvas.current.scrollLeft, st: canvas.current.scrollTop }; setGrabbing(true); (e.currentTarget as Element).setPointerCapture(e.pointerId); }}
+        onPointerMove={(e) => { const p = pan.current; if (p && canvas.current) { canvas.current.scrollLeft = p.sl - (e.clientX - p.x); canvas.current.scrollTop = p.st - (e.clientY - p.y); } }}
+        onPointerUp={() => { pan.current = null; setGrabbing(false); }}
+        onClick={(e) => { if (e.target === e.currentTarget || (e.target as Element).classList.contains("canvas-in")) deselect(); }}>
+        <div className="canvas-in" style={{ minWidth: "100%", minHeight: "100%", width: sheetW + 96, height: sheetW * (sheetMm.h / sheetMm.w) + 112 }}>
+          <div className="sheetbox" style={{ width: sheetW }}>
+            <div className="pagenos"><span>Halaman {s * 2 + 1}</span>{spread.left?.side === "both" && <span>panorama dua halaman</span>}<span>Spread {s + 1} dari {spreads.length} · halaman {s * 2 + 2}</span></div>
+            <Sheet spread={spread} preset={preset} byId={byId} place={place} sel={sel} selText={selText} guides={guides} lowres={lowres} passive={hand}
+              crop={crop} onCrop={setCropId}
+              hiSide={blankPick ? pickOn!.side : pickPage && !sel && !selText ? (pickPage.side as 0 | 1 | "both") : null}
+              onSelectPage={(side) => { setSel(""); setSelText(null); setPick({ spread: s, side }); setTab("props"); }}
+              onPlace={(id, pl, replace) => commit({ ...design, place: { ...place, [id]: pl } }, replace)}
+              onSelectPhoto={selectFrame} more={group.slice(1)} onSelectMany={selectMany} onGroup={(m, replace) => setRects(m, replace)}
+              onSelectText={(t) => { setSelText(t); setSel(""); if (t) setTab("props"); }}
+              onEditText={(t) => { setSelText(t); setSel(""); setTab("props"); setTimeout(() => textArea.current?.focus(), 30); }}
+              onDrop={drop}
+              onFrames={(page, boxes, replace) => setPage(page, { free: boxes }, replace)}
+              onText={(page, id, patch, replace) => setText(page, id, patch, replace)} />
+          </div>
+        </div>
+      </div>
+      {guides && <div className="canvas-ovl leg"><span><i style={{ background: "var(--bleed)" }} />Potong</span><span><i style={{ background: "var(--safe)" }} />Area aman</span><span><i style={{ background: "var(--guide)" }} />Snap</span></div>}
+      <div className="canvas-ovl nav"><IconBtn icon="chevron-left" small cmd="e.prev" /><span className="nt">PgUp / PgDn</span><IconBtn icon="chevron-right" small cmd="e.next" /></div>
+      <div className="canvas-ovl zoom">
+        <IconBtn icon="zoom-out" small cmd="e.zoomOut" />
+        <button type="button" className="ib s zv" style={{ width: 48 }} data-cmd="e.fit" onClick={() => runCommand("e.fit")}>{Math.round(z * 100)}%</button>
+        <IconBtn icon="zoom-in" small cmd="e.zoomIn" /><IconBtn icon="maximize-2" small cmd="e.fit" on={zoom === "fit"} />
+      </div>
+    </div>
+  ) : (
+    <div className="canvas" style={{ display: "flex" }}>
+      <div className="dropzone"><Icon name="layout-template" size={24} /><strong>Album belum punya halaman</strong>
+        <div className="two"><Btn label="Susun otomatis" icon="wand-sparkles" kind="primary" cmd="app.auto" /><Btn label="Spread kosong" icon="plus" cmd="e.newSpread" /></div></div>
+    </div>
+  );
+
+  const filmstrip = (
+    <div className="strip">
+      <div className="strip-h">
+        <span className="overline">Spread</span><span className="caption">{spreads.length} spread · {spreads.length * 2} halaman · seret untuk mengurutkan</span><span className="grow" />
+        <IconBtn icon="plus" small cmd="e.newSpread" /><IconBtn icon="wand-sparkles" small cmd="app.auto" /><IconBtn icon="layout-grid" small cmd="e.overview" />
+      </div>
+      <div className="strip-row">
+        {spreads.map((sp, i) => {
+          const note = [sp.left, sp.right].some((x) => x?.cfg.note && !x.cfg.noteDone);
+          const warn = warnPages.has(i * 2 + 1) || warnPages.has(i * 2 + 2);
+          return (
+            <button key={i} type="button" className={`st-item ${i === s ? "cur" : ""} ${warn ? "warn" : ""} ${stripDrag && stripDrag.over === i && stripDrag.from !== i ? "drop" : ""}`} draggable
+              ref={(el) => { if (el && i === s) el.scrollIntoView?.({ block: "nearest", inline: "nearest" }); }}
+              onClick={() => { setSi(i); deselect(); }}
+              onDragStart={(e) => { setStripDrag({ from: i, over: i }); e.dataTransfer.setData("text/plain", `spread:${i}`); e.dataTransfer.effectAllowed = "move"; }}
+              onDragOver={(e) => { if (stripDrag) { e.preventDefault(); if (stripDrag.over !== i) setStripDrag({ ...stripDrag, over: i }); } }}
+              onDrop={(e) => { e.preventDefault(); if (stripDrag && stripDrag.from !== i) { setAlbum(moveSheet(album, pages, stripDrag.from, i)); setSi(i); } setStripDrag(null); }}
+              onDragEnd={() => setStripDrag(null)}>
+              <MiniSheet sp={sp} preset={preset} byId={byId} place={place} />
+              <span className="lb">{warn && <Icon name="triangle-alert" size={11} className="warn-text" />}{i * 2 + 1}–{i * 2 + 2}{sp.left?.side === "both" ? " · panorama" : ""}{note && <i className="dot" />}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  // ---------- right panel ----------
+  const props = (
+    <aside className="props" aria-label="Properti">
+      <div className="tabs-h"><Seg full items={[{ v: "props", label: "Properti" }, { v: "album", label: "Album" }, { v: "revisi", label: proof && proof.notes.some((n) => !n.done) ? `Revisi · ${proof.notes.filter((n) => !n.done).length}` : "Revisi" }]} value={tab} onChange={setTab} /></div>
+      <div className="scroll">
+        {tab === "revisi" ? (
+          <RevisionPanel info={proof} loading={proofBusy} error={proofErr} onRefresh={() => void loadProof()} onSend={() => onSendProof?.()}
+            onOpen={(n) => { const k = spreadOfProof(n.spread); if (k >= 0) { setSi(k); deselect(); } }} onMark={(n, d) => void markProofNote(n, d)} labelOf={proofLabel} />
+        ) : tab === "album" ? (
+          <>
+            <Section id="e-all" title="Semua halaman">
+              <Row label="Margin"><NumField value={preset.marginPct} min={0} max={20} step={0.5} unit="%" onChange={(v) => setPreset({ ...preset, marginPct: v })} /></Row>
+              <Row label="Jarak foto"><NumField value={preset.gapPct} min={0} max={10} step={0.5} unit="%" onChange={(v) => setPreset({ ...preset, gapPct: v })} /></Row>
+              <Row label="Latar album"><ColorField value={preset.bg} onChange={(v) => setPreset({ ...preset, bg: v })} /></Row>
+            </Section>
+            <Section id="e-size" title="Ukuran & cetak">
+              <p className="caption">{preset.pageWmm / 10} × {preset.pageHmm / 10} cm per halaman · {preset.pages} halaman · {preset.binding === "layflat" ? "lay-flat" : "jilid biasa"} · bleed {preset.bleedMm} mm · {preset.dpi} dpi</p>
+              <Btn label="Properti album…" icon="sliders-horizontal" full cmd="app.props" />
+              <Btn label="Acak semua tata letak" icon="shuffle" full cmd="e.shuffleAll" />
+              <Btn label="Template tata letak…" icon="layout-template" full cmd="app.templates" />
+            </Section>
+            <Section id="e-sum" title="Ringkasan">
+              <dl className="meta-dl">
+                <dt>Spread</dt><dd>{spreads.length} ({spreads.length * 2} halaman)</dd>
+                <dt>Foto</dt><dd>{album.order.length - blanks} di album</dd>
+                {blanks > 0 && <><dt>Kosong</dt><dd>{blanks} bingkai</dd></>}
+                <dt>dpi rendah</dt><dd className={warnings.length ? "warn-text" : ""}>{warnings.length ? `${warnings.length} foto` : "tidak ada"}</dd>
+                <dt>Catatan</dt><dd>{openNotes ? `${openNotes} belum selesai` : "tidak ada"}</dd>
+              </dl>
+            </Section>
+          </>
+        ) : (
+          <>
+            {tb && selText && (
+              <>
+                <Section id="e-text" title={`Teks · halaman ${textPage ? pageNo(textPage) : ""}`}>
+                  <textarea ref={textArea} rows={4} value={tb.text} aria-label="Isi teks" onChange={(e) => textSlide({ text: e.target.value })} onBlur={endSlide} />
+                  <Row label="Huruf"><select value={tb.font} onChange={(e) => setText(selText.page, tb.id, { font: e.target.value })} style={{ fontFamily: `"${tb.font}"` }}>
+                    {FONTS.map((f) => <option key={f.family} value={f.family} style={{ fontFamily: f.family }}>{f.family}</option>)}</select></Row>
+                  <Row label="Ukuran"><NumField value={tb.sizeMm} min={1} max={80} step={0.5} unit="mm" onChange={(v) => setText(selText.page, tb.id, { sizeMm: v })} />
+                    <IconBtn icon="bold" small tip="Tebal" on={!!tb.bold} onClick={() => setText(selText.page, tb.id, { bold: !tb.bold })} />
+                    <IconBtn icon="italic" small tip="Miring" on={!!tb.italic} onClick={() => setText(selText.page, tb.id, { italic: !tb.italic })} /></Row>
+                  <Row label="Perataan"><Seg full value={tb.align} onChange={(a) => setText(selText.page, tb.id, { align: a })}
+                    items={[{ v: "left", label: "", icon: "align-left", tip: "Rata kiri" }, { v: "center", label: "", icon: "align-center", tip: "Tengah" }, { v: "right", label: "", icon: "align-right", tip: "Rata kanan" }]} /></Row>
+                  <Row label="Warna"><ColorField value={tb.color} onChange={(v) => textSlide({ color: v })} onEnd={endSlide} /></Row>
+                  <Row label="Jarak huruf">{slider(tb.tracking ?? 0, 0, 0.5, 0.01, (v) => textSlide({ tracking: v }), `${Math.round((tb.tracking ?? 0) * 100)}`)}</Row>
+                  <div className="pair"><Btn label="Duplikat" icon="copy" full cmd="e.dup" /><Btn label="Hapus" icon="trash-2" full cmd="e.delete" /></div>
+                </Section>
+              </>
+            )}
+            {multi && (
+              <>
+                <Section id="e-multi" title={`Susun ${group.length} bingkai`}>
+                  <Row label="Ratakan"><IconBtn icon="align-start-vertical" cmd="e.alignLeft" /><IconBtn icon="align-center-vertical" cmd="e.alignHCenter" /><IconBtn icon="align-end-vertical" cmd="e.alignRight" /></Row>
+                  <Row label=""><IconBtn icon="align-start-horizontal" cmd="e.alignTop" /><IconBtn icon="align-center-horizontal" cmd="e.alignVCenter" /><IconBtn icon="align-end-horizontal" cmd="e.alignBottom" /></Row>
+                  <Row label="Sebar rata"><IconBtn icon="align-horizontal-distribute-center" cmd="e.distH" /><IconBtn icon="align-vertical-distribute-center" cmd="e.distV" /></Row>
+                  <Row label="Jarak"><NumField value={gapNow} min={0} max={50} step={0.5} unit="mm" label="Jarak antarbingkai" onChange={setGapMm} /><Btn label="Samakan" tip="Susun ulang dengan jarak ini, urutan dari kiri/atas tetap" onClick={doSpace} /></Row>
+                  <div className="fs" style={{ gap: 6 }}><span className="caption">Samakan ukuran dengan bingkai yang terakhir diklik</span>
+                    <div className="hrow"><Btn label="Lebar" full onClick={() => doMatch("w")} /><Btn label="Tinggi" full onClick={() => doMatch("h")} /><Btn label="Keduanya" full onClick={() => doMatch("both")} /></div></div>
+                  <div className="fs" style={{ gap: 6 }}><span className="caption">Rata ke</span>
+                    <Seg full value={alignTo} onChange={setAlignTo} items={[{ v: "sel", label: "Seleksi" }, { v: "page", label: "Halaman" }, { v: "safe", label: "Area aman" }]} /></div>
+                  <p className="caption">Seleksi = tepi kotak seleksi. Halaman = tepi halaman dengan margin. Area aman = garis area aman.</p>
+                </Section>
+                <Section id="e-multi-photos" title={`${group.length} bingkai`}>
+                  <div className="pair"><Btn label="Kosongkan" icon="eraser" full onClick={() => { setAlbum(group.reduce((a, id) => clearFrame(a, id), album)); deselect(); }} /><Btn label={`Hapus ${group.length}`} icon="trash-2" full cmd="e.delete" /></div>
+                </Section>
+              </>
+            )}
+            {!tb && !multi && selOnSpread && selPhoto && (
+              <Section id="e-frame" title="Bingkai foto">
+                <Row label="Perbesar">{slider(selPl.z, 1, 3, 0.01, (v) => setPlace(sel, { z: v }), `${Math.round(selPl.z * 100)}%`)}</Row>
+                <Row label="Geser datar">{slider(selPl.x, 0, 1, 0.01, (v) => setPlace(sel, { x: v }), `${Math.round(selPl.x * 100)}%`)}</Row>
+                <Row label="Geser tegak">{slider(selPl.y, 0, 1, 0.01, (v) => setPlace(sel, { y: v }), `${Math.round(selPl.y * 100)}%`)}</Row>
+                {selDpi > 0 && <div className={`note ${selDpi < (preset.dpi * 2) / 3 ? "warn" : "ok"}`}><Icon name={selDpi < (preset.dpi * 2) / 3 ? "triangle-alert" : "circle-check"} size={14} />
+                  {selDpi < (preset.dpi * 2) / 3 ? `Resolusi cetak ${selDpi} dpi (target ${preset.dpi}). Perkecil bingkai atau ganti foto.` : `Resolusi cetak ${selDpi} dpi · aman`}</div>}
+                <div className="pair"><Btn label="Kosongkan" icon="x" full onClick={() => { setAlbum(clearFrame(album, sel)); setSel(""); }} /><Btn label="Hapus bingkai" icon="trash-2" full cmd="e.delete" /></div>
+                <p className="caption" title={selPhoto.name}>{selPhoto.name}</p>
+              </Section>
+            )}
+            {!tb && selOnSpread && isEmpty(sel) && (
+              <Section id="e-empty" title="Bingkai kosong">
+                <p className="caption">Seret foto dari panel kiri ke bingkai ini.</p>
+                <Btn label="Hapus bingkai" icon="trash-2" full cmd="e.delete" />
+              </Section>
+            )}
+            {blankPick && (
+              <Section id="e-blank" title={`Halaman ${s * 2 + 1 + pickOn!.side} · kosong`}>
+                <p className="caption">Belum ada halaman di sini, jadi akan tercetak putih. Pilih jumlah bingkai untuk memasang placeholder; foto bisa diseret masuk nanti.</p>
+                <div className="counts" role="group" aria-label="Jumlah bingkai">
+                  {countsFor(false).map((n) => <button key={n} type="button" data-tip={`${n} bingkai kosong`} onClick={() => fillBlank(n)}>{n}</button>)}
+                </div>
+                {spreads.length > 1 && <Btn label="Hapus spread ini" icon="trash-2" full cmd="e.deleteSpread" />}
+              </Section>
+            )}
+            {selPage && (
+              <>
+                <Section id="e-layout" title={`Tata letak ${pageLabel}`}>
+                  <div className="counts" role="group" aria-label="Jumlah foto">
+                    {countsFor(joined).map((n) => <button key={n} type="button" className={selPage.cfg.n === n ? "on" : ""} aria-pressed={selPage.cfg.n === n} data-tip={`${n} foto`} onClick={() => setAlbum(setCount(album, selPage.index, n))}>{n}</button>)}
+                  </div>
+                  <div className={joined ? "tpls wide" : "tpls"}>
+                    {templatesFor(selPage.ids.length, joined).map((t) => (
+                      <button key={t.id} type="button" className={`tpl ${!selPage.cfg.free && selPage.tpl?.id === t.id ? "on" : ""}`} aria-label={t.label} data-tip={t.label}
+                        onClick={() => setAlbum(applyTpl(album, selPage.index, t))}
+                        style={{ gridTemplateColumns: `repeat(${t.cols}, 1fr)`, gridTemplateRows: `repeat(${t.rows}, 1fr)` }}>
+                        {t.cells.map(([c, r, cs, rs], k) => <span key={k} style={{ gridColumn: `${c + 1} / span ${cs}`, gridRow: `${r + 1} / span ${rs}` }} />)}
+                      </button>
+                    ))}
+                  </div>
+                  {selPage.cfg.free && <p className="caption">Bingkai diatur manual. Klik template untuk kembali ke tata letak template.</p>}
+                  {selPage.ids.length > 0 && selPage.ids.every(isEmpty) && <p className="caption">Semua bingkai masih kosong. Seret foto dari panel kiri ke bingkai.</p>}
+                  <div className="pair"><Btn label="Bingkai kosong" icon="square-dashed" full cmd="e.frame" tip="Tambah satu bingkai kosong di halaman ini (F)" /><Btn label="Halaman baru" icon="plus" full cmd="e.addPage" tip="Halaman kosong baru sesudah halaman ini" /></div>
+                  <div className="pair"><Btn label="Kosongkan" icon="eraser" full cmd="e.clearPage" tip="Foto kembali ke panel, bingkai tetap" /><Btn label="Hapus halaman" icon="trash-2" full cmd="e.deletePage" tip="Hapus halaman ini (Shift+Del)" /></div>
+                  <div className="pair"><Btn label="Acak" icon="shuffle" full cmd="e.shuffle" /><Btn label="Template baru…" icon="layout-template" full cmd="app.templates" /></div>
+                  <div className="pair"><Btn label="Salin" icon="copy" full cmd="e.copyLayout" /><Btn label="Tempel" icon="clipboard-paste" full cmd="e.pasteLayout" /></div>
+                  <Btn label={joined ? "Pisahkan jadi dua halaman" : "Jadikan panorama dua halaman"} icon={joined ? "unlink-2" : "link-2"} full cmd="e.join" />
+                  {joined && preset.binding === "biasa" && <div className="note warn"><Icon name="triangle-alert" size={14} />Jilid biasa: bagian foto di lipatan bisa tertelan jilid.</div>}
+                  <label className="ck"><input type="checkbox" checked={!!selPage.cfg.locked} onChange={() => setPage(selPage.index, { locked: !selPage.cfg.locked })} />Kunci tata letak halaman ini (L)</label>
+                </Section>
+                <Section id="e-note" title="Catatan revisi">
+                  <textarea placeholder="mis. ganti foto kanan dengan yang tertawa" aria-label="Catatan revisi halaman ini" value={selPage.cfg.note ?? ""}
+                    onChange={(e) => setPage(selPage.index, { note: e.target.value || undefined, noteDone: false }, sliding.current)} onFocus={() => { sliding.current = false; }} onBlur={endSlide}
+                    onKeyDown={(e) => { if (e.key === "Enter" && e.ctrlKey) (e.target as HTMLElement).blur(); }} />
+                  {selPage.cfg.note && <label className="ck"><input type="checkbox" checked={!!selPage.cfg.noteDone} onChange={(e) => setPage(selPage.index, { noteDone: e.target.checked })} />Sudah dikerjakan</label>}
+                </Section>
+                <Section id="e-style" title="Gaya halaman" defaultOpen={false}>
+                  <Row label="Latar"><ColorField value={selPage.cfg.bg ?? preset.bg} onChange={(v) => setPage(selPage.index, { bg: v }, sliding.current)} onEnd={endSlide} />
+                    {selPage.cfg.bg && <IconBtn icon="rotate-ccw" small tip="Ikut latar album" onClick={() => setPage(selPage.index, { bg: undefined })} />}</Row>
+                  <Row label="Garis foto"><NumField value={selPage.cfg.stroke?.mm ?? 0} min={0} max={10} step={0.25} unit="mm" onChange={(v) => setPage(selPage.index, { stroke: { color: selPage.cfg.stroke?.color ?? "#ffffff", mm: v } })} /></Row>
+                  {(selPage.cfg.stroke?.mm ?? 0) > 0 && <Row label="Warna garis"><ColorField value={selPage.cfg.stroke?.color ?? "#ffffff"} onChange={(v) => setPage(selPage.index, { stroke: { mm: selPage.cfg.stroke?.mm ?? 1, color: v } })} /></Row>}
+                </Section>
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </aside>
+  );
+
+  const tool2 = (icon: Parameters<typeof IconBtn>[0]["icon"], cmd: Parameters<typeof IconBtn>[0]["cmd"]) => <IconBtn icon={icon} cmd={cmd} />;
   return (
     <>
-      <div className="tools">
-        <button type="button" className="btn" disabled={!canUndo} onClick={undo}>Urungkan</button>
-        <button type="button" className="btn" disabled={!canRedo} onClick={redo}>Ulangi</button>
-        <span className="sep" aria-hidden="true" />
-        <label className="check"><input type="checkbox" checked={guides} onChange={(e) => setGuides(e.target.checked)} /> Garis potong &amp; zona aman</label>
-        <span className="right" />
-        <button type="button" className="btn" onClick={() => { setAlbum(shuffleTemplates(album, pages, seed)); setSeed(seed + 1); }}>Acak ulang album</button>
-        <button type="button" className="btn" onClick={() => { if (confirm("Susun ulang dari awal? Tata letak sekarang masih bisa dikembalikan dengan Urungkan.")) onRebuild(); }}>Susun ulang</button>
-        <button type="button" className="btn primary" onClick={onExport}>Ekspor</button>
-      </div>
-
-      <div className="work">
-        <aside className="panel" aria-label="Foto yang belum dipakai">
-          <h2>Belum dipakai · {tray.length}</h2>
-          {tray.length === 0 ? <p className="dim">Semua foto terpilih sudah ada di album.</p> : (
-            <div className="tray">
-              {tray.map((p) => (
-                <div key={p.id} className="thumb" draggable title={p.name}
-                  onDragStart={(e) => { e.dataTransfer.setData("text/plain", p.id); e.dataTransfer.effectAllowed = "move"; }}>
-                  {p.thumb && <img src={p.thumb} alt={p.name} draggable={false} />}
-                </div>
-              ))}
-            </div>
-          )}
-          <p className="dim">Seret foto ke bingkai untuk menggantinya. Seret antar bingkai untuk menukar.</p>
-        </aside>
-
-        <main className="stage dark">
-          {spread && (
-            <div className="sheetwrap">
-              <div className="pagenos"><span>Halaman {s * 2 + 1}</span>{spread.left?.side === "both" && <span>dua halaman menyambung</span>}<span>Halaman {s * 2 + 2}</span></div>
-              <div className="sheet" style={{ aspectRatio: `${sheet.w} / ${sheet.h}`, background: preset.bg }} onClick={(e) => { if (e.target === e.currentTarget) setSel(""); }}>
-                {spread.left?.tpl && spread.left.ids.map((_, k) => cell(spread.left!, k))}
-                {spread.right?.tpl && spread.right.side === 1 && spread.right.ids.map((_, k) => cell(spread.right!, k))}
-                {guides && (
-                  <>
-                    <div className="trim" style={{ inset: `${pct(preset.bleedMm / sheet.h)} ${pct(preset.bleedMm / sheet.w)}` }} />
-                    <div className="fold" />
-                    {[0, 1].map((side) => (
-                      <div key={side} className="safe" style={{
-                        left: pct((preset.bleedMm + side * preset.pageWmm + preset.safeMm) / sheet.w), top: pct((preset.bleedMm + preset.safeMm) / sheet.h),
-                        width: pct((preset.pageWmm - 2 * preset.safeMm) / sheet.w), height: pct((preset.pageHmm - 2 * preset.safeMm) / sheet.h),
-                      }} />
-                    ))}
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-          <div className="spreads" role="tablist" aria-label="Spread">
-            {spreads.map((sp, i) => (
-              <button key={i} type="button" role="tab" aria-selected={i === s} className="spreadtab" onClick={() => { setSi(i); setSel(""); }}>
-                {i * 2 + 1}–{i * 2 + 2}
-                {sp.left?.side === "both" ? " · sambung" : ""}{(sp.left?.cfg.locked || sp.right?.cfg.locked) ? " · kunci" : ""}
-              </button>
-            ))}
+      <div className={`work ${panels ? "" : "no-panels"}`}>
+        <div className="rail" role="toolbar" aria-label="Alat">
+          {tool2("mouse-pointer-2", "e.select")}{tool2("hand", "e.hand")}{tool2("type", "e.text")}{tool2("square-dashed", "e.frame")}{tool2("zoom-in", "e.zoomIn")}
+          <span className="hdiv" />
+          {tool2("grid-3x3", "e.guides")}{tool2("layout-grid", "e.overview")}{tool2("sliders-horizontal", "app.props")}
+        </div>
+        <aside className="side" aria-label="Foto">
+          <div className="tabs-h" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <Seg full items={[{ v: "pick", label: `Dipilih` }, { v: "all", label: "Semua foto" }]} value={trayAll ? "all" : "pick"} onChange={(v) => setTrayAll(v === "all")} />
+            <input className="search" type="text" placeholder="Cari nama file…" value={q} onChange={(e) => setQ(e.target.value)} style={{ width: "100%" }} aria-label="Cari foto" />
+            <span className="caption">{tray.length.toLocaleString("id-ID")} belum dipakai · {(album.order.length - blanks).toLocaleString("id-ID")} di album</span>
           </div>
+          <div className="scroll">
+            {tray.length === 0 ? <p className="caption" style={{ padding: "0 12px" }}>{trayAll ? "Semua foto sudah ada di album." : "Semua foto terpilih sudah ada di album. Pilih “Semua foto” untuk memakai foto lain."}</p> : (
+              <div className="tray">
+                {tray.slice(0, 600).map((p) => (
+                  <div key={p.id} className="pt bare" draggable title={p.name}
+                    onDragStart={(e) => { e.dataTransfer.setData("text/plain", p.id); e.dataTransfer.effectAllowed = "move"; }}>
+                    {p.thumb && <img src={p.thumb} alt={p.name} draggable={false} loading="lazy" />}
+                    {p.stars > 0 && <span className="badge burst" style={{ color: "var(--warn)" }}>{"★".repeat(p.stars)}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+            {tray.length > 600 && <p className="caption" style={{ padding: "0 12px 12px" }}>Menampilkan 600 dari {tray.length.toLocaleString("id-ID")}. Saring di Kurasi untuk mempersempit.</p>}
+          </div>
+          <div className="pad" style={{ borderTop: "1px solid var(--line-subtle)", flexDirection: "row", alignItems: "center" }}><Icon name="info" size={14} className="dimtext" /><span className="caption">Seret ke bingkai · seret antar bingkai = tukar</span></div>
+        </aside>
+        <main className="center">
+          {overview ? (
+            <>
+              <div className="optbar"><Seg items={[{ v: "one", label: "Spread" }, { v: "all", label: <>Semua spread <span className="dimtext">G</span></> }]} value="all" onChange={() => setOverview(false)} />
+                <span className="grow" /><span className="caption">Seret untuk mengurutkan · klik = buka</span></div>
+              <Overview spreads={spreads} preset={preset} byId={byId} place={place} current={s} warnPages={warnPages}
+                onOpen={(i) => { setSi(i); setOverview(false); }}
+                onMove={(from, to) => { setAlbum(moveSheet(album, pages, from, to)); setSi(to); }} />
+            </>
+          ) : (
+            <>{optbar}{canvasEl}{filmstrip}</>
+          )}
         </main>
-
-        <aside className="panel" aria-label="Properti">
-          {selPage && (
-            <>
-              <h2>Tata letak · {joined ? `halaman ${pageNo(selPage)}–${pageNo(selPage) + 1}` : `halaman ${pageNo(selPage)}`}</h2>
-              <button type="button" className="btn" aria-pressed={joined}
-                onClick={() => { setAlbum(joined ? splitPages(album, selPage.index) : joinPages(album, selPage.side === 1 ? selPage.index - 1 : selPage.index)); setSel(""); }}>
-                {joined ? "Pisahkan jadi dua halaman" : "Sambung dua halaman"}
-              </button>
-              {joined && preset.binding === "biasa" && <div className="warn">Jilid biasa: bagian foto di lipatan bisa tertelan jilid. Ubah jenis jilid di Ekspor kalau albumnya layflat.</div>}
-              <div className="five" role="group" aria-label="Jumlah foto">
-                {countsFor(joined).map((n) => (
-                  <button key={n} type="button" className="btn" aria-pressed={selPage.cfg.n === n} aria-label={`${n} foto`}
-                    onClick={() => setAlbum(setCount(album, selPage.index, n))}>{n}</button>
-                ))}
-              </div>
-              <div className={joined ? "tpls wide" : "tpls"}>
-                {templatesFor(selPage.ids.length, joined).map((t) => (
-                  <button key={t.id} type="button" className="tpl" aria-pressed={selPage.tpl?.id === t.id} aria-label={t.label} title={t.label}
-                    onClick={() => setAlbum(applyTpl(album, selPage.index, t))}
-                    style={{ gridTemplateColumns: `repeat(${t.cols}, 1fr)`, gridTemplateRows: `repeat(${t.rows}, 1fr)` }}>
-                    {t.cells.map(([c, r, cs, rs], k) => <span key={k} style={{ gridColumn: `${c + 1} / span ${cs}`, gridRow: `${r + 1} / span ${rs}` }} />)}
-                  </button>
-                ))}
-              </div>
-              <button type="button" className="btn" onClick={() => setMaking(true)}>Buat template sendiri…</button>
-              <div className="two">
-                <button type="button" className="btn" disabled={!!selPage.cfg.locked} onClick={() => { setAlbum(shuffleTemplates(album, pages, seed, selPage.index)); setSeed(seed + 1); }}>Acak halaman</button>
-                <button type="button" className="btn" aria-pressed={!!selPage.cfg.locked} onClick={() => setPage(selPage.index, { locked: !selPage.cfg.locked })}>
-                  {selPage.cfg.locked ? "Terkunci" : "Kunci"}
-                </button>
-              </div>
-            </>
-          )}
-
-          <h2>Halaman</h2>
-          <div className="two">
-            <label className="field">Margin (%)
-              <input type="number" min={0} max={20} step={0.5} value={preset.marginPct} onChange={(e) => setPreset({ ...preset, marginPct: Math.min(20, Math.max(0, +e.target.value || 0)) })} />
-            </label>
-            <label className="field">Jarak foto (%)
-              <input type="number" min={0} max={10} step={0.5} value={preset.gapPct} onChange={(e) => setPreset({ ...preset, gapPct: Math.min(10, Math.max(0, +e.target.value || 0)) })} />
-            </label>
-          </div>
-          <label className="field">Latar
-            <input type="color" value={preset.bg} onChange={(e) => setPreset({ ...preset, bg: e.target.value })} />
-          </label>
-
-          {selOnSpread && selPhoto && (
-            <>
-              <h2>Foto terpilih</h2>
-              <div className="dim">{selPhoto.name}</div>
-              <label className="field">Perbesar
-                <input type="range" min={1} max={3} step={0.01} value={selPl.z} onChange={(e) => setPlace(sel, { z: +e.target.value })} onPointerUp={endSlide} onKeyUp={endSlide} onBlur={endSlide} />
-              </label>
-              <label className="field">Geser mendatar
-                <input type="range" min={0} max={1} step={0.01} value={selPl.x} onChange={(e) => setPlace(sel, { x: +e.target.value })} onPointerUp={endSlide} onKeyUp={endSlide} onBlur={endSlide} />
-              </label>
-              <label className="field">Geser tegak
-                <input type="range" min={0} max={1} step={0.01} value={selPl.y} onChange={(e) => setPlace(sel, { y: +e.target.value })} onPointerUp={endSlide} onKeyUp={endSlide} onBlur={endSlide} />
-              </label>
-              {selDpi > 0 && <div className={selDpi < (preset.dpi * 2) / 3 ? "warn" : "dim"}>{selDpi} dpi pada ukuran ini (target {preset.dpi})</div>}
-              <button type="button" className="btn" onClick={() => { setAlbum(removePhoto(album, sel)); setSel(""); }}>Keluarkan dari album</button>
-            </>
-          )}
-        </aside>
+        {props}
       </div>
-      {making && (
-        <TemplateEditor preset={preset} custom={custom} setCustom={setCustom} startSpread={joined} onClose={() => setMaking(false)}
-          onUse={(t) => { if (selPage && !!t.spread === joined) setAlbum(applyTpl(album, selPage.index, t)); }} />
-      )}
-      <footer className="status">
-        <span>Spread {s + 1} dari {spreads.length}</span><span>{spreads.length * 2} halaman</span>
-        <span>{album.order.length} foto di album</span>
-        {warnings.length > 0 && <span className="warn">{warnings.length} foto beresolusi rendah</span>}
-        <span className="right">← → pindah spread · Ctrl+Z urungkan</span>
-      </footer>
+      <StatusBar left={`Album ${preset.pageWmm / 10} × ${preset.pageHmm / 10} cm · spread ${(2 * preset.pageWmm) / 10} × ${preset.pageHmm / 10} cm · bleed ${preset.bleedMm} mm · ${preset.dpi} dpi`}
+        warn={warnings.length || openNotes ? [warnings.length ? `${warnings.length} foto di bawah ${Math.round((preset.dpi * 2) / 3)} dpi` : "", openNotes ? `${openNotes} catatan revisi terbuka` : ""].filter(Boolean).join(" · ") : undefined}
+        right={<span className="dimtext">{tb ? `Teks · ${pageLabel}` : selOnSpread ? `Bingkai · ${pageLabel}` : `Spread ${s + 1} dari ${spreads.length}`} · Zoom {Math.round(z * 100)}%</span>} />
     </>
+  );
+}
+
+/** Colour swatch + hex field. */
+export function ColorField({ value, onChange, onEnd }: { value: string; onChange: (v: string) => void; onEnd?: () => void }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  return (
+    <span className="colorf">
+      <input type="color" value={value} onChange={(e) => onChange(e.target.value)} onBlur={onEnd} aria-label="Pilih warna" />
+      <input type="text" value={draft ?? value.toUpperCase()} aria-label="Kode warna" onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => { if (draft !== null) { const v = draft.trim().replace(/^#?/, "#"); if (/^#[0-9a-f]{6}$/i.test(v)) onChange(v.toLowerCase()); setDraft(null); } onEnd?.(); }} />
+    </span>
   );
 }

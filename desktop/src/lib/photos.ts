@@ -1,11 +1,19 @@
 /** Reading a folder of photos: sizes, thumbnails, and the user's decisions about each. */
+import { fileUrl } from "./platform";
 
 export type Photo = {
   /** Path inside the opened folder; stable between sessions, used to restore saved work. */
   id: string;
   name: string;
-  file: File;
+  /** Browser: the picked file. */
+  file?: File;
+  /** Windows app: the file on disk, and what to show and print (the file itself, or a RAW's extracted preview). */
+  path?: string;
+  full?: string;
+  raw?: boolean;
+  /** Capture time: EXIF when known, else the file's modified time. */
   time: number;
+  camera?: string;
   /** Full-resolution size as it is displayed (after EXIF rotation). 0 until read. */
   w: number;
   h: number;
@@ -83,11 +91,26 @@ export async function readAll(
     while (next < photos.length && !isCancelled()) {
       const p = photos[next++];
       // An unreadable file still counts as read; it just stays without a thumbnail.
-      const got = await readPhoto(p.file).catch(() => ({ thumb: "", w: 0, h: 0 }));
+      const got = p.file ? await readPhoto(p.file).catch(() => ({ thumb: "", w: 0, h: 0 })) : { thumb: "", w: 0, h: 0 };
       batch.set(p.id, got); // after the await: another worker may have flushed and replaced `batch` meanwhile
       if (batch.size >= 8) flush();
     }
   };
   await Promise.all(Array.from({ length: workers }, work));
   flush();
+}
+
+/** The photo's full-size image as a blob (for decoding at print size). */
+export async function photoBlob(ph: Photo): Promise<Blob> {
+  if (ph.file) return ph.file;
+  const src = ph.full || ph.path;
+  if (!src) throw new Error(`Foto ${ph.name} belum siap`);
+  return (await fetch(fileUrl(src))).blob();
+}
+
+/** A URL to show the photo at full size, and how to release it. */
+export function photoUrl(ph: Photo): { url: string; release: () => void } {
+  if (ph.file) { const url = URL.createObjectURL(ph.file); return { url, release: () => URL.revokeObjectURL(url) }; }
+  const src = ph.full || ph.path;
+  return { url: src ? fileUrl(src) : "", release: () => {} };
 }

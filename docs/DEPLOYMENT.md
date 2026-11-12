@@ -47,6 +47,13 @@ Revalidasi: API memanggil `/api/revalidate` di Vercel dengan `REVALIDATE_SECRET`
 Mode service account (`GOOGLE_SERVICE_ACCOUNT_JSON` di produksi; lokal `api/service_account.json`, di-gitignore).
 Folder Drive harus di-share ke email service account.
 
+## Aplikasi album (Windows) — installer dan pembaruan otomatis
+- Installer dibuat oleh GitHub Actions: **Actions → "Album app (Windows installer)" → Run workflow**. Hasilnya di bagian *Artifacts* run itu.
+- **Pembaruan otomatis** (mulai 0.4.0): aplikasi yang terpasang memeriksa `releases/latest/download/latest.json` di repo ini 5 detik setelah dibuka (tidak berulang), mengunduh di latar, lalu memasang saat pengguna menekan "Mulai ulang sekarang" atau saat jendela ditutup. Karena itu **Releases repo ini khusus untuk aplikasi album** (rilis lain akan dianggap pembaruan).
+- **Menerbitkan pembaruan**: naikkan versi di `desktop/package.json`, `desktop/src-tauri/tauri.conf.json`, `desktop/src-tauri/Cargo.toml` (+ entri `lw-album` di `Cargo.lock`), push, lalu Run workflow dengan centang **"Terbitkan sebagai pembaruan"** dan isi catatan rilis (satu poin per baris).
+- **Kunci tanda tangan.** Pembaruan hanya dipasang kalau ditandatangani kunci ini. Kunci **publik** ada di `desktop/src-tauri/tauri.conf.json` (`plugins.updater.pubkey`) dan `src-tauri/src/main.rs` (boleh di repo). Kunci **privat** (dibuat 12 Nov 2026, tanpa kata sandi) hanya ada di secret GitHub `TAURI_SIGNING_PRIVATE_KEY` dan cadangan pemilik. Tanpa secret itu, build tetap jalan tetapi tidak bisa menjadi pembaruan.
+  - **Kalau kunci privat hilang**, aplikasi yang sudah terpasang tidak bisa diperbarui lagi: buat kunci baru (`npx @tauri-apps/cli@2 signer generate -w lw-album.key`), ganti kunci publik di dua file di atas dan secret-nya, lalu pasang installer baru secara manual sekali di setiap laptop.
+
 ## Masalah yang diketahui
 - **Link galeri klien pernah HTTP 500** (preview fotografer normal). Pencatatan kunjungan kini dibungkus try/except (commit `147a0cc`) dan endpoint kembali 200. Akar masalah belum diketahui — cari log `could not record gallery visit` di Railway.
 - **Galeri besar (±784 foto) berat di Safari** — lihat `docs/PLAN.md` (grid virtual, penyimpanan pilihan, warm-up; sudah di `main`).

@@ -26,7 +26,7 @@ const nextConfig: NextConfig = {
     if (process.env.NEXT_PUBLIC_API_URL) return [];
     return {
       // after Next's own /api routes (inquiry, revalidate), before the 404
-      afterFiles: ["gallery", "admin", "public"].map((p) => ({ source: `/api/${p}/:path*`, destination: `${API_INTERNAL}/api/${p}/:path*` })),
+      afterFiles: ["gallery", "admin", "public", "proof"].map((p) => ({ source: `/api/${p}/:path*`, destination: `${API_INTERNAL}/api/${p}/:path*` })),
     };
   },
   // Security headers, as in photo-selection-platform: no framing by other sites, no MIME sniffing,
@@ -46,7 +46,7 @@ const nextConfig: NextConfig = {
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
         ],
       },
-      ...["/g/:path*", "/i/:path*", "/admin/:path*", "/admin"].map((source) => ({ source, headers: privatePage })),
+      ...["/g/:path*", "/p/:path*", "/i/:path*", "/admin/:path*", "/admin"].map((source) => ({ source, headers: privatePage })),
     ];
   },
   images: {

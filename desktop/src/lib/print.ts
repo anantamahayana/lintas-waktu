@@ -15,6 +15,9 @@ export type Preset = {
   bg: string;
   /** "layflat": pages open flat, a photo may cross the fold. "biasa": part of the fold is lost in the binding. */
   binding: "layflat" | "biasa";
+  /** Cover: spine width, and how far the printed cover folds round the board (hardcover), both in mm. */
+  spineMm: number;
+  wrapMm: number;
   /** File name stem for exports: `<pattern>_01.jpg`. */
   pattern: string;
 };
@@ -38,8 +41,19 @@ export const DEFAULT_PRESET: Preset = {
   gapPct: 2,
   bg: "#ffffff",
   binding: "layflat",
+  spineMm: 10,
+  wrapMm: 0,
   pattern: "Album",
 };
+
+/** Starting points offered when a project is made; every value can be changed afterwards. */
+export const STARTS: { id: string; label: string; preset: Partial<Preset> }[] = [
+  { id: "a4l", label: "A4 mendatar · layflat", preset: { pageWmm: 297, pageHmm: 210 } },
+  { id: "a4p", label: "A4 tegak · layflat", preset: { pageWmm: 210, pageHmm: 297 } },
+  { id: "25", label: "25 × 25 cm · layflat", preset: { pageWmm: 250, pageHmm: 250 } },
+  { id: "30", label: "30 × 30 cm · layflat", preset: { pageWmm: 300, pageHmm: 300 } },
+  { id: "a4l-b", label: "A4 mendatar · jilid biasa", preset: { pageWmm: 297, pageHmm: 210, binding: "biasa" } },
+];
 
 export type Rect = { x: number; y: number; w: number; h: number };
 
@@ -119,4 +133,9 @@ export function setJpegDpi(bytes: Uint8Array, dpi: number): boolean {
   bytes[14] = dpi >> 8; bytes[15] = dpi & 0xff;
   bytes[16] = dpi >> 8; bytes[17] = dpi & 0xff;
   return true;
+}
+
+/** A page's trim box on its sheet, in mm. `side` "both" is the two pages of a joined sheet. */
+export function pageBoxMm(p: Preset, side: 0 | 1 | "both"): Rect {
+  return { x: p.bleedMm + (side === 1 ? p.pageWmm : 0), y: p.bleedMm, w: (side === "both" ? 2 : 1) * p.pageWmm, h: p.pageHmm };
 }

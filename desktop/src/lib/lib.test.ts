@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { applyTpl, autoCounts, gridTpl, joinPages, layPages, MAX_PER_PAGE, newAlbum, pickTpl, removePhoto, replacePhoto, setCount, setCustomTemplates, shuffleTemplates, splitPages, swapPhotos, TEMPLATES, templatesFor, validTpl, type Tpl } from "./layout";
+import { addEmptyFrames, addPage, clearPage, deletePage, insertPage, applyTpl, autoCounts, clearFrame, emptyAlbum, isEmpty, gridTpl, joinPages, layPages, MAX_PER_PAGE, newAlbum, pickTpl, removePhoto, replacePhoto, setCount, setCustomTemplates, shuffleTemplates, splitPages, swapPhotos, TEMPLATES, templatesFor, validTpl, type Tpl } from "./layout";
 import { toSpreads } from "./export";
 import { jpegSize } from "./photos";
+import { crc32, zip } from "./zip";
+import { burstLeaders, bursts, windowRows } from "./cull";
+import { boxToMm, currentBoxes, frameRectMm, mmToBox } from "./frames";
+import { moveSheet, sheetsOf, snap } from "./layout";
+import { wrap } from "./paint";
+import type { Photo } from "./photos";
+import { coverMm, coverParts } from "./cover";
+import { pdfFromJpegs } from "./pdf";
 import { cellRectMm, cropRect, DEFAULT_PRESET, effectiveDpi, setJpegDpi, spreadMm, spreadPx } from "./print";
 
 const ids = (n: number) => Array.from({ length: n }, (_, i) => `p${i}`);
@@ -82,12 +90,19 @@ describe("templates", () => {
           taken.add(`${x},${y}`);
         }
       }
-      expect(taken.size).toBe(t.cols * t.rows);
+      if (!t.airy) expect(taken.size).toBe(t.cols * t.rows);
     }
   });
   it("auto pick follows photo shape", () => {
     expect(pickTpl([0.67, 0.67], 1.4).id).toBe("2-cols");
     expect(pickTpl([2.4, 2.4], 1.4).id).toBe("2-rows");
+  });
+  it("one-photo pages can be shuffled too", () => {
+    const a = newAlbum(ids(3), 20);
+    const laid = layPages(a, () => 1.5, SHAPE);
+    expect(laid[0].tpl!.id).toBe("1-full"); // auto layout fills the page
+    const b = shuffleTemplates(a, laid, 3);
+    expect(b.pages.every((p, i) => p.tpl && p.tpl !== laid[i].tpl!.id)).toBe(true);
   });
   it("shuffle changes unlocked pages only", () => {
     const a = { order: ids(6), pages: [{ n: 3 }, { n: 3, locked: true }] };
@@ -108,7 +123,7 @@ describe("joined pages (layflat)", () => {
     let a = newAlbum(ids(12), 6); // 2 per page
     a = joinPages(a, 2);
     check(a, 12);
-    expect(a.pages[2]).toMatchObject({ n: 2, joined: true });
+    expect(a.pages[2]).toMatchObject({ n: 4, joined: true }); // page 4's photos join the panorama
     expect(a.pages[3]).toMatchObject({ n: 0, tail: true });
     const laid = layPages(a, () => 1.5, SHAPE);
     expect(laid[2].side).toBe("both");
@@ -144,6 +159,32 @@ describe("joined pages (layflat)", () => {
     expect(r.x + r.w).toBeGreaterThan(fold);
     const full = cellRectMm({ ...p, marginPct: 0 }, "both", 1, 1, [0, 0, 1, 1]);
     expect(full).toEqual({ x: 0, y: 0, ...spreadMm(p) });
+  });
+});
+
+describe("albums filled by hand", () => {
+  it("starts as empty frames; photos replace them, clearing keeps the frame", () => {
+    let a = emptyAlbum(4, 1);
+    expect(a.order.every(isEmpty)).toBe(true);
+    expect(new Set(a.order).size).toBe(4);
+    a = replacePhoto(a, a.order[1], "p1");
+    expect(a.order[1]).toBe("p1");
+    a = setCount(a, 0, 3);
+    expect(a.pages).toHaveLength(4); // growing adds frames, it does not eat other pages
+    expect(a.order).toHaveLength(6);
+    expect(sum(a.pages.map((p) => p.n))).toBe(a.order.length);
+    a = setCount(a, 0, 1); // shrinking drops the empty frames, the photo stays put
+    expect(a.order).toHaveLength(4);
+    expect(a.order[1]).toBe("p1");
+    a = addPage(a, 2);
+    expect(a.order).toHaveLength(6);
+    expect(new Set(a.order).size).toBe(6);
+    expect(sum(a.pages.map((p) => p.n))).toBe(6);
+    const before = a.order.length;
+    a = clearFrame(a, "p1");
+    expect(a.order).toHaveLength(before);
+    expect(a.order).not.toContain("p1");
+    expect(new Set(a.order).size).toBe(before);
   });
 });
 
@@ -229,5 +270,195 @@ describe("jpeg headers", () => {
   it("reads the stored size", () => {
     expect(jpegSize(jfif())).toEqual({ w: 6000, h: 4000 });
     expect(jpegSize(new Uint8Array([1, 2, 3]))).toBeNull();
+  });
+});
+
+describe("zip", () => {
+  it("crc32 matches the standard check value", () => {
+    expect(crc32(new TextEncoder().encode("123456789"))).toBe(0xcbf43926);
+  });
+  it("writes a readable archive layout", async () => {
+    const z = new Uint8Array(await zip([{ name: "a_01.jpg", data: new Uint8Array([1, 2, 3]) }, { name: "a_02.jpg", data: new Uint8Array([4]) }]).arrayBuffer());
+    const v = new DataView(z.buffer);
+    expect(v.getUint32(0, true)).toBe(0x04034b50);
+    const end = z.length - 22;
+    expect(v.getUint32(end, true)).toBe(0x06054b50);
+    expect(v.getUint16(end + 10, true)).toBe(2);
+    expect(v.getUint32(v.getUint32(end + 16, true), true)).toBe(0x02014b50);
+  });
+});
+
+describe("cover and proof pdf", () => {
+  it("cover sheet = back + spine + front, plus bleed and board wrap on the outside", () => {
+    const p = { ...DEFAULT_PRESET, spineMm: 12, wrapMm: 15 };
+    const m = coverMm(p), parts = coverParts(p);
+    expect(m.w).toBe(2 * 297 + 12 + 2 * (3 + 15));
+    expect(m.h).toBe(210 + 2 * 18);
+    expect(parts.back.w + parts.spine.w + parts.front.w).toBeCloseTo(m.w, 9);
+    expect(parts.trimFront).toEqual({ x: 18 + 297 + 12, y: 18, w: 297, h: 210 });
+  });
+  it("pdf has one page per jpeg and a valid trailer", async () => {
+    const jpg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 16, 0x4a, 0x46, 0x49, 0x46, 0, 1, 1, 0, 0, 72, 0, 72, 0, 0,
+      0xff, 0xc0, 0, 17, 8, 0x01, 0x00, 0x02, 0x00, 3, 0xff, 0xd9]);
+    const text = new TextDecoder("latin1").decode(await pdfFromJpegs([jpg, jpg]).arrayBuffer());
+    expect(text.startsWith("%PDF-1.4")).toBe(true);
+    expect(text).toContain("/Count 2");
+    expect((text.match(/\/Type \/Page /g) ?? []).length).toBe(2);
+    const xref = +text.slice(text.lastIndexOf("startxref") + 10).trim().split("\n")[0];
+    expect(text.slice(xref, xref + 4)).toBe("xref");
+    // every offset in the table points at the object it names
+    const rows = text.slice(xref).split("\n").slice(3, 3 + 7);
+    rows.forEach((r, k) => expect(text.slice(+r.slice(0, 10), +r.slice(0, 10) + 8)).toBe(`${k + 1} 0 obj`.padEnd(8, "\n").slice(0, 8)));
+  });
+});
+
+describe("culling helpers", () => {
+  const ph = (id: string, time: number, extra: Partial<Photo> = {}): Photo => ({ id, name: id, time, w: 1, h: 1, pick: null, stars: 0, ...extra });
+  it("groups bursts by time gap and camera", () => {
+    const ps = [ph("a", 0), ph("b", 800), ph("c", 1500), ph("d", 5000), ph("e", 5300, { camera: "Z6" })];
+    const { groupOf, size } = bursts(ps);
+    expect([groupOf.get("a"), groupOf.get("b"), groupOf.get("c")]).toEqual(["a", "a", "a"]);
+    expect(groupOf.get("d")).toBe("d");
+    expect(groupOf.get("e")).toBe("e"); // different camera: not the same burst
+    expect(size.get("a")).toBe(3);
+    const leaders = burstLeaders([ps[0], { ...ps[1], stars: 3 }, ps[2], ps[3], ps[4]], groupOf);
+    expect([...leaders].sort()).toEqual(["b", "d", "e"]);
+  });
+  it("windows rows for a virtual grid", () => {
+    expect(windowRows(0, 500, 110, 1000)).toEqual({ first: 0, count: 8 });
+    const w = windowRows(11000, 500, 110, 1000);
+    expect(w.first).toBe(97);
+    expect(w.first + w.count).toBeLessThanOrEqual(1000);
+    expect(windowRows(0, 500, 110, 2)).toEqual({ first: 0, count: 2 });
+  });
+});
+
+describe("hand-placed frames, text and sheet moves", () => {
+  it("boxes and millimetres convert both ways, and a page's current frames match its template", () => {
+    const p = DEFAULT_PRESET;
+    const r = { x: 50, y: 40, w: 100, h: 60 };
+    for (const side of [0, 1, "both"] as const) {
+      const back = boxToMm(p, side, mmToBox(p, side, r));
+      for (const k of ["x", "y", "w", "h"] as const) expect(back[k]).toBeCloseTo(r[k], 9);
+    }
+    const laid = layPages(newAlbum(ids(6), 2), () => 1.5, SHAPE);
+    const boxes = currentBoxes(p, laid[1]);
+    const free = { ...laid[1], cfg: { ...laid[1].cfg, free: boxes } };
+    boxes.forEach((_, k) => {
+      const a = frameRectMm(p, laid[1], k), b = frameRectMm(p, free, k);
+      expect(b.x).toBeCloseTo(a.x, 9); expect(b.w).toBeCloseTo(a.w, 9);
+    });
+  });
+  it("changing a page's template or photo count drops hand-placed frames", () => {
+    let a = newAlbum(ids(6), 2);
+    a = { ...a, pages: a.pages.map((pg, i) => (i === 0 ? { ...pg, free: [{ x: 0, y: 0, w: 0.5, h: 0.5 }, { x: 0.5, y: 0, w: 0.5, h: 0.5 }, { x: 0, y: 0.5, w: 1, h: 0.5 }] } : pg)) };
+    expect(setCount(a, 0, 2).pages[0].free).toBeUndefined();
+  });
+  it("moving a sheet carries its pages and photos", () => {
+    const a = newAlbum(ids(8), 8); // 1 photo per page, 4 sheets
+    const laid = layPages(a, () => 1.5, SHAPE);
+    expect(sheetsOf(laid)).toEqual([[0, 1], [2, 3], [4, 5], [6, 7]]);
+    const b = moveSheet(a, laid, 3, 0);
+    expect(b.order).toEqual(["p6", "p7", "p0", "p1", "p2", "p3", "p4", "p5"]);
+    expect(b.pages).toHaveLength(8);
+    const j = joinPages(newAlbum(ids(6), 6), 2); // pages 2+3 joined
+    const lj = layPages(j, () => 1.5, SHAPE);
+    const m = moveSheet(j, lj, 1, 0);
+    expect(m.pages[0].joined).toBe(true);
+    expect(m.pages[1].tail).toBe(true);
+    expect(sum(m.pages.map((x) => x.n))).toBe(m.order.length);
+  });
+  it("snaps to the nearest guide within tolerance", () => {
+    expect(snap(10.8, [0, 10, 12], 1)).toEqual({ v: 10, at: 10 });
+    expect(snap(10.8, [0, 20], 1)).toEqual({ v: 10.8, at: null });
+  });
+  it("wraps text at spaces and line breaks", () => {
+    const m = { measureText: (s: string) => ({ width: s.length * 10 }) as TextMetrics };
+    expect(wrap(m, "Ayu dan Made menikah", 100)).toEqual(["Ayu dan", "Made", "menikah"]);
+    expect(wrap(m, "a\nb", 100)).toEqual(["a", "b"]);
+  });
+});
+
+describe("page controls (insert, delete, placeholders)", () => {
+  const ids = ["a", "b", "c", "d", "e", "f", "g"];
+  const base = { order: ids, pages: [{ n: 2 }, { n: 2 }, { n: 3 }] };
+  const real = (a: { order: string[] }) => a.order.filter((x) => !isEmpty(x));
+  const sum = (a: { pages: { n: number }[] }) => a.pages.reduce((s, p) => s + p.n, 0);
+  it("inserts a page of empty frames without moving other pages' photos", () => {
+    const a = insertPage(base, 1, 3);
+    expect(a.pages.map((p) => p.n)).toEqual([2, 3, 2, 3]);
+    expect(a.order.slice(0, 2)).toEqual(["a", "b"]);
+    expect(a.order.slice(2, 5).every(isEmpty)).toBe(true);
+    expect(real(a)).toEqual(ids);
+    expect(sum(a)).toBe(a.order.length);
+    expect(insertPage(base, 99, 1).pages.length).toBe(4);
+  });
+  it("never inserts between a joined page and its tail", () => {
+    const j = joinPages(base, 0);
+    const tail = j.pages.findIndex((p) => p.tail);
+    expect(insertPage(j, tail, 1)).toBe(j);
+  });
+  it("adds empty frames to one page only", () => {
+    const a = addEmptyFrames(base, 0, 2);
+    expect(a.pages.map((p) => p.n)).toEqual([4, 2, 3]);
+    expect(a.order.slice(0, 4).filter(isEmpty).length).toBe(2);
+    expect(real(a)).toEqual(ids);
+    const free = { ...base, pages: [{ n: 2, free: [{ x: 0, y: 0, w: 0.5, h: 1 }, { x: 0.5, y: 0, w: 0.5, h: 1 }] }, { n: 2 }, { n: 3 }] };
+    expect(addEmptyFrames(free, 0).pages[0].free?.length).toBe(3);
+  });
+  it("deletes a page, sending its photos back to the tray", () => {
+    const a = deletePage(base, 1);
+    expect(a.pages.map((p) => p.n)).toEqual([2, 3]);
+    expect(a.order).toEqual(["a", "b", "e", "f", "g"]);
+    const j = joinPages(base, 0);
+    const d = deletePage(j, 1); // the tail: the whole sheet goes
+    expect(d.pages.some((p) => p.joined || p.tail)).toBe(false);
+    expect(sum(d)).toBe(d.order.length);
+  });
+  it("joining keeps the album length when the panorama can take the photos", () => {
+    const a = joinPages(newAlbum(Array.from({ length: 20 }, (_, i) => `q${i}`), 6), 0); // 3,3,4,4,3,3
+    expect(a.pages.length).toBe(6);
+    expect(a.pages[0]).toMatchObject({ n: 4, joined: true });
+    expect(a.pages.reduce((s, p) => s + p.n, 0)).toBe(20);
+  });
+  it("clears a page into placeholders", () => {
+    const a = clearPage(base, 2);
+    expect(a.pages).toEqual(base.pages);
+    expect(a.order.slice(4).every(isEmpty)).toBe(true);
+    expect(a.order.slice(0, 4)).toEqual(["a", "b", "c", "d"]);
+  });
+});
+
+describe("align and distribute", async () => {
+  const { align, distribute, spaceBy, matchSize, bounds, mainAxis } = await import("./align");
+  const rs = [{ x: 10, y: 10, w: 20, h: 10 }, { x: 50, y: 30, w: 10, h: 20 }, { x: 100, y: 0, w: 30, h: 30 }];
+  it("aligns to the selection bounds", () => {
+    const b = bounds(rs);
+    expect(align(rs, "left", b).map((r) => r.x)).toEqual([10, 10, 10]);
+    expect(align(rs, "right", b).map((r) => r.x + r.w)).toEqual([130, 130, 130]);
+    expect(align(rs, "vcenter", b).map((r) => r.y + r.h / 2)).toEqual([25, 25, 25]);
+    expect(align(rs, "bottom", b).map((r) => r.y + r.h)).toEqual([50, 50, 50]);
+  });
+  it("aligns each rect to its own reference", () => {
+    const refs = [{ x: 0, y: 0, w: 100, h: 100 }, { x: 100, y: 0, w: 100, h: 100 }, { x: 100, y: 0, w: 100, h: 100 }];
+    expect(align(rs, "hcenter", refs).map((r) => r.x)).toEqual([40, 145, 135]);
+  });
+  it("distributes with equal gaps and keeps the ends", () => {
+    const d = distribute(rs, "x");
+    expect(d[0].x).toBe(10);
+    expect(d[2].x).toBe(100);
+    const g1 = d[1].x - (d[0].x + d[0].w), g2 = d[2].x - (d[1].x + d[1].w);
+    expect(g1).toBeCloseTo(g2);
+    expect(distribute(rs.slice(0, 2), "x")).toEqual(rs.slice(0, 2));
+  });
+  it("spaces by a fixed gap in reading order", () => {
+    const d = spaceBy([rs[2], rs[0], rs[1]], "x", 4);
+    expect(d.map((r) => r.x)).toEqual([48, 10, 34]);
+  });
+  it("matches size to the reference and finds the main axis", () => {
+    expect(matchSize(rs, "both", 2).every((r) => r.w === 30 && r.h === 30)).toBe(true);
+    expect(matchSize(rs, "w", 0).map((r) => [r.w, r.h])).toEqual([[20, 10], [20, 20], [20, 30]]);
+    expect(mainAxis(rs)).toBe("x");
+    expect(mainAxis([{ x: 0, y: 0, w: 10, h: 10 }, { x: 0, y: 50, w: 10, h: 10 }])).toBe("y");
   });
 });

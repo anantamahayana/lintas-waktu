@@ -77,7 +77,9 @@ Untuk perubahan tampilan, buka halamannya dan lihat sendiri (lebar HP ±390 px d
 - **Galeri klien besar (±800 foto)**: hanya baris dekat layar yang dipasang; pilihan tersimpan di server dengan versi, tergabung antarperangkat, tidak hilang saat klien keluar. Setelah dikirim, klien hanya bisa melihat (read-only).
 - **Foto proyek** tampil utuh sesuai bentuknya; foto halaman bisa diatur bingkainya di admin.
 - **Region**: Vercel dan Railway sama-sama di Singapura. Railway 1 replica saja selama memakai SQLite.
+- **Releases GitHub repo ini khusus aplikasi album** (12 Nov 2026): aplikasi yang terpasang memperbarui diri dari `releases/latest/download/latest.json`; rilis lain di repo ini akan dianggap pembaruan aplikasi. Kunci tanda tangan dipegang pemilik (secret GitHub), tidak pernah di repo.
 - **DNS di Cloudflare** (DNS only), email tetap di hosting anjas.id.
+- **Aplikasi album (`desktop/`)** (11 Nov 2026): tampilan mengikuti file Figma "Editing Album LW" (tema gelap, aksen biru `#2f6fe4`, Inter); setelah diterapkan, kode di `desktop/src` yang jadi acuan. Semua pintasan keyboard didaftarkan di satu tempat (`desktop/src/lib/keys.ts`, CATALOG) dan menu, tooltip, serta daftar pintasan dibaca dari sana; pengguna bisa mengubahnya (Ctrl+,). Pindah modul memakai **Ctrl+Alt+1–4** karena angka 1–5 dipakai untuk bintang di Kurasi.
 
 ## Yang belum dikerjakan / ide berikutnya
 Lihat `docs/PLAN.md`: gambar langsung dari Railway (tidak lewat Vercel), thumbnail WebP, upgrade Railway dengan volume lebih besar.

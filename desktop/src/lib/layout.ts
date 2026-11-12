@@ -4,10 +4,15 @@ import type { GridCell } from "./print";
  * A layout template: `n` frames on a small grid. `spread` templates cover both pages as one
  * sheet (a photo may cross the fold: for layflat binding). `custom` ones are made by the user.
  */
-export type Tpl = { id: string; n: number; label: string; cols: number; rows: number; cells: GridCell[]; spread?: boolean; custom?: boolean };
+export type Tpl = { id: string; n: number; label: string; cols: number; rows: number; cells: GridCell[]; spread?: boolean; custom?: boolean; airy?: boolean };
 
 export const TEMPLATES: Tpl[] = [
   { id: "1-full", n: 1, label: "Satu foto", cols: 1, rows: 1, cells: [[0, 0, 1, 1]] },
+  // One photo with deliberate white space around it (the empty grid squares stay blank).
+  { id: "1-pad-c", n: 1, label: "Satu foto di tengah, ruang putih", cols: 6, rows: 6, cells: [[1, 1, 4, 4]], airy: true },
+  { id: "1-pad-l", n: 1, label: "Satu foto di kiri", cols: 3, rows: 1, cells: [[0, 0, 2, 1]], airy: true },
+  { id: "1-pad-r", n: 1, label: "Satu foto di kanan", cols: 3, rows: 1, cells: [[1, 0, 2, 1]], airy: true },
+  { id: "1-pad-t", n: 1, label: "Satu foto di atas", cols: 1, rows: 3, cells: [[0, 0, 1, 2]], airy: true },
   { id: "2-cols", n: 2, label: "Dua berdampingan", cols: 2, rows: 1, cells: [[0, 0, 1, 1], [1, 0, 1, 1]] },
   { id: "2-rows", n: 2, label: "Dua bertumpuk", cols: 1, rows: 2, cells: [[0, 0, 1, 1], [0, 1, 1, 1]] },
   { id: "3-left", n: 3, label: "Besar kiri, dua kanan", cols: 2, rows: 2, cells: [[0, 0, 1, 2], [1, 0, 1, 1], [1, 1, 1, 1]] },
@@ -18,6 +23,7 @@ export const TEMPLATES: Tpl[] = [
   { id: "4-top", n: 4, label: "Besar atas, tiga bawah", cols: 3, rows: 3, cells: [[0, 0, 3, 2], [0, 2, 1, 1], [1, 2, 1, 1], [2, 2, 1, 1]] },
   // Two pages as one sheet.
   { id: "s1-full", n: 1, spread: true, label: "Satu foto dua halaman", cols: 1, rows: 1, cells: [[0, 0, 1, 1]] },
+  { id: "s1-pad", n: 1, spread: true, label: "Satu foto lebar di tengah, ruang putih", cols: 8, rows: 6, cells: [[1, 1, 6, 4]], airy: true },
   { id: "s2-wide", n: 2, spread: true, label: "Lebar melintasi lipatan, satu di kanan", cols: 3, rows: 1, cells: [[0, 0, 2, 1], [2, 0, 1, 1]] },
   { id: "s2-wide-r", n: 2, spread: true, label: "Satu di kiri, lebar melintasi lipatan", cols: 3, rows: 1, cells: [[0, 0, 1, 1], [1, 0, 2, 1]] },
   { id: "s3-wide", n: 3, spread: true, label: "Lebar melintasi lipatan, dua di kanan", cols: 3, rows: 2, cells: [[0, 0, 2, 2], [2, 0, 1, 1], [2, 1, 1, 1]] },
@@ -65,10 +71,114 @@ export function validTpl(cols: number, rows: number, cells: GridCell[]): boolean
  * One page: how many photos it takes, an optional fixed template, and whether shuffles may touch it.
  * `joined` makes this page and the next one sheet; that next page is its `tail` and holds nothing.
  */
-export type PageCfg = { n: number; tpl?: string; locked?: boolean; joined?: boolean; tail?: boolean };
+export type PageCfg = {
+  n: number; tpl?: string; locked?: boolean; joined?: boolean; tail?: boolean;
+  /** Frames placed by hand, as fractions of the page's trim box (may reach into the bleed). Overrides the template. */
+  free?: Box[];
+  /** Text on the page. */
+  texts?: TextBox[];
+  /** This page's own background colour, and a line round every photo. */
+  bg?: string;
+  stroke?: { mm: number; color: string };
+  /** Revision note from the client for this page (not printed). */
+  note?: string;
+  noteDone?: boolean;
+};
+
+/** A rectangle as fractions of the page (or, for a joined sheet, of both pages). */
+export type Box = { x: number; y: number; w: number; h: number };
+export type TextBox = Box & {
+  id: string;
+  text: string;
+  font: string;
+  /** Size in millimetres of paper, so it prints the same at any dpi. */
+  sizeMm: number;
+  color: string;
+  align: "left" | "center" | "right";
+  bold?: boolean;
+  italic?: boolean;
+  /** Letter spacing in em. */
+  tracking?: number;
+};
+
+export const FONTS: { family: string; label: string }[] = [
+  { family: "Cormorant Garamond", label: "Cormorant Garamond (serif)" },
+  { family: "Playfair Display", label: "Playfair Display (serif tebal)" },
+  { family: "Lora", label: "Lora (serif)" },
+  { family: "Marcellus", label: "Marcellus (judul klasik)" },
+  { family: "Montserrat", label: "Montserrat (sans)" },
+  { family: "Great Vibes", label: "Great Vibes (tulisan tangan)" },
+];
 
 /** The album: photo ids in reading order, cut into pages by each page's `n`. */
 export type Album = { order: string[]; pages: PageCfg[] };
+
+/** An id that starts with this is a frame with no photo in it yet (albums filled by hand). */
+const EMPTY = "~";
+export const isEmpty = (id: string) => id.startsWith(EMPTY);
+function freshEmpties(order: string[], count: number): string[] {
+  let next = order.reduce((m, id) => (isEmpty(id) ? Math.max(m, +id.slice(1) + 1 || 0) : m), 0);
+  return Array.from({ length: count }, () => EMPTY + next++);
+}
+
+/** An album of empty frames, to be filled by dragging photos in. */
+export function emptyAlbum(pages: number, perPage = 1): Album {
+  return { order: freshEmpties([], pages * perPage), pages: Array.from({ length: pages }, () => ({ n: perPage })) };
+}
+
+/** Add a page of empty frames at the end. */
+export function addPage(album: Album, n = 1): Album {
+  return { order: [...album.order, ...freshEmpties(album.order, n)], pages: [...album.pages, { n }] };
+}
+
+/** Where page `i`'s photos start in the order. */
+const startOf = (album: Album, i: number) => album.pages.slice(0, i).reduce((s, p) => s + p.n, 0);
+
+/** Put a new page of `n` empty frames at page position `at` (the end when `at` is past the last page). */
+export function insertPage(album: Album, at: number, n: number): Album {
+  const i = Math.max(0, Math.min(at, album.pages.length));
+  if (album.pages[i]?.tail) return album; // never between a joined page and its tail
+  const start = startOf(album, i);
+  const order = [...album.order.slice(0, start), ...freshEmpties(album.order, n), ...album.order.slice(start)];
+  return { order, pages: [...album.pages.slice(0, i), { n }, ...album.pages.slice(i)] };
+}
+
+/** Add `k` empty frames to page `i`, keeping every other page as it is. */
+export function addEmptyFrames(album: Album, i: number, k = 1): Album {
+  const page = album.pages[i];
+  if (!page || page.tail || page.n + k > MAX_CELLS) return album;
+  const end = startOf(album, i) + page.n;
+  const order = [...album.order.slice(0, end), ...freshEmpties(album.order, k), ...album.order.slice(end)];
+  // Hand-placed frames keep their places; the new ones start in the middle of the page.
+  const free = page.free && page.free.length === page.n ? [...page.free, ...Array.from({ length: k }, (_, j) => ({ x: 0.35 + j * 0.03, y: 0.35 + j * 0.03, w: 0.3, h: 0.3 }))] : undefined;
+  return { order, pages: album.pages.map((p, j) => (j === i ? { ...p, n: p.n + k, tpl: undefined, free } : p)) };
+}
+
+/** Delete page `i` (a joined sheet goes with its tail). Its photos go back to the tray; empty frames vanish. */
+export function deletePage(album: Album, i: number): Album {
+  if (album.pages[i]?.tail) i -= 1;
+  const page = album.pages[i];
+  if (!page) return album;
+  const start = startOf(album, i), drop = page.joined && album.pages[i + 1]?.tail ? 2 : 1;
+  return { order: [...album.order.slice(0, start), ...album.order.slice(start + page.n)], pages: [...album.pages.slice(0, i), ...album.pages.slice(i + drop)] };
+}
+
+/** Take every photo off page `i` but keep its frames as placeholders. */
+export function clearPage(album: Album, i: number): Album {
+  const page = album.pages[i];
+  if (!page) return album;
+  const start = startOf(album, i), ids = album.order.slice(start, start + page.n).filter((id) => !isEmpty(id));
+  const blanks = freshEmpties(album.order, ids.length);
+  const map = new Map(ids.map((id, k) => [id, blanks[k]]));
+  return { ...album, order: album.order.map((id) => map.get(id) ?? id) };
+}
+
+/** Take the photo out but keep its frame (the photo goes back to the tray). */
+export function clearFrame(album: Album, id: string): Album {
+  if (!album.order.includes(id) || isEmpty(id)) return album;
+  const [blank] = freshEmpties(album.order, 1);
+  return { ...album, order: album.order.map((x) => (x === id ? blank : x)) };
+}
 
 /** Spread `nPhotos` evenly over `pages` pages (1 to 4 each); adds pages when they do not fit. */
 export function autoCounts(nPhotos: number, pages: number): number[] {
@@ -125,10 +235,22 @@ function settle(pages: PageCfg[], i: number, diff: number): PageCfg[] | null {
 export function setCount(album: Album, i: number, n: number): Album {
   const pages = album.pages.map((p) => ({ ...p }));
   if (!pages[i] || pages[i].tail || n < 1 || n > MAX_CELLS) return album;
-  const diff = pages[i].n - n;
-  pages[i] = { ...pages[i], n, tpl: undefined };
+  let diff = pages[i].n - n;
+  let order = album.order;
+  const start = pages.slice(0, i).reduce((s, p) => s + p.n, 0), end = start + pages[i].n;
+  if (diff < 0 && order.some(isEmpty)) {
+    // An album filled by hand: a page that grows gets new empty frames instead of taking other pages' photos.
+    order = [...order.slice(0, end), ...freshEmpties(order, -diff), ...order.slice(end)];
+    diff = 0;
+  } else if (diff > 0) {
+    // A page that shrinks gives up its empty frames first.
+    const drop = new Set(order.slice(start, end).filter(isEmpty).slice(-diff));
+    order = order.filter((id) => !drop.has(id));
+    diff -= drop.size;
+  }
+  pages[i] = { ...pages[i], n, tpl: undefined, free: undefined };
   const out = settle(pages, i, diff);
-  return out ? { ...album, pages: out } : album;
+  return out ? { order, pages: out } : album;
 }
 
 /** Use a template on page `i`, changing the page's photo count to fit it. */
@@ -137,10 +259,13 @@ export function applyTpl(album: Album, i: number, tpl: Tpl): Album {
   if (!page || page.tail || !!page.joined !== !!tpl.spread) return album;
   const a = page.n === tpl.n ? album : setCount(album, i, tpl.n);
   if (a.pages[i]?.n !== tpl.n) return album;
-  return { ...a, pages: a.pages.map((p, j) => (j === i ? { ...p, tpl: tpl.id } : p)) };
+  return { ...a, pages: a.pages.map((p, j) => (j === i ? { ...p, tpl: tpl.id, free: undefined } : p)) };
 }
 
-/** Make page `i` and the page after it one sheet. The second page's photos move to later pages. */
+/**
+ * Make page `i` and the page after it one sheet. The second page's photos join the panorama while
+ * a panorama template can hold them; only the rest move to later pages, so the album keeps its length.
+ */
 export function joinPages(album: Album, i: number): Album {
   const pages = album.pages.map((p) => ({ ...p }));
   const a = pages[i];
@@ -149,7 +274,9 @@ export function joinPages(album: Album, i: number): Album {
   let spare = 0;
   if (b && !b.joined && !b.tail) { spare = b.n; pages[i + 1] = { n: 0, tail: true }; }
   else pages.splice(i + 1, 0, { n: 0, tail: true });
-  pages[i] = { ...a, joined: true, tpl: undefined };
+  const room = Math.max(0, Math.max(a.n, ...countsFor(true)) - a.n), take = Math.min(room, spare);
+  spare -= take;
+  pages[i] = { ...a, n: a.n + take, joined: true, tpl: undefined, free: undefined };
   const out = settle(pages, i + 1, spare);
   return out ? { ...album, pages: out } : album;
 }
@@ -176,7 +303,7 @@ export function removePhoto(album: Album, id: string): Album {
   for (const p of album.pages) {
     if (dropTail && p.tail) { dropTail = false; continue; }
     if (at >= seen && at < seen + p.n) {
-      if (p.n > 1) pages.push({ ...p, n: p.n - 1, tpl: undefined });
+      if (p.n > 1) pages.push({ ...p, n: p.n - 1, tpl: undefined, free: p.free?.filter((_, k) => k !== at - seen) });
       else dropTail = !!p.joined;
     } else pages.push(p);
     seen += p.n;
@@ -200,7 +327,7 @@ export function replacePhoto(album: Album, inAlbum: string, fromTray: string): A
 
 /** Best built-in template for these photos: the one whose frames are closest in shape to the photos, in order. */
 export function pickTpl(aspects: number[], contentAspect: number, gapFrac = 0, spread = false): Tpl {
-  const options = TEMPLATES.filter((t) => t.n === aspects.length && !!t.spread === spread);
+  const options = TEMPLATES.filter((t) => t.n === aspects.length && !!t.spread === spread && !t.airy);
   if (!options.length) return templatesFor(aspects.length, spread)[0] ?? gridTpl(aspects.length, spread);
   let best = options[0], bestCost = Infinity;
   for (const t of options) {
@@ -253,10 +380,46 @@ export function rng(seed: number) {
 export function shuffleTemplates(album: Album, current: LaidPage[], seed: number, only?: number): Album {
   const r = rng(seed);
   const pages = album.pages.map((p, i) => {
-    if (p.locked || p.tail || (only !== undefined && only !== i) || p.n === 0) return p;
+    if (p.locked || p.tail || p.free || (only !== undefined && only !== i) || p.n === 0) return p;
     const options = templatesFor(p.n, !!p.joined).filter((t) => t.id !== current[i]?.tpl?.id);
     if (!options.length) return p;
-    return { ...p, tpl: options[Math.floor(r() * options.length)].id };
+    return { ...p, tpl: options[Math.floor(r() * options.length)].id, free: undefined };
   });
   return { ...album, pages };
+}
+
+/** Pages that print together: one sheet each (two facing pages, or one joined pair). */
+export function sheetsOf(laid: LaidPage[]): number[][] {
+  const out: number[][] = [];
+  for (const pg of laid) (out[pg.spread] ??= []).push(pg.index);
+  return out.map((x) => x ?? []);
+}
+
+/**
+ * Move sheet `from` to position `to` (both sheet numbers), taking its pages and photos along.
+ * Facing pages stay facing; a single page left alone by the move faces a blank page.
+ */
+export function moveSheet(album: Album, laid: LaidPage[], from: number, to: number): Album {
+  const sheets = sheetsOf(laid);
+  if (from === to || !sheets[from] || to < 0 || to >= sheets.length) return album;
+  const starts: number[] = [];
+  let at = 0;
+  for (const p of album.pages) { starts.push(at); at += p.n; }
+  const chunk = (idx: number[]) => ({ pages: idx.map((i) => album.pages[i]), ids: idx.flatMap((i) => album.order.slice(starts[i], starts[i] + album.pages[i].n)) });
+  const parts = sheets.map(chunk);
+  const [moved] = parts.splice(from, 1);
+  parts.splice(to, 0, moved);
+  return { order: parts.flatMap((c) => c.ids), pages: parts.flatMap((c) => c.pages) };
+}
+
+/** Change one page's settings (anything but its photo count). */
+export function patchPage(album: Album, i: number, patch: Partial<PageCfg>): Album {
+  return { ...album, pages: album.pages.map((p, j) => (j === i ? { ...p, ...patch } : p)) };
+}
+
+/** Snap a value to the nearest guide within `tol`; returns the value and the guide used. */
+export function snap(v: number, guides: number[], tol: number): { v: number; at: number | null } {
+  let best: number | null = null;
+  for (const g of guides) if (Math.abs(g - v) <= tol && (best === null || Math.abs(g - v) < Math.abs(best - v))) best = g;
+  return best === null ? { v, at: null } : { v: best, at: best };
 }

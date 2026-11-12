@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "LW Album",
-  "version": "0.1.0",
+  "version": "0.4.0",
   "identifier": "com.lintaswaktuvisual.album",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -11,13 +11,55 @@
   },
   "app": {
     "windows": [
-      { "title": "LW Album", "width": 1360, "height": 860, "minWidth": 1024, "minHeight": 640, "dragDropEnabled": false }
+      {
+        "title": "LW Album",
+        "width": 1360,
+        "height": 860,
+        "minWidth": 1024,
+        "minHeight": 640,
+        "dragDropEnabled": false,
+        "label": "main"
+      }
     ],
-    "security": { "csp": null }
+    "security": {
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": {
+          "allow": [
+            "**"
+          ],
+          "requireLiteralLeadingDot": false
+        }
+      }
+    }
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico"]
+    "targets": [
+      "nsis"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDI1RkM4MTc4NEYxMTc0M0UKUldRK2RCRlBlSUg4SlhxbWVmUlg4MndUQUk1THc5Z3pvcSszWlRmR2hkUXRKS3Jtc0c4KzRqVFAK",
+      "endpoints": [
+        "https://github.com/anantamahayana/lintas-waktu/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }
