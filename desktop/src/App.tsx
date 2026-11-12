@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ask, tell } from "./lib/ask";
+import { toSpreads } from "./lib/export";
 import type { Cover } from "./lib/cover";
 import { installKeys, runCommand, setScope, useCommands } from "./lib/keys";
 import { checkForUpdate, getUpdate, startUpdates } from "./lib/update";
 import { AboutDialog, UpdateDialog, UpdateToast } from "./views/Update";
+import { ProofSendDialog } from "./views/Proof";
 import { emptyAlbum, newAlbum, setCustomTemplates, type Album, type Tpl } from "./lib/layout";
 import { photosFromFiles, readAll, type Photo } from "./lib/photos";
 import { isNative, pickFolder, pickProjectFile, preparePhotos, ready, scanFolder, exists } from "./lib/platform";
 import { DEFAULT_PRESET, type Placement, type Preset } from "./lib/print";
 import { listProjects, loadProject, loadProjectFile, projectsDir, removeProject, saveProject, updateMeta, type ProjectMeta, type Saved } from "./lib/projects";
 import { Beranda, NewProject } from "./views/Beranda";
-import { Editor } from "./views/Editor";
+import { Editor, useLaidPages } from "./views/Editor";
 import { Ekspor } from "./views/Ekspor";
 import { Kurasi } from "./views/Kurasi";
 import { PresetForm } from "./views/PresetForm";
@@ -50,6 +52,8 @@ export function App() {
   const [panels, setPanels] = useState(true);
   const [sheet, setSheet] = useState<null | "view" | "edit">(null);
   const [upd, setUpd] = useState(false);
+  const [sendProof, setSendProof] = useState(false);
+  const [proofTick, setProofTick] = useState(0);
   const [about, setAbout] = useState(false);
   const [making, setMaking] = useState(false);
   const [props, setProps] = useState(false);
@@ -258,6 +262,7 @@ export function App() {
     "app.props": { run: () => setProps(true), enabled: has },
     "app.auto": { run: () => void autoBuild(), enabled: has },
     "app.templates": { run: () => setTemplates(true) },
+    "app.proof": { run: () => setSendProof(true), enabled: has && !!design },
     "app.panels": { run: () => setPanels((p) => !p), enabled: has, checked: !panels },
     "app.full": { run: () => void fullscreen() },
     "mod.kurasi": { run: () => setTab("kurasi"), enabled: has, checked: has && tab === "kurasi" },
@@ -271,6 +276,8 @@ export function App() {
   );
   const dialogs = (
     <>
+      {sendProof && meta && hist.now && <ProofSendHost photos={photos} design={hist.now} preset={preset} custom={custom} projectKey={meta.id} name={meta.name}
+        onClose={() => setSendProof(false)} onSent={() => { setProofTick((t) => t + 1); if (meta.status !== "proof") setMeta({ ...meta, status: "proof" }); }} />}
       {upd && <UpdateDialog onClose={() => setUpd(false)} save={() => saveNow.current()} project={meta?.name} />}
       {about && <AboutDialog onClose={() => setAbout(false)} onCheck={() => runCommand("app.update")} />}
       {!upd && <UpdateToast onOpen={() => setUpd(true)} />}
@@ -337,7 +344,7 @@ export function App() {
       {tab === "editor" && design && (
         <Editor photos={photos} design={design} commit={commit} canUndo={hist.past.length > 0}
           preset={preset} setPreset={setPreset} custom={custom} panels={panels}
-          registerTemplateUse={(fn) => { tplUse.current = fn; }} />
+          registerTemplateUse={(fn) => { tplUse.current = fn; }} projectKey={meta.id} onSendProof={() => setSendProof(true)} proofTick={proofTick} />
       )}
       {tab === "sampul" && design && (
         <Sampul photos={photos} design={design} commit={commit} preset={preset} setPreset={setPreset} panels={panels} />
@@ -372,4 +379,13 @@ function PropsDialog({ preset, setPreset, onClose }: { preset: Preset; setPreset
       </footer>
     </dialog>
   );
+}
+
+/** Lays the album out for the proof dialog (the editor may not be open). */
+function ProofSendHost({ photos, design, preset, custom, projectKey, name, onClose, onSent }: {
+  photos: Photo[]; design: Design; preset: Preset; custom: Tpl[]; projectKey: string; name: string; onClose: () => void; onSent: () => void;
+}) {
+  const { byId, pages } = useLaidPages(photos, design, preset, custom);
+  const spreads = useMemo(() => toSpreads(pages), [pages]);
+  return <ProofSendDialog projectKey={projectKey} name={name} cover={design.cover ?? null} spreads={spreads} byId={byId} place={design.place} preset={preset} onClose={onClose} onSent={onSent} />;
 }

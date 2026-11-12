@@ -117,6 +117,40 @@ export async function proofPdf(
 }
 
 /**
+ * Spreads for the online proof (/p/<code> on the site): trimmed, about 2,000 px wide, light JPEGs,
+ * with a faint "PROOF" across each when `mark` is on. The cover (if any) comes first.
+ */
+export async function proofImages(
+  cover: Cover | null, spreads: Spread[], byId: Map<string, Photo>, place: Record<string, Placement>, p: Preset, lang: "en" | "id", mark: boolean,
+  onEach: (i: number, img: { blob: Blob; label: string; w: number; h: number }) => Promise<void>,
+): Promise<number> {
+  const dpi = Math.max(36, Math.min(110, 2000 / ((2 * p.pageWmm) / 25.4)));
+  const shot = async (sheet: OffscreenCanvas, edgeMm: number) => {
+    const e = Math.round(mmToPx(edgeMm, dpi)), w = sheet.width - 2 * e, h = sheet.height - 2 * e;
+    const out = new OffscreenCanvas(w, h);
+    const ctx = out.getContext("2d")!;
+    ctx.drawImage(sheet, e, e, w, h, 0, 0, w, h);
+    if (mark) {
+      ctx.save();
+      ctx.translate(w / 2, h / 2); ctx.rotate(-0.32);
+      ctx.font = `${Math.round(h * 0.16)}px Georgia, "Times New Roman", serif`;
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillStyle = "rgba(255,255,255,0.22)"; ctx.fillText("PROOF", 0, 0);
+      ctx.restore();
+    }
+    return { blob: await out.convertToBlob({ type: "image/jpeg", quality: 0.82 }), w, h };
+  };
+  let n = 0;
+  if (cover && hasCover(cover)) {
+    await onEach(n++, { ...(await shot(await drawCover(cover, byId, p, dpi, fromFile), p.bleedMm + p.wrapMm)), label: lang === "id" ? "Sampul" : "Cover" });
+  }
+  for (let i = 0; i < spreads.length; i++) {
+    await onEach(n++, { ...(await shot(await drawSpread(spreads[i], byId, place, p, dpi, fromFile), p.bleedMm)), label: `${i * 2 + 1}–${i * 2 + 2}` });
+  }
+  return n;
+}
+
+/**
  * The print files as one PDF at full resolution: cover (if any) then every spread, bleed included,
  * each page at its real size in millimetres, ready for a printer that asks for a PDF.
  */

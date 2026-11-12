@@ -124,6 +124,7 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().pubkey(UPDATER_PUBKEY).build())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             scan_folder, prepare_photos, read_text, write_text, write_bytes, list_files, remove_file, path_exists, snapshot, updater_ready
         ])

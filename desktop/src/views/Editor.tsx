@@ -11,6 +11,8 @@ import type { Photo } from "../lib/photos";
 import { CENTER, effectiveDpi, pageBoxMm, spreadMm, type Placement, type Preset, type Rect } from "../lib/print";
 import { MiniSheet, Overview } from "./Overview";
 import { Btn, IconBtn, NumField, Row, Section, Seg, StatusBar } from "./Shell";
+import { proofHasCover, RevisionPanel } from "./Proof";
+import { proofs, signedIn, type ProofInfo, type ProofNote } from "../lib/proofs";
 import { Sheet, type TextSel } from "./Sheet";
 
 type Props = {
@@ -24,6 +26,11 @@ type Props = {
   panels: boolean;
   /** Lets the template editor (owned by the app) put a new template on the selected page. */
   registerTemplateUse: (fn: ((t: Tpl) => void) | null) => void;
+  /** The project's id: its online proof is found by it. */
+  projectKey?: string;
+  onSendProof?: () => void;
+  /** Bumped after a proof was sent, so the Revisi tab reloads. */
+  proofTick?: number;
 };
 
 /** Shared by the editor and the export screen: lay the album out for a preset. */
@@ -44,7 +51,7 @@ const STEPS = [0.1, 0.15, 0.2, 0.25, 0.33, 0.5, 0.67, 0.75, 1, 1.5, 2, 3, 4];
 type Tool = "select" | "hand";
 
 /** Layout editor (Figma page 05): tool rail, photo tray, canvas with options bar and filmstrip, properties. */
-export function Editor({ photos, design, commit, preset, setPreset, custom, panels, registerTemplateUse }: Props) {
+export function Editor({ photos, design, commit, preset, setPreset, custom, panels, registerTemplateUse, projectKey, onSendProof, proofTick = 0 }: Props) {
   const { album, place } = design;
   const { byId, pages } = useLaidPages(photos, design, preset, custom);
   const spreads = useMemo(() => toSpreads(pages), [pages]);
@@ -55,7 +62,11 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
   const [guides, setGuides] = useState(true);
   const [seed, setSeed] = useState(1);
   const [clip, setClip] = useState<Pick<PageCfg, "tpl" | "free" | "texts" | "bg" | "stroke"> & { n: number; spread: boolean } | null>(null);
-  const [tab, setTab] = useState<"props" | "album">("props");
+  const [tab, setTab] = useState<"props" | "album" | "revisi">("props");
+  // ---- online proof (tab Revisi) ----
+  const [proof, setProof] = useState<ProofInfo | null>(null);
+  const [proofBusy, setProofBusy] = useState(false);
+  const [proofErr, setProofErr] = useState("");
   const [tool, setTool] = useState<Tool>("select");
   const [spaceHand, setSpaceHand] = useState(false);
   const [zoom, setZoom] = useState<number | "fit">("fit");
@@ -124,6 +135,43 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
   const setText = (page: number, id: string, patch: Partial<TextBox>, replace = false) =>
     setPage(page, { texts: (album.pages[page].texts ?? []).map((x) => (x.id === id ? { ...x, ...patch } : x)) }, replace);
   const textSlide = (patch: Partial<TextBox>) => { if (selText) { setText(selText.page, selText.id, patch, sliding.current); sliding.current = true; } };
+  /** Editor spread of a proof image (the first image is the cover when it was sent with one). */
+  const spreadOfProof = (i: number) => i - (proof && proofHasCover(proof.id) ? 1 : 0);
+  const proofLabel = (i: number) => { const k = spreadOfProof(i); return k < 0 ? "Sampul" : `Hal. ${k * 2 + 1}–${k * 2 + 2}`; };
+  const loadProof = async () => {
+    if (!projectKey) return;
+    if (!signedIn()) { setProofErr("Masuk ke server lewat Kirim proof ke klien untuk melihat catatan."); return; }
+    setProofBusy(true); setProofErr("");
+    try {
+      const p = await proofs.find(projectKey);
+      setProof(p);
+      if (p) {
+        // New client notes go into each page's revision note too (once per note, remembered on this computer).
+        const key = `lwalbum:proofImported:${p.id}`;
+        let seen: number[] = [];
+        try { seen = JSON.parse(localStorage.getItem(key) ?? "[]"); } catch { /* none yet */ }
+        const fresh = p.notes.filter((n) => !n.done && !seen.includes(n.id));
+        let a = album;
+        for (const n of fresh) {
+          const k = n.spread - (proofHasCover(p.id) ? 1 : 0), sp2 = spreads[k], pg = sp2?.left ?? (sp2?.right?.side === 1 ? sp2.right : null);
+          if (!pg) continue;
+          const old = a.pages[pg.index].note;
+          a = patchPage(a, pg.index, { note: `${old ? `${old}\n` : ""}[Klien] ${n.author}: ${n.text}`, noteDone: false });
+        }
+        if (a !== album) setAlbum(a);
+        try { localStorage.setItem(key, JSON.stringify([...seen, ...fresh.map((n) => n.id)])); } catch { /* ignore */ }
+      }
+    } catch (e) { setProofErr(e instanceof Error ? e.message : String(e)); }
+    finally { setProofBusy(false); }
+  };
+  const markProofNote = async (n: ProofNote, done: boolean) => {
+    if (!proof) return;
+    try { const m = await proofs.mark(proof.id, n.id, done); setProof({ ...proof, notes: proof.notes.map((x) => (x.id === m.id ? m : x)) }); }
+    catch (e) { setProofErr(e instanceof Error ? e.message : String(e)); }
+  };
+  const loadRef = useRef(loadProof);
+  loadRef.current = loadProof;
+  useEffect(() => { if (tab === "revisi") void loadRef.current(); }, [tab, proofTick]);
   const deselect = () => { setSel(""); setMore([]); setSelText(null); setPick(null); };
   /** Put frames at new places (sheet mm); every page touched becomes hand-placed. One undo step. */
   const setRects = (m: Map<string, Rect>, replace = false) => {
@@ -489,9 +537,12 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
   // ---------- right panel ----------
   const props = (
     <aside className="props" aria-label="Properti">
-      <div className="tabs-h"><Seg full items={[{ v: "props", label: "Properti" }, { v: "album", label: "Album" }]} value={tab} onChange={setTab} /></div>
+      <div className="tabs-h"><Seg full items={[{ v: "props", label: "Properti" }, { v: "album", label: "Album" }, { v: "revisi", label: proof && proof.notes.some((n) => !n.done) ? `Revisi · ${proof.notes.filter((n) => !n.done).length}` : "Revisi" }]} value={tab} onChange={setTab} /></div>
       <div className="scroll">
-        {tab === "album" ? (
+        {tab === "revisi" ? (
+          <RevisionPanel info={proof} loading={proofBusy} error={proofErr} onRefresh={() => void loadProof()} onSend={() => onSendProof?.()}
+            onOpen={(n) => { const k = spreadOfProof(n.spread); if (k >= 0) { setSi(k); deselect(); } }} onMark={(n, d) => void markProofNote(n, d)} labelOf={proofLabel} />
+        ) : tab === "album" ? (
           <>
             <Section id="e-all" title="Semua halaman">
               <Row label="Margin"><NumField value={preset.marginPct} min={0} max={20} step={0.5} unit="%" onChange={(v) => setPreset({ ...preset, marginPct: v })} /></Row>

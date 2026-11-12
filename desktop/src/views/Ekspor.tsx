@@ -97,6 +97,7 @@ export function Ekspor({ photos, design, preset, setPreset, custom, onGo, onDone
                 <Row label="Resolusi"><span>Layar &amp; HP (kecil, cepat dibuka)</span></Row>
                 <Row label="Nama file"><div className="row-ctl h"><input type="text" value={preset.pattern} onChange={(e) => setPreset({ ...preset, pattern: e.target.value })} style={{ flex: 1 }} /><span className="caption">- pratinjau.pdf</span></div></Row>
                 <Row label="Setelah ekspor"><label className="ck"><input type="checkbox" checked={toProof} onChange={(e) => setToProof(e.target.checked)} />Ubah tahap proyek ke “Proof ke klien”</label></Row>
+                <Row label="Atau online"><Btn label="Kirim proof ke klien…" icon="send" cmd="app.proof" tip="Link + PIN di situs: klien melihat album, menulis catatan, dan menyetujui" /></Row>
               </>
             ) : (
               <>

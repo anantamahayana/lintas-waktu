@@ -30,6 +30,7 @@ export const CATALOG = {
   "app.props": E("Properti album…", ["Ctrl+Shift+P"], "global", "Album"),
   "app.auto": E("Susun otomatis dari foto terpilih…", ["Ctrl+Shift+A"], "global", "Album"),
   "app.templates": E("Template tata letak…", [], "global", "Album"),
+  "app.proof": E("Kirim proof ke klien…", ["Ctrl+Shift+K"], "global", "Album"),
   "app.panels": E("Sembunyikan / tampilkan panel", ["Tab"], "global", "Tampilan"),
   "app.full": E("Layar penuh", ["F11"], "global", "Tampilan"),
   "mod.kurasi": E("Kurasi", ["Ctrl+Alt+1"], "global", "Tampilan"),
