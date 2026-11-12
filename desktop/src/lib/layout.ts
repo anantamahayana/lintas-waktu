@@ -131,6 +131,48 @@ export function addPage(album: Album, n = 1): Album {
   return { order: [...album.order, ...freshEmpties(album.order, n)], pages: [...album.pages, { n }] };
 }
 
+/** Where page `i`'s photos start in the order. */
+const startOf = (album: Album, i: number) => album.pages.slice(0, i).reduce((s, p) => s + p.n, 0);
+
+/** Put a new page of `n` empty frames at page position `at` (the end when `at` is past the last page). */
+export function insertPage(album: Album, at: number, n: number): Album {
+  const i = Math.max(0, Math.min(at, album.pages.length));
+  if (album.pages[i]?.tail) return album; // never between a joined page and its tail
+  const start = startOf(album, i);
+  const order = [...album.order.slice(0, start), ...freshEmpties(album.order, n), ...album.order.slice(start)];
+  return { order, pages: [...album.pages.slice(0, i), { n }, ...album.pages.slice(i)] };
+}
+
+/** Add `k` empty frames to page `i`, keeping every other page as it is. */
+export function addEmptyFrames(album: Album, i: number, k = 1): Album {
+  const page = album.pages[i];
+  if (!page || page.tail || page.n + k > MAX_CELLS) return album;
+  const end = startOf(album, i) + page.n;
+  const order = [...album.order.slice(0, end), ...freshEmpties(album.order, k), ...album.order.slice(end)];
+  // Hand-placed frames keep their places; the new ones start in the middle of the page.
+  const free = page.free && page.free.length === page.n ? [...page.free, ...Array.from({ length: k }, (_, j) => ({ x: 0.35 + j * 0.03, y: 0.35 + j * 0.03, w: 0.3, h: 0.3 }))] : undefined;
+  return { order, pages: album.pages.map((p, j) => (j === i ? { ...p, n: p.n + k, tpl: undefined, free } : p)) };
+}
+
+/** Delete page `i` (a joined sheet goes with its tail). Its photos go back to the tray; empty frames vanish. */
+export function deletePage(album: Album, i: number): Album {
+  if (album.pages[i]?.tail) i -= 1;
+  const page = album.pages[i];
+  if (!page) return album;
+  const start = startOf(album, i), drop = page.joined && album.pages[i + 1]?.tail ? 2 : 1;
+  return { order: [...album.order.slice(0, start), ...album.order.slice(start + page.n)], pages: [...album.pages.slice(0, i), ...album.pages.slice(i + drop)] };
+}
+
+/** Take every photo off page `i` but keep its frames as placeholders. */
+export function clearPage(album: Album, i: number): Album {
+  const page = album.pages[i];
+  if (!page) return album;
+  const start = startOf(album, i), ids = album.order.slice(start, start + page.n).filter((id) => !isEmpty(id));
+  const blanks = freshEmpties(album.order, ids.length);
+  const map = new Map(ids.map((id, k) => [id, blanks[k]]));
+  return { ...album, order: album.order.map((id) => map.get(id) ?? id) };
+}
+
 /** Take the photo out but keep its frame (the photo goes back to the tray). */
 export function clearFrame(album: Album, id: string): Album {
   if (!album.order.includes(id) || isEmpty(id)) return album;
@@ -220,7 +262,10 @@ export function applyTpl(album: Album, i: number, tpl: Tpl): Album {
   return { ...a, pages: a.pages.map((p, j) => (j === i ? { ...p, tpl: tpl.id, free: undefined } : p)) };
 }
 
-/** Make page `i` and the page after it one sheet. The second page's photos move to later pages. */
+/**
+ * Make page `i` and the page after it one sheet. The second page's photos join the panorama while
+ * a panorama template can hold them; only the rest move to later pages, so the album keeps its length.
+ */
 export function joinPages(album: Album, i: number): Album {
   const pages = album.pages.map((p) => ({ ...p }));
   const a = pages[i];
@@ -229,7 +274,9 @@ export function joinPages(album: Album, i: number): Album {
   let spare = 0;
   if (b && !b.joined && !b.tail) { spare = b.n; pages[i + 1] = { n: 0, tail: true }; }
   else pages.splice(i + 1, 0, { n: 0, tail: true });
-  pages[i] = { ...a, joined: true, tpl: undefined };
+  const room = Math.max(0, Math.max(a.n, ...countsFor(true)) - a.n), take = Math.min(room, spare);
+  spare -= take;
+  pages[i] = { ...a, n: a.n + take, joined: true, tpl: undefined, free: undefined };
   const out = settle(pages, i + 1, spare);
   return out ? { ...album, pages: out } : album;
 }

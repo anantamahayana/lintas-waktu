@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addPage, applyTpl, autoCounts, clearFrame, emptyAlbum, isEmpty, gridTpl, joinPages, layPages, MAX_PER_PAGE, newAlbum, pickTpl, removePhoto, replacePhoto, setCount, setCustomTemplates, shuffleTemplates, splitPages, swapPhotos, TEMPLATES, templatesFor, validTpl, type Tpl } from "./layout";
+import { addEmptyFrames, addPage, clearPage, deletePage, insertPage, applyTpl, autoCounts, clearFrame, emptyAlbum, isEmpty, gridTpl, joinPages, layPages, MAX_PER_PAGE, newAlbum, pickTpl, removePhoto, replacePhoto, setCount, setCustomTemplates, shuffleTemplates, splitPages, swapPhotos, TEMPLATES, templatesFor, validTpl, type Tpl } from "./layout";
 import { toSpreads } from "./export";
 import { jpegSize } from "./photos";
 import { crc32, zip } from "./zip";
@@ -123,7 +123,7 @@ describe("joined pages (layflat)", () => {
     let a = newAlbum(ids(12), 6); // 2 per page
     a = joinPages(a, 2);
     check(a, 12);
-    expect(a.pages[2]).toMatchObject({ n: 2, joined: true });
+    expect(a.pages[2]).toMatchObject({ n: 4, joined: true }); // page 4's photos join the panorama
     expect(a.pages[3]).toMatchObject({ n: 0, tail: true });
     const laid = layPages(a, () => 1.5, SHAPE);
     expect(laid[2].side).toBe("both");
@@ -376,5 +376,55 @@ describe("hand-placed frames, text and sheet moves", () => {
     const m = { measureText: (s: string) => ({ width: s.length * 10 }) as TextMetrics };
     expect(wrap(m, "Ayu dan Made menikah", 100)).toEqual(["Ayu dan", "Made", "menikah"]);
     expect(wrap(m, "a\nb", 100)).toEqual(["a", "b"]);
+  });
+});
+
+describe("page controls (insert, delete, placeholders)", () => {
+  const ids = ["a", "b", "c", "d", "e", "f", "g"];
+  const base = { order: ids, pages: [{ n: 2 }, { n: 2 }, { n: 3 }] };
+  const real = (a: { order: string[] }) => a.order.filter((x) => !isEmpty(x));
+  const sum = (a: { pages: { n: number }[] }) => a.pages.reduce((s, p) => s + p.n, 0);
+  it("inserts a page of empty frames without moving other pages' photos", () => {
+    const a = insertPage(base, 1, 3);
+    expect(a.pages.map((p) => p.n)).toEqual([2, 3, 2, 3]);
+    expect(a.order.slice(0, 2)).toEqual(["a", "b"]);
+    expect(a.order.slice(2, 5).every(isEmpty)).toBe(true);
+    expect(real(a)).toEqual(ids);
+    expect(sum(a)).toBe(a.order.length);
+    expect(insertPage(base, 99, 1).pages.length).toBe(4);
+  });
+  it("never inserts between a joined page and its tail", () => {
+    const j = joinPages(base, 0);
+    const tail = j.pages.findIndex((p) => p.tail);
+    expect(insertPage(j, tail, 1)).toBe(j);
+  });
+  it("adds empty frames to one page only", () => {
+    const a = addEmptyFrames(base, 0, 2);
+    expect(a.pages.map((p) => p.n)).toEqual([4, 2, 3]);
+    expect(a.order.slice(0, 4).filter(isEmpty).length).toBe(2);
+    expect(real(a)).toEqual(ids);
+    const free = { ...base, pages: [{ n: 2, free: [{ x: 0, y: 0, w: 0.5, h: 1 }, { x: 0.5, y: 0, w: 0.5, h: 1 }] }, { n: 2 }, { n: 3 }] };
+    expect(addEmptyFrames(free, 0).pages[0].free?.length).toBe(3);
+  });
+  it("deletes a page, sending its photos back to the tray", () => {
+    const a = deletePage(base, 1);
+    expect(a.pages.map((p) => p.n)).toEqual([2, 3]);
+    expect(a.order).toEqual(["a", "b", "e", "f", "g"]);
+    const j = joinPages(base, 0);
+    const d = deletePage(j, 1); // the tail: the whole sheet goes
+    expect(d.pages.some((p) => p.joined || p.tail)).toBe(false);
+    expect(sum(d)).toBe(d.order.length);
+  });
+  it("joining keeps the album length when the panorama can take the photos", () => {
+    const a = joinPages(newAlbum(Array.from({ length: 20 }, (_, i) => `q${i}`), 6), 0); // 3,3,4,4,3,3
+    expect(a.pages.length).toBe(6);
+    expect(a.pages[0]).toMatchObject({ n: 4, joined: true });
+    expect(a.pages.reduce((s, p) => s + p.n, 0)).toBe(20);
+  });
+  it("clears a page into placeholders", () => {
+    const a = clearPage(base, 2);
+    expect(a.pages).toEqual(base.pages);
+    expect(a.order.slice(4).every(isEmpty)).toBe(true);
+    expect(a.order.slice(0, 4)).toEqual(["a", "b", "c", "d"]);
   });
 });

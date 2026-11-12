@@ -432,6 +432,13 @@ dialog.dlg::backdrop { background: rgba(17, 18, 19, 0.6); }
 .hd-ne { left: 100%; top: 0; cursor: nesw-resize; } .hd-sw { left: 0; top: 100%; cursor: nesw-resize; }
 .hd-nw { left: 0; top: 0; cursor: nwse-resize; } .hd-se { left: 100%; top: 100%; cursor: nwse-resize; }
 .dimtag { position: absolute; left: 50%; top: calc(100% + 8px); transform: translateX(-50%); z-index: 3; padding: 2px 5px; border-radius: 3px; background: var(--selection); color: #fff; font-size: 10px; white-space: nowrap; pointer-events: none; }
+/* Pages: a picked page is outlined; a side with no page shows a placeholder you can click. */
+.pagehi { position: absolute; outline: 2px solid var(--selection); outline-offset: -1px; pointer-events: none; z-index: 1; }
+.blankpage { position: absolute; display: flex; align-items: center; justify-content: center; text-align: center; color: #8b8f96; font-size: 11px; line-height: 1.4;
+  background: repeating-linear-gradient(135deg, rgba(0,0,0,.025) 0 8px, transparent 8px 16px); outline: 1px dashed #b9bcc2; outline-offset: -6px; cursor: pointer; }
+.blankpage small { font-size: 10px; opacity: .8; }
+.blankpage:hover { color: #55585e; }
+.blankpage.on { outline: 2px solid var(--selection); outline-offset: -1px; color: var(--selection); }
 /* Crop mode: double-click a frame, drag the photo inside it (Canva-style). */
 .frame.cropping { z-index: 6; }
 .frame.cropping > .cell { cursor: move; outline: 2px solid var(--selection); outline-offset: 0; pointer-events: none; }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as PE } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type MouseEvent as ME, type PointerEvent as PE } from "react";
 import type { Spread } from "../lib/export";
 import { boxToMm, currentBoxes, frameRectMm, mmToBox } from "../lib/frames";
 import { isEmpty, snap, type Box, type LaidPage, type TextBox } from "../lib/layout";
@@ -34,6 +34,10 @@ type Props = {
   onCrop?: (id: string) => void;
   /** New placement of a photo in its frame; `replace` folds one drag into a single undo. */
   onPlace?: (id: string, pl: Placement, replace: boolean) => void;
+  /** Page outlined as selected (clicked on its paper), or null. */
+  hiSide?: 0 | 1 | "both" | null;
+  /** Click on the paper of a page (not on a frame or text): pick that page, even a blank one. */
+  onSelectPage?: (side: 0 | 1) => void;
 };
 
 const MAX_Z = 3;
@@ -49,7 +53,7 @@ const pct = (n: number) => `${n * 100}%`;
 const SNAP_MM = 2;
 
 /** One sheet of the album, editable: photos in frames, frames and text that can be moved and resized. */
-export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSelectPhoto, onSelectText, onDrop, onFrames, onText, onEditText, lowres, passive, crop = "", onCrop, onPlace }: Props) {
+export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSelectPhoto, onSelectText, onDrop, onFrames, onText, onEditText, lowres, passive, crop = "", onCrop, onPlace, hiSide = null, onSelectPage }: Props) {
   const [dragOver, setDragOver] = useState("");
   const ref = useRef<HTMLDivElement>(null);
   const sheet = spreadMm(preset);
@@ -59,6 +63,15 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
   const box = (r: Rect): CSSProperties => ({ left: pct(r.x / sheet.w), top: pct(r.y / sheet.h), width: pct(r.w / sheet.w), height: pct(r.h / sheet.h) });
   const mmPerPx = () => sheet.w / (ref.current?.getBoundingClientRect().width || 1);
   const pages = [spread.left, spread.right].filter((p): p is LaidPage => !!p && p.side !== "tail");
+  /** Sides of this sheet with no page at all (an odd album's last page, or the page before a panorama). */
+  const blanks = ([0, 1] as const).filter((side) => !pages.some((p) => p.side === side || p.side === "both"));
+  const paperClick = (e: ME) => {
+    const t = e.target as Element;
+    if (t !== e.currentTarget && !t.classList.contains("pagebg") && !t.closest(".blankpage")) return;
+    const r = ref.current!.getBoundingClientRect(), xmm = ((e.clientX - r.left) / r.width) * sheet.w;
+    if (onSelectPage) onSelectPage(xmm < preset.bleedMm + preset.pageWmm ? 0 : 1);
+    else { onSelectPhoto(""); onSelectText(null); }
+  };
 
   /** Lines a frame edge can snap to on its page: trim edges, centre, margins, safe area, other frames. */
   const guidesFor = (pg: LaidPage, skip: number, textId?: string) => {
@@ -245,9 +258,15 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
 
   return (
     <div ref={ref} className="sheet" style={{ aspectRatio: `${sheet.w} / ${sheet.h}`, background: preset.bg, pointerEvents: passive ? "none" : undefined }}
-      onClick={(e) => { if (e.target === e.currentTarget) { onSelectPhoto(""); onSelectText(null); } }}
+      onClick={paperClick}
       onPointerMove={(e) => { move(e); cropMove(e); }} onPointerUp={end} onPointerCancel={end}>
       {pages.filter((pg) => pg.cfg.bg).map((pg) => <div key={`bg${pg.index}`} className="pagebg" style={{ ...box(pageBgRectMm(preset, pg.side as Side)), background: pg.cfg.bg }} />)}
+      {blanks.map((side) => (
+        <div key={`blank${side}`} className={`blankpage ${hiSide === side ? "on" : ""}`} style={box(pageBoxMm(preset, side))}>
+          <span>Halaman kosong<br /><small>Klik untuk memilih, lalu tambah bingkai</small></span>
+        </div>
+      ))}
+      {hiSide !== null && !blanks.includes(hiSide as 0 | 1) && <div className="pagehi" style={box(pageBoxMm(preset, hiSide))} />}
       {pages.map((pg) => pg.tpl && pg.ids.map((_, k) => frame(pg, k)))}
       {pages.map((pg) => (pg.cfg.texts ?? []).map((t) => text(pg, t)))}
       {guides && (

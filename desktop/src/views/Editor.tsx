@@ -5,7 +5,7 @@ import { lowResWarnings, pageNo, toSpreads } from "../lib/export";
 import { frameRectMm } from "../lib/frames";
 import { Icon } from "../lib/icons";
 import { runCommand, useCommands } from "../lib/keys";
-import { addPage, applyTpl, clearFrame, countsFor, FONTS, isEmpty, joinPages, layPages, moveSheet, patchPage, removePhoto, replacePhoto, setCount, shuffleTemplates, splitPages, swapPhotos, templatesFor, type Album, type Box, type LaidPage, type PageCfg, type TextBox, type Tpl } from "../lib/layout";
+import { addEmptyFrames, addPage, applyTpl, clearFrame, clearPage, deletePage, insertPage, countsFor, FONTS, isEmpty, joinPages, layPages, moveSheet, patchPage, removePhoto, replacePhoto, setCount, shuffleTemplates, splitPages, swapPhotos, templatesFor, type Album, type Box, type LaidPage, type PageCfg, type TextBox, type Tpl } from "../lib/layout";
 import type { Photo } from "../lib/photos";
 import { CENTER, effectiveDpi, spreadMm, type Placement, type Preset } from "../lib/print";
 import { MiniSheet, Overview } from "./Overview";
@@ -67,6 +67,8 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
   const [grabbing, setGrabbing] = useState(false);
   /** Frame whose photo is being moved inside it (double-click a photo, Enter to finish). */
   const [cropId, setCropId] = useState("");
+  /** A page picked by clicking its empty paper (side of spread `spread`); may be a blank slot with no page yet. */
+  const [pick, setPick] = useState<{ spread: number; side: 0 | 1 } | null>(null);
   useEffect(() => { if (cropId && cropId !== sel) setCropId(""); }, [sel, cropId]);
 
   const s = Math.min(si, Math.max(0, spreads.length - 1));
@@ -83,7 +85,14 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
   const openNotes = album.pages.filter((p) => p.note && !p.noteDone).length;
 
   const textPage = selText ? pages[selText.page] : null;
-  const selPage: LaidPage | null = textPage || (sel && pages.find((p) => p.ids.includes(sel))) || spread?.left || (spread?.right?.side === 1 ? spread.right : null);
+  const pickOn = pick && pick.spread === s ? pick : null;
+  const pickPage: LaidPage | null = !pickOn || !spread ? null
+    : pickOn.side === 0 || spread.left?.side === "both" ? spread.left : spread.right?.side === 1 ? spread.right : null;
+  /** The clicked side of this spread has no page yet (e.g. the last right page of an odd album). */
+  const blankPick = !!pickOn && !pickPage && !sel && !selText;
+  const selPage: LaidPage | null = textPage || (sel && pages.find((p) => p.ids.includes(sel))) || pickPage || (blankPick ? null : spread?.left || (spread?.right?.side === 1 ? spread.right : null));
+  /** Where a page put in the blank slot goes in the album. */
+  const blankAt = blankPick && spread ? (spread.left ? spread.left.index + 1 : spread.right ? spread.right.index : album.pages.length) : -1;
   const joined = selPage?.side === "both";
   const selPhoto = sel ? byId.get(sel) : undefined;
   const selOnSpread = !!sel && !!selPage && (selPage === spread?.left || selPage === spread?.right);
@@ -100,7 +109,7 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
   const setText = (page: number, id: string, patch: Partial<TextBox>, replace = false) =>
     setPage(page, { texts: (album.pages[page].texts ?? []).map((x) => (x.id === id ? { ...x, ...patch } : x)) }, replace);
   const textSlide = (patch: Partial<TextBox>) => { if (selText) { setText(selText.page, selText.id, patch, sliding.current); sliding.current = true; } };
-  const deselect = () => { setSel(""); setSelText(null); };
+  const deselect = () => { setSel(""); setSelText(null); setPick(null); };
 
   // ---- zoom & pan ----
   useLayoutEffect(() => {
@@ -205,12 +214,36 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
   };
   const deleteSpread = async () => {
     if (!spread) return;
-    const ids = [spread.left, spread.right].flatMap((p) => (p && p.side !== "tail" ? p.ids : []));
-    if (!ids.length || !(await ask(`Spread halaman ${s * 2 + 1}–${s * 2 + 2} dihapus. Fotonya kembali ke panel Foto. Bisa diurungkan (Ctrl+Z).`, "Hapus spread", "Batal", { title: "Hapus spread?", danger: true }))) return;
-    setAlbum(ids.reduce((a, id) => removePhoto(a, id), album)); deselect();
+    const pgs = [spread.left, spread.right].filter((p): p is LaidPage => !!p && p.side !== "tail");
+    if (!pgs.length) return;
+    const photosIn = pgs.flatMap((p) => p.ids).filter((id) => !isEmpty(id)).length;
+    if (photosIn && !(await ask(`Spread halaman ${s * 2 + 1}–${s * 2 + 2} dihapus. ${photosIn} foto kembali ke panel Foto. Bisa diurungkan (Ctrl+Z).`, "Hapus spread", "Batal", { title: "Hapus spread?", danger: true }))) return;
+    setAlbum([...pgs].sort((a, b) => b.index - a.index).reduce((a, p) => deletePage(a, p.index), album)); deselect();
+    setSi(Math.max(0, s - (s >= spreads.length - 1 ? 1 : 0)));
   };
   const toggleJoin = () => { if (!selPage) return; setAlbum(joined ? splitPages(album, selPage.index) : joinPages(album, selPage.side === 1 ? selPage.index - 1 : selPage.index)); setSel(""); };
-  const addFrame = () => { if (!selPage || joined) return; const n = selPage.ids.length + 1; const a = setCount(album, selPage.index, n); if (a === album) void tell("Bingkai tidak bisa ditambah di halaman ini (maksimal 12, atau halaman lain terkunci)."); else setAlbum(a); };
+  /** A new empty frame (placeholder) on the page; other pages keep their photos. */
+  const addFrame = () => {
+    if (blankPick) { fillBlank(1); return; }
+    if (!selPage) return;
+    const a = addEmptyFrames(album, selPage.index);
+    if (a === album) void tell("Bingkai tidak bisa ditambah di halaman ini (maksimal 12 bingkai).");
+    else { setAlbum(a); setSel(""); setPick({ spread: s, side: selPage.side === 1 ? 1 : 0 }); }
+  };
+  /** Turn the blank slot into a page of `n` placeholders. */
+  const fillBlank = (n: number) => { if (blankAt < 0) return; setAlbum(insertPage(album, blankAt, n)); };
+  const addPageAfter = () => {
+    if (blankPick) { fillBlank(1); return; }
+    if (!selPage) return;
+    setAlbum(insertPage(album, selPage.index + (joined ? 2 : 1), 1));
+  };
+  const clearSelPage = () => { if (selPage) { setAlbum(clearPage(album, selPage.index)); setSel(""); } };
+  const deleteSelPage = async () => {
+    if (!selPage) return;
+    const n = selPage.ids.filter((id) => !isEmpty(id)).length;
+    if (n && !(await ask(`${joined ? "Panorama" : "Halaman"} ${pageLabel.replace("halaman ", "")} dihapus. ${n} foto kembali ke panel Foto; halaman sesudahnya bergeser maju. Bisa diurungkan (Ctrl+Z).`, "Hapus halaman", "Batal", { title: "Hapus halaman?", danger: true }))) return;
+    setAlbum(deletePage(album, selPage.index)); deselect();
+  };
 
   const keyState = { selText, sel, tb };
   void keyState;
@@ -218,7 +251,10 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
     "e.select": { run: () => setTool("select"), checked: tool === "select" && !spaceHand },
     "e.hand": { run: (c) => { if (c === "Space") setSpaceHand(true); else setTool(tool === "hand" ? "select" : "hand"); }, up: () => setSpaceHand(false), checked: hand, enabled: !overview },
     "e.text": { run: addText, enabled: !overview && !!pages.length },
-    "e.frame": { run: addFrame, enabled: !overview && !!selPage && !joined },
+    "e.frame": { run: addFrame, enabled: !overview && (!!selPage || blankPick) },
+    "e.addPage": { run: addPageAfter, enabled: !overview && (!!selPage || blankPick) },
+    "e.clearPage": { run: clearSelPage, enabled: !overview && !!selPage?.ids.some((id) => !isEmpty(id)) },
+    "e.deletePage": { run: () => void deleteSelPage(), enabled: !overview && !!selPage },
     "e.nudge": { run: nudgeKey, enabled: !overview && (!!selText || selOnSpread) },
     "e.prev": { run: () => { setSi(Math.max(0, s - 1)); deselect(); }, enabled: s > 0 },
     "e.next": { run: () => { setSi(Math.min(spreads.length - 1, s + 1)); deselect(); }, enabled: s < spreads.length - 1 },
@@ -233,7 +269,7 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
     "e.copyLayout": { run: copyLayout, enabled: !!selPage },
     "e.pasteLayout": { run: pasteLayout, enabled: !!clip && !!selPage },
     "e.newSpread": { run: () => { setAlbum(addPage(addPage(album))); setSi(spreads.length); deselect(); } },
-    "e.deleteSpread": { run: () => void deleteSpread(), enabled: !!spread && spreads.length > 1 },
+    "e.deleteSpread": { run: () => void deleteSpread(), enabled: !!spread && spreads.length > 1 && !!(spread.left || spread.right) },
     "e.guides": { run: () => setGuides((g) => !g), checked: guides },
     "e.zoomIn": { run: () => stepZoom(1), enabled: !overview },
     "e.zoomOut": { run: () => stepZoom(-1), enabled: !overview },
@@ -316,6 +352,8 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
             <div className="pagenos"><span>Halaman {s * 2 + 1}</span>{spread.left?.side === "both" && <span>panorama dua halaman</span>}<span>Spread {s + 1} dari {spreads.length} · halaman {s * 2 + 2}</span></div>
             <Sheet spread={spread} preset={preset} byId={byId} place={place} sel={sel} selText={selText} guides={guides} lowres={lowres} passive={hand}
               crop={crop} onCrop={setCropId}
+              hiSide={blankPick ? pickOn!.side : pickPage && !sel && !selText ? (pickPage.side as 0 | 1 | "both") : null}
+              onSelectPage={(side) => { setSel(""); setSelText(null); setPick({ spread: s, side }); setTab("props"); }}
               onPlace={(id, pl, replace) => commit({ ...design, place: { ...place, [id]: pl } }, replace)}
               onSelectPhoto={(id) => { setSel(id); setSelText(null); if (id) setTab("props"); }}
               onSelectText={(t) => { setSelText(t); setSel(""); if (t) setTab("props"); }}
@@ -432,6 +470,15 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
                 <Btn label="Hapus bingkai" icon="trash-2" full cmd="e.delete" />
               </Section>
             )}
+            {blankPick && (
+              <Section id="e-blank" title={`Halaman ${s * 2 + 1 + pickOn!.side} · kosong`}>
+                <p className="caption">Belum ada halaman di sini, jadi akan tercetak putih. Pilih jumlah bingkai untuk memasang placeholder; foto bisa diseret masuk nanti.</p>
+                <div className="counts" role="group" aria-label="Jumlah bingkai">
+                  {countsFor(false).map((n) => <button key={n} type="button" data-tip={`${n} bingkai kosong`} onClick={() => fillBlank(n)}>{n}</button>)}
+                </div>
+                {spreads.length > 1 && <Btn label="Hapus spread ini" icon="trash-2" full cmd="e.deleteSpread" />}
+              </Section>
+            )}
             {selPage && (
               <>
                 <Section id="e-layout" title={`Tata letak ${pageLabel}`}>
@@ -448,6 +495,9 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
                     ))}
                   </div>
                   {selPage.cfg.free && <p className="caption">Bingkai diatur manual. Klik template untuk kembali ke tata letak template.</p>}
+                  {selPage.ids.length > 0 && selPage.ids.every(isEmpty) && <p className="caption">Semua bingkai masih kosong. Seret foto dari panel kiri ke bingkai.</p>}
+                  <div className="pair"><Btn label="Bingkai kosong" icon="square-dashed" full cmd="e.frame" tip="Tambah satu bingkai kosong di halaman ini (F)" /><Btn label="Halaman baru" icon="plus" full cmd="e.addPage" tip="Halaman kosong baru sesudah halaman ini" /></div>
+                  <div className="pair"><Btn label="Kosongkan" icon="eraser" full cmd="e.clearPage" tip="Foto kembali ke panel, bingkai tetap" /><Btn label="Hapus halaman" icon="trash-2" full cmd="e.deletePage" tip="Hapus halaman ini (Shift+Del)" /></div>
                   <div className="pair"><Btn label="Acak" icon="shuffle" full cmd="e.shuffle" /><Btn label="Template baru…" icon="layout-template" full cmd="app.templates" /></div>
                   <div className="pair"><Btn label="Salin" icon="copy" full cmd="e.copyLayout" /><Btn label="Tempel" icon="clipboard-paste" full cmd="e.pasteLayout" /></div>
                   <Btn label={joined ? "Pisahkan jadi dua halaman" : "Jadikan panorama dua halaman"} icon={joined ? "unlink-2" : "link-2"} full cmd="e.join" />

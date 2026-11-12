@@ -72,6 +72,9 @@ export const CATALOG = {
   "e.pasteLayout": E("Tempel tata letak", ["Ctrl+Alt+V"], "editor", "Tata letak"),
   "e.newSpread": E("Spread baru", ["Ctrl+Alt+N"], "editor", "Tata letak"),
   "e.deleteSpread": E("Hapus spread ini", ["Ctrl+Del"], "editor", "Tata letak"),
+  "e.addPage": E("Sisipkan halaman kosong sesudahnya", [], "editor", "Tata letak"),
+  "e.clearPage": E("Kosongkan halaman (bingkai tetap)", [], "editor", "Tata letak"),
+  "e.deletePage": E("Hapus halaman ini", ["Shift+Del"], "editor", "Tata letak"),
   "e.guides": E("Garis bantu", ["Ctrl+;"], "editor", "Tampilan"),
   "e.zoomIn": E("Perbesar", ["Ctrl+="], "editor", "Tampilan", true),
   "e.zoomOut": E("Perkecil", ["Ctrl+-"], "editor", "Tampilan", true),
@@ -171,7 +174,7 @@ const textLike = (t: EventTarget | null) => {
 };
 /** Browser/WebView behaviours that would reload, print or zoom the app. */
 const BLOCK = new Set(["Ctrl+R", "F5", "Ctrl+P", "Ctrl+F", "Ctrl+=", "Ctrl+-", "Ctrl+0", "Ctrl+Shift+R", "Ctrl+G", "Ctrl+U", "Ctrl+J", "Ctrl+H", "F3", "F7", "Alt+Left", "Alt+Right"]);
-const FIELD_OWN = new Set(["Ctrl+Z", "Ctrl+Y", "Ctrl+Shift+Z", "Ctrl+C", "Ctrl+V", "Ctrl+X", "Ctrl+A", "Left", "Right", "Up", "Down", "Shift+Left", "Shift+Right", "Shift+Up", "Shift+Down", "Home", "End", "Del", "Backspace", "Enter", "Tab", "Shift+Tab"]);
+const FIELD_OWN = new Set(["Ctrl+Z", "Ctrl+Y", "Ctrl+Shift+Z", "Ctrl+C", "Ctrl+V", "Ctrl+X", "Ctrl+A", "Left", "Right", "Up", "Down", "Shift+Left", "Shift+Right", "Shift+Up", "Shift+Down", "Home", "End", "Del", "Shift+Del", "Backspace", "Enter", "Tab", "Shift+Tab"]);
 
 function find(combo: string): [CommandId, Handler] | null {
   for (const pass of ["global", scope] as Scope[]) {
