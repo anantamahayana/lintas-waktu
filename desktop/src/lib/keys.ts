@@ -25,6 +25,8 @@ export const CATALOG = {
   "app.redo": E("Ulangi", ["Ctrl+Y", "Ctrl+Shift+Z"], "global", "Edit", true),
   "app.keys": E("Pintasan keyboard", ["Ctrl+/"], "global", "Bantuan"),
   "app.prefs": E("Ubah pintasan…", ["Ctrl+,"], "global", "Edit"),
+  "app.update": E("Periksa pembaruan…", [], "global", "Bantuan"),
+  "app.about": E("Tentang LW Album", [], "global", "Bantuan"),
   "app.props": E("Properti album…", ["Ctrl+Shift+P"], "global", "Album"),
   "app.auto": E("Susun otomatis dari foto terpilih…", ["Ctrl+Shift+A"], "global", "Album"),
   "app.templates": E("Template tata letak…", [], "global", "Album"),

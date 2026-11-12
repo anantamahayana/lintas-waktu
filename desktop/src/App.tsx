@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ask, tell } from "./lib/ask";
 import type { Cover } from "./lib/cover";
-import { installKeys, setScope, useCommands } from "./lib/keys";
+import { installKeys, runCommand, setScope, useCommands } from "./lib/keys";
+import { checkForUpdate, getUpdate, startUpdates } from "./lib/update";
+import { AboutDialog, UpdateDialog, UpdateToast } from "./views/Update";
 import { emptyAlbum, newAlbum, setCustomTemplates, type Album, type Tpl } from "./lib/layout";
 import { photosFromFiles, readAll, type Photo } from "./lib/photos";
 import { isNative, pickFolder, pickProjectFile, preparePhotos, ready, scanFolder, exists } from "./lib/platform";
@@ -47,6 +49,8 @@ export function App() {
   const [saving, setSaving] = useState(false);
   const [panels, setPanels] = useState(true);
   const [sheet, setSheet] = useState<null | "view" | "edit">(null);
+  const [upd, setUpd] = useState(false);
+  const [about, setAbout] = useState(false);
   const [making, setMaking] = useState(false);
   const [props, setProps] = useState(false);
   const [templates, setTemplates] = useState(false);
@@ -181,7 +185,7 @@ export function App() {
   // Save decisions and the design as they change; the photos themselves stay where they are on disk.
   const metaRef = useRef(meta);
   metaRef.current = meta;
-  const saveNow = useRef<() => void>(() => {});
+  const saveNow = useRef<() => Promise<unknown> | void>(() => {});
   useEffect(() => {
     if (!meta) return;
     const save = () => {
@@ -191,7 +195,7 @@ export function App() {
       for (const p of photos) if (p.pick !== null || p.stars) marks[p.id] = [p.pick, p.stars];
       const nextMeta: ProjectMeta = { ...m, updated: Date.now(), photos: photos.length, picked: picked.length, size: `${preset.pageWmm / 10} × ${preset.pageHmm / 10} cm · ${preset.pages} hlm` };
       setSaving(true);
-      saveProject({ v: 3, meta: nextMeta, marks, design: hist.now, preset, target })
+      return saveProject({ v: 3, meta: nextMeta, marks, design: hist.now, preset, target })
         .then((saved) => { setSaveError(""); if (saved.file !== m.file) setMeta(saved); })
         .catch((e) => setSaveError(String(e)))
         .finally(() => setSaving(false));
@@ -237,6 +241,7 @@ export function App() {
   const scope = meta ? tab : "home";
   useEffect(() => { setScope(scope); }, [scope]);
   const has = !!meta, design = hist.now;
+  useEffect(() => { startUpdates(() => saveNow.current()); }, []);
   useCommands({
     "app.new": { run: () => { if (meta) goHome(); setMaking(true); } },
     "app.open": { run: () => { if (isNative) void openFile(); else if (meta) goHome(); } },
@@ -247,6 +252,8 @@ export function App() {
     "app.undo": { run: undo, enabled: has && hist.past.length > 0 },
     "app.redo": { run: redo, enabled: has && hist.future.length > 0 },
     "app.keys": { run: () => setSheet((s) => (s ? null : "view")) },
+    "app.update": { run: () => { setUpd(true); const p = getUpdate().phase; if (!["available", "downloading", "ready"].includes(p)) void checkForUpdate(true); } },
+    "app.about": { run: () => { setAbout(true); void checkForUpdate(false); } },
     "app.prefs": { run: () => setSheet("edit") },
     "app.props": { run: () => setProps(true), enabled: has },
     "app.auto": { run: () => void autoBuild(), enabled: has },
@@ -264,6 +271,9 @@ export function App() {
   );
   const dialogs = (
     <>
+      {upd && <UpdateDialog onClose={() => setUpd(false)} save={() => saveNow.current()} project={meta?.name} />}
+      {about && <AboutDialog onClose={() => setAbout(false)} onCheck={() => runCommand("app.update")} />}
+      {!upd && <UpdateToast onOpen={() => setUpd(true)} />}
       {sheet && <ShortcutSheet edit={sheet === "edit"} onClose={() => setSheet(null)} />}
       {making && <NewProject onCancel={() => setMaking(false)} onCreate={create} />}
       {templates && <TemplateEditor preset={preset} custom={custom} setCustom={setCustom} startSpread={false} onClose={() => setTemplates(false)}

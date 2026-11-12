@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { UpdateChip } from "./Update";
 import { Icon, type IconName } from "../lib/icons";
 import { CATALOG, comboOf, conflicts, handlerOf, isCustom, keyParts, keysOf, resetKeys, runCommand, setKeys, useKeysVersion, type CommandId } from "../lib/keys";
 
@@ -104,7 +105,7 @@ const MENUS: { label: string; access: string; items: Item[] }[] = [
   { label: "Album", access: "A", items: ["app.props", "app.auto", "e.shuffleAll", "-", "app.templates"] },
   { label: "Halaman", access: "H", items: ["e.newSpread", "e.deleteSpread", "-", "e.addPage", "e.clearPage", "e.deletePage", "-", "e.shuffle", "e.copyLayout", "e.pasteLayout", "e.lock", "-", "e.join", "-", "e.text", "e.frame", "-", "e.selectAll", "e.alignLeft", "e.alignHCenter", "e.alignRight", "e.alignTop", "e.alignVCenter", "e.alignBottom", "e.distH", "e.distV", "-", "e.prev", "e.next"] },
   { label: "Tampilan", access: "T", items: ["mod.kurasi", "mod.editor", "mod.sampul", "mod.ekspor", "-", "e.overview", "-", "e.zoomIn", "e.zoomOut", "e.fit", "e.actual", "-", "e.guides", "app.panels", "app.full"] },
-  { label: "Bantuan", access: "B", items: ["app.keys", "app.prefs"] },
+  { label: "Bantuan", access: "B", items: ["app.keys", "app.prefs", "-", "app.update", "app.about"] },
 ];
 
 export function MenuBar({ title, state, tone }: { title: string; state?: string; tone?: "warn" | "danger" }) {
@@ -206,6 +207,7 @@ export function StatusBar({ left, warn, right }: { left: ReactNode; warn?: React
       {warn && <span className="sb-warn"><Icon name="triangle-alert" size={12} />{warn}</span>}
       <span className="grow" />
       {right}
+      <UpdateChip onOpen={() => runCommand("app.update")} />
       <button type="button" className="sb-help" data-cmd="app.keys" onClick={() => runCommand("app.keys")}><Icon name="keyboard" size={12} />Ctrl+/ pintasan</button>
     </footer>
   );

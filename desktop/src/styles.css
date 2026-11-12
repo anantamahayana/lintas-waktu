@@ -542,3 +542,12 @@ dialog.dlg::backdrop { background: rgba(17, 18, 19, 0.6); }
 .busy-box h2 { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600; }
 .spin { animation: spin 1s linear infinite; color: var(--accent-text); } @keyframes spin { to { transform: rotate(360deg); } }
 dialog.dlg .row-label { width: 128px; }
+
+/* Updates (Figma page 07) */
+.upd-ic { color: var(--accent); } .upd-ic.ready, .upd-ic.none { color: var(--ok); } .upd-ic.error { color: var(--warn); }
+.upd-notes { margin: 0; padding-left: 18px; display: grid; gap: 4px; line-height: 20px; }
+.toast { position: fixed; right: 16px; bottom: 36px; z-index: 50; display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 14px; max-width: 380px;
+  background: var(--raise); border: 1px solid var(--line); border-radius: var(--r-xl); box-shadow: 0 12px 32px rgba(0,0,0,.45); animation: toast-in 200ms ease-out; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
+.sb-chip { display: inline-flex; align-items: center; gap: 6px; height: 18px; padding: 0 8px; margin-right: 8px; border: 0; border-radius: 9px; background: rgba(47,111,228,.18); color: #8db5ff; font: inherit; font-size: 11px; cursor: pointer; }

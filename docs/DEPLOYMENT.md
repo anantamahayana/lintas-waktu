@@ -47,6 +47,17 @@ Revalidasi: API memanggil `/api/revalidate` di Vercel dengan `REVALIDATE_SECRET`
 Mode service account (`GOOGLE_SERVICE_ACCOUNT_JSON` di produksi; lokal `api/service_account.json`, di-gitignore).
 Folder Drive harus di-share ke email service account.
 
+## Aplikasi album (Windows) — installer dan pembaruan otomatis
+- Installer dibuat oleh GitHub Actions: **Actions → "Album app (Windows installer)" → Run workflow**. Hasilnya di bagian *Artifacts* run itu.
+- **Pembaruan otomatis** (mulai 0.4.0): aplikasi yang terpasang memeriksa `releases/latest/download/latest.json` di repo ini 5 detik setelah dibuka (tidak berulang), mengunduh di latar, lalu memasang saat pengguna menekan "Mulai ulang sekarang" atau saat jendela ditutup. Karena itu **Releases repo ini khusus untuk aplikasi album** (rilis lain akan dianggap pembaruan).
+- **Menerbitkan pembaruan**: naikkan versi di `desktop/package.json`, `desktop/src-tauri/tauri.conf.json`, `desktop/src-tauri/Cargo.toml` (+ entri `lw-album` di `Cargo.lock`), push, lalu Run workflow dengan centang **"Terbitkan sebagai pembaruan"** dan isi catatan rilis (satu poin per baris).
+- **Kunci tanda tangan (sekali saja, oleh pemilik)**. Pembaruan hanya dipasang kalau ditandatangani kunci ini; tanpa secret di bawah, build tetap jalan tetapi aplikasinya tidak bisa memperbarui sendiri.
+  1. Di laptop (perlu Node.js): `npx @tauri-apps/cli@2 signer generate -w "%USERPROFILE%\.tauri\lw-album.key"` lalu isi kata sandi. Hasilnya dua file: `lw-album.key` (rahasia) dan `lw-album.key.pub` (publik).
+  2. GitHub → repo → Settings → Secrets and variables → Actions → **New repository secret**, tiga kali:
+     `TAURI_SIGNING_PRIVATE_KEY` = isi file `lw-album.key` · `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` = kata sandinya · `LW_UPDATER_PUBKEY` = isi file `lw-album.key.pub`.
+  3. Simpan `lw-album.key` + kata sandinya di tempat aman (mis. pengelola kata sandi). **Kalau hilang, aplikasi yang sudah terpasang tidak bisa diperbarui lagi** dan harus dipasang ulang manual dengan kunci baru.
+  4. Pasang installer pertama yang dibuat setelah secret ada (dipasang manual sekali); versi sesudahnya datang sendiri.
+
 ## Masalah yang diketahui
 - **Link galeri klien pernah HTTP 500** (preview fotografer normal). Pencatatan kunjungan kini dibungkus try/except (commit `147a0cc`) dan endpoint kembali 200. Akar masalah belum diketahui — cari log `could not record gallery visit` di Railway.
 - **Galeri besar (±784 foto) berat di Safari** — lihat `docs/PLAN.md` (grid virtual, penyimpanan pilihan, warm-up; sudah di `main`).

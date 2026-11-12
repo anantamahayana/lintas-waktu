@@ -112,11 +112,20 @@ fn snapshot(path: String, dir: String, keep: usize) -> Result<(), String> {
     Ok(())
 }
 
+/// Public key that signed updates are checked against, set at build time by the release workflow
+/// (GitHub secret LW_UPDATER_PUBKEY). Builds without it cannot update themselves.
+const UPDATER_PUBKEY: &str = match option_env!("LW_UPDATER_PUBKEY") { Some(k) => k, None => "" };
+
+#[tauri::command]
+fn updater_ready() -> bool { !UPDATER_PUBKEY.trim().is_empty() }
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().pubkey(UPDATER_PUBKEY).build())
+        .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
-            scan_folder, prepare_photos, read_text, write_text, write_bytes, list_files, remove_file, path_exists, snapshot
+            scan_folder, prepare_photos, read_text, write_text, write_bytes, list_files, remove_file, path_exists, snapshot, updater_ready
         ])
         .run(tauri::generate_context!())
         .expect("error while running LW Album");
