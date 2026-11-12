@@ -15,6 +15,7 @@ from .content import router_admin as content_admin, router_public as content_pub
 from .content import bookings as content_bookings
 from .content import invoices as content_invoices
 from .content import site_images as content_site_images
+from .content import proofs as content_proofs
 from .content import models as content_models  # noqa: F401  (registers tables)
 from .services import backup, drive_service
 
@@ -86,20 +87,27 @@ async def lifespan(app: FastAPI):
             db.commit()
         log.warning("ADMIN_PASSWORD_RESET: panel password cleared (%d) — ADMIN_PASSWORD applies. Remove the flag now.", n)
     cleanup_cache()
+    try:
+        n = content_proofs.purge_old_files()
+        if n:
+            log.info("proofs: removed the files of %d old proof(s)", n)
+    except Exception:
+        log.exception("proofs: cleanup failed")
     threading.Thread(target=resume_warming, daemon=True).start()
     yield
 
 
 app = FastAPI(
     title="Lintas Waktu API",
-    description="Website content (projects, inquiries, settings) + client proofing (sessions, gallery, XMP export).",
+    description="Website content (projects, inquiries, settings) + client proofing (sessions, gallery, XMP export) + album proofs.",
     version="3.0.0",
     lifespan=lifespan,
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_url, "http://localhost:3000", "http://127.0.0.1:3000"],
+    # The album app (Tauri) calls the API from its own origin to send proofs.
+    allow_origins=[settings.frontend_url, "http://localhost:3000", "http://127.0.0.1:3000", "http://tauri.localhost", "https://tauri.localhost", "tauri://localhost", "http://localhost:1420"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -112,6 +120,8 @@ app.include_router(content_invoices.router)
 app.include_router(content_invoices.public)
 app.include_router(content_bookings.router)
 app.include_router(content_site_images.router)
+app.include_router(content_proofs.router)
+app.include_router(content_proofs.public)
 
 
 @app.get("/api/health")
