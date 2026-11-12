@@ -428,3 +428,37 @@ describe("page controls (insert, delete, placeholders)", () => {
     expect(a.order.slice(0, 4)).toEqual(["a", "b", "c", "d"]);
   });
 });
+
+describe("align and distribute", async () => {
+  const { align, distribute, spaceBy, matchSize, bounds, mainAxis } = await import("./align");
+  const rs = [{ x: 10, y: 10, w: 20, h: 10 }, { x: 50, y: 30, w: 10, h: 20 }, { x: 100, y: 0, w: 30, h: 30 }];
+  it("aligns to the selection bounds", () => {
+    const b = bounds(rs);
+    expect(align(rs, "left", b).map((r) => r.x)).toEqual([10, 10, 10]);
+    expect(align(rs, "right", b).map((r) => r.x + r.w)).toEqual([130, 130, 130]);
+    expect(align(rs, "vcenter", b).map((r) => r.y + r.h / 2)).toEqual([25, 25, 25]);
+    expect(align(rs, "bottom", b).map((r) => r.y + r.h)).toEqual([50, 50, 50]);
+  });
+  it("aligns each rect to its own reference", () => {
+    const refs = [{ x: 0, y: 0, w: 100, h: 100 }, { x: 100, y: 0, w: 100, h: 100 }, { x: 100, y: 0, w: 100, h: 100 }];
+    expect(align(rs, "hcenter", refs).map((r) => r.x)).toEqual([40, 145, 135]);
+  });
+  it("distributes with equal gaps and keeps the ends", () => {
+    const d = distribute(rs, "x");
+    expect(d[0].x).toBe(10);
+    expect(d[2].x).toBe(100);
+    const g1 = d[1].x - (d[0].x + d[0].w), g2 = d[2].x - (d[1].x + d[1].w);
+    expect(g1).toBeCloseTo(g2);
+    expect(distribute(rs.slice(0, 2), "x")).toEqual(rs.slice(0, 2));
+  });
+  it("spaces by a fixed gap in reading order", () => {
+    const d = spaceBy([rs[2], rs[0], rs[1]], "x", 4);
+    expect(d.map((r) => r.x)).toEqual([48, 10, 34]);
+  });
+  it("matches size to the reference and finds the main axis", () => {
+    expect(matchSize(rs, "both", 2).every((r) => r.w === 30 && r.h === 30)).toBe(true);
+    expect(matchSize(rs, "w", 0).map((r) => [r.w, r.h])).toEqual([[20, 10], [20, 20], [20, 30]]);
+    expect(mainAxis(rs)).toBe("x");
+    expect(mainAxis([{ x: 0, y: 0, w: 10, h: 10 }, { x: 0, y: 50, w: 10, h: 10 }])).toBe("y");
+  });
+});

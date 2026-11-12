@@ -2,12 +2,13 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ask, tell } from "../lib/ask";
 import type { Design } from "../App";
 import { lowResWarnings, pageNo, toSpreads } from "../lib/export";
-import { frameRectMm } from "../lib/frames";
+import { align, bounds, distribute, mainAxis, matchSize, spaceBy, type AlignMode, type Axis } from "../lib/align";
+import { currentBoxes, frameRectMm, mmToBox } from "../lib/frames";
 import { Icon } from "../lib/icons";
 import { runCommand, useCommands } from "../lib/keys";
 import { addEmptyFrames, addPage, applyTpl, clearFrame, clearPage, deletePage, insertPage, countsFor, FONTS, isEmpty, joinPages, layPages, moveSheet, patchPage, removePhoto, replacePhoto, setCount, shuffleTemplates, splitPages, swapPhotos, templatesFor, type Album, type Box, type LaidPage, type PageCfg, type TextBox, type Tpl } from "../lib/layout";
 import type { Photo } from "../lib/photos";
-import { CENTER, effectiveDpi, spreadMm, type Placement, type Preset } from "../lib/print";
+import { CENTER, effectiveDpi, pageBoxMm, spreadMm, type Placement, type Preset, type Rect } from "../lib/print";
 import { MiniSheet, Overview } from "./Overview";
 import { Btn, IconBtn, NumField, Row, Section, Seg, StatusBar } from "./Shell";
 import { Sheet, type TextSel } from "./Sheet";
@@ -70,6 +71,12 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
   /** A page picked by clicking its empty paper (side of spread `spread`); may be a blank slot with no page yet. */
   const [pick, setPick] = useState<{ spread: number; side: 0 | 1 } | null>(null);
   useEffect(() => { if (cropId && cropId !== sel) setCropId(""); }, [sel, cropId]);
+  /** Other selected frames besides `sel` (Shift+click, box select, Ctrl+A); `sel` is the one clicked last. */
+  const [more, setMore] = useState<string[]>([]);
+  useEffect(() => { if (!sel && more.length) setMore([]); }, [sel, more.length]);
+  /** What "align" lines frames up against. */
+  const [alignTo, setAlignTo] = useState<"sel" | "page" | "safe">("sel");
+  const [gapMm, setGapMm] = useState<number | null>(null);
 
   const s = Math.min(si, Math.max(0, spreads.length - 1));
   const spread = spreads[s];
@@ -97,6 +104,14 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
   const selPhoto = sel ? byId.get(sel) : undefined;
   const selOnSpread = !!sel && !!selPage && (selPage === spread?.left || selPage === spread?.right);
   const crop = cropId && cropId === sel && selOnSpread ? cropId : "";
+  // ---- several frames ----
+  const sheetPages = spread ? [spread.left, spread.right].filter((p): p is LaidPage => !!p && p.side !== "tail" && !!p.tpl) : [];
+  const onSheet = new Set(sheetPages.flatMap((p) => p.ids));
+  /** Selected frames, the one clicked last first. */
+  const group = selOnSpread ? [sel, ...more.filter((id) => id !== sel && onSheet.has(id))] : [];
+  const multi = group.length > 1;
+  const pageOfId = (id: string) => sheetPages.find((p) => p.ids.includes(id));
+  const rectOf = (id: string): Rect => { const pg = pageOfId(id)!; return frameRectMm(preset, pg, pg.ids.indexOf(id)); };
   const tb: TextBox | undefined = selText ? pages[selText.page]?.cfg.texts?.find((x) => x.id === selText.id) : undefined;
 
   const setAlbum = (a: Album, replace = false) => { if (a !== album) commit({ ...design, album: a }, replace); };
@@ -109,7 +124,44 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
   const setText = (page: number, id: string, patch: Partial<TextBox>, replace = false) =>
     setPage(page, { texts: (album.pages[page].texts ?? []).map((x) => (x.id === id ? { ...x, ...patch } : x)) }, replace);
   const textSlide = (patch: Partial<TextBox>) => { if (selText) { setText(selText.page, selText.id, patch, sliding.current); sliding.current = true; } };
-  const deselect = () => { setSel(""); setSelText(null); setPick(null); };
+  const deselect = () => { setSel(""); setMore([]); setSelText(null); setPick(null); };
+  /** Put frames at new places (sheet mm); every page touched becomes hand-placed. One undo step. */
+  const setRects = (m: Map<string, Rect>, replace = false) => {
+    let a = album;
+    for (const pg of sheetPages) {
+      if (!pg.ids.some((id) => m.has(id))) continue;
+      const boxes = currentBoxes(preset, pg).map((b, k) => { const r = m.get(pg.ids[k]); return r ? mmToBox(preset, pg.side as 0 | 1 | "both", r) : b; });
+      a = patchPage(a, pg.index, { free: boxes });
+    }
+    setAlbum(a, replace);
+  };
+  const selectFrame = (id: string, add?: boolean) => {
+    setSelText(null); setPick(null);
+    if (add && sel && id && onSheet.has(id)) {
+      if (group.includes(id)) { const rest = group.filter((x) => x !== id); setSel(rest[0] ?? ""); setMore(rest.slice(1)); }
+      else { setMore(group); setSel(id); }
+    } else { setSel(id); setMore([]); }
+    if (id) setTab("props");
+  };
+  const selectMany = (ids: string[], add = false) => {
+    const all = add ? [...new Set([...group, ...ids])] : ids;
+    setSelText(null); setPick(null);
+    setSel(all[0] ?? ""); setMore(all.slice(1));
+    if (all.length) setTab("props");
+  };
+  const marginMm = (preset.marginPct / 100) * preset.pageWmm;
+  const refRects = (rs: Rect[]): Rect | Rect[] => {
+    if (alignTo === "sel") return bounds(rs);
+    const inset = alignTo === "safe" ? preset.safeMm : marginMm;
+    return group.map((id) => { const t = pageBoxMm(preset, pageOfId(id)!.side as 0 | 1 | "both"); return { x: t.x + inset, y: t.y + inset, w: t.w - 2 * inset, h: t.h - 2 * inset }; });
+  };
+  const apply = (out: Rect[]) => setRects(new Map(group.map((id, i) => [id, out[i]])));
+  const doAlign = (mode: AlignMode) => { const rs = group.map(rectOf); apply(align(rs, mode, refRects(rs))); };
+  const doDistribute = (a: Axis) => apply(distribute(group.map(rectOf), a));
+  const gapNow = gapMm ?? Math.round((preset.gapPct / 100) * preset.pageWmm * 10) / 10;
+  const doSpace = () => { const rs = group.map(rectOf); apply(spaceBy(rs, mainAxis(rs), gapNow)); };
+  const doMatch = (what: "w" | "h" | "both") => apply(matchSize(group.map(rectOf), what, 0));
+  const canAlign = multi || (group.length === 1 && alignTo !== "sel");
 
   // ---- zoom & pan ----
   useLayoutEffect(() => {
@@ -144,6 +196,10 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
       const a = ph.w / ph.h, fa = selRect.w / selRect.h, z = Math.max(1, pl.z);
       const w = (a > fa ? a / fa : 1) * z, h = (a > fa ? 1 : fa / a) * z;
       setPlace(crop, { x: w > 1 ? Math.min(1, Math.max(0, pl.x - dx / selRect.w / (w - 1))) : pl.x, y: h > 1 ? Math.min(1, Math.max(0, pl.y - dy / selRect.h / (h - 1))) : pl.y });
+      return;
+    }
+    if (multi) {
+      setRects(new Map(group.map((id) => { const r = rectOf(id); return [id, { ...r, x: r.x + dx, y: r.y + dy }]; })), sliding.current);
       return;
     }
     if (sel && selPage && selOnSpread) {
@@ -210,6 +266,7 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
   };
   const deleteSel = () => {
     if (selText && tb) { setPage(selText.page, { texts: (album.pages[selText.page].texts ?? []).filter((x) => x.id !== tb.id) }); setSelText(null); return; }
+    if (multi) { setAlbum(group.reduce((a, id) => removePhoto(a, id), album)); deselect(); return; }
     if (sel && selOnSpread) { setAlbum(removePhoto(album, sel)); setSel(""); }
   };
   const deleteSpread = async () => {
@@ -275,6 +332,15 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
     "e.zoomOut": { run: () => stepZoom(-1), enabled: !overview },
     "e.fit": { run: () => zoomTo("fit"), enabled: !overview },
     "e.actual": { run: () => zoomTo(1), enabled: !overview },
+    "e.selectAll": { run: () => selectMany([...onSheet]), enabled: !overview && onSheet.size > 0 },
+    "e.alignLeft": { run: () => doAlign("left"), enabled: canAlign },
+    "e.alignHCenter": { run: () => doAlign("hcenter"), enabled: canAlign },
+    "e.alignRight": { run: () => doAlign("right"), enabled: canAlign },
+    "e.alignTop": { run: () => doAlign("top"), enabled: canAlign },
+    "e.alignVCenter": { run: () => doAlign("vcenter"), enabled: canAlign },
+    "e.alignBottom": { run: () => doAlign("bottom"), enabled: canAlign },
+    "e.distH": { run: () => doDistribute("x"), enabled: group.length > 2 },
+    "e.distV": { run: () => doDistribute("y"), enabled: group.length > 2 },
     "e.esc": { run: () => { if (crop) setCropId(""); else if (overview) setOverview(false); else deselect(); } },
   });
   const useRef2 = useRef<(t: Tpl) => void>(() => {});
@@ -292,7 +358,21 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
   // ---------- options bar (context) ----------
   const optbar = (
     <div className="optbar">
-      {tb && selText ? (
+      {multi ? (
+        <>
+          <span className="ctx"><Icon name="layers" size={14} />{group.length} bingkai</span><span className="vdiv" />
+          <IconBtn icon="align-start-vertical" cmd="e.alignLeft" /><IconBtn icon="align-center-vertical" cmd="e.alignHCenter" /><IconBtn icon="align-end-vertical" cmd="e.alignRight" />
+          <span className="vdiv" />
+          <IconBtn icon="align-start-horizontal" cmd="e.alignTop" /><IconBtn icon="align-center-horizontal" cmd="e.alignVCenter" /><IconBtn icon="align-end-horizontal" cmd="e.alignBottom" />
+          <span className="vdiv" />
+          <IconBtn icon="align-horizontal-distribute-center" cmd="e.distH" /><IconBtn icon="align-vertical-distribute-center" cmd="e.distV" />
+          <span className="vdiv" />
+          <span className="lbl">Rata ke</span>
+          <Seg value={alignTo} onChange={setAlignTo} items={[{ v: "sel", label: "Seleksi" }, { v: "page", label: "Halaman", tip: "Tepi halaman dengan margin" }, { v: "safe", label: "Area aman" }]} />
+          <span className="vdiv" /><IconBtn icon="trash-2" cmd="e.delete" />
+          <span className="grow" /><span className="caption">Shift+klik = tambah/kurangi</span>
+        </>
+      ) : tb && selText ? (
         <>
           <span className="ctx"><Icon name="type" size={14} />Teks</span><span className="vdiv" />
           <select value={tb.font} onChange={(e) => setText(selText.page, tb.id, { font: e.target.value })} style={{ width: 190, fontFamily: `"${tb.font}"` }} aria-label="Huruf">
@@ -355,7 +435,7 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
               hiSide={blankPick ? pickOn!.side : pickPage && !sel && !selText ? (pickPage.side as 0 | 1 | "both") : null}
               onSelectPage={(side) => { setSel(""); setSelText(null); setPick({ spread: s, side }); setTab("props"); }}
               onPlace={(id, pl, replace) => commit({ ...design, place: { ...place, [id]: pl } }, replace)}
-              onSelectPhoto={(id) => { setSel(id); setSelText(null); if (id) setTab("props"); }}
+              onSelectPhoto={selectFrame} more={group.slice(1)} onSelectMany={selectMany} onGroup={(m, replace) => setRects(m, replace)}
               onSelectText={(t) => { setSelText(t); setSel(""); if (t) setTab("props"); }}
               onEditText={(t) => { setSelText(t); setSel(""); setTab("props"); setTimeout(() => textArea.current?.focus(), 30); }}
               onDrop={drop}
@@ -453,7 +533,25 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
                 </Section>
               </>
             )}
-            {!tb && selOnSpread && selPhoto && (
+            {multi && (
+              <>
+                <Section id="e-multi" title={`Susun ${group.length} bingkai`}>
+                  <Row label="Ratakan"><IconBtn icon="align-start-vertical" cmd="e.alignLeft" /><IconBtn icon="align-center-vertical" cmd="e.alignHCenter" /><IconBtn icon="align-end-vertical" cmd="e.alignRight" /></Row>
+                  <Row label=""><IconBtn icon="align-start-horizontal" cmd="e.alignTop" /><IconBtn icon="align-center-horizontal" cmd="e.alignVCenter" /><IconBtn icon="align-end-horizontal" cmd="e.alignBottom" /></Row>
+                  <Row label="Sebar rata"><IconBtn icon="align-horizontal-distribute-center" cmd="e.distH" /><IconBtn icon="align-vertical-distribute-center" cmd="e.distV" /></Row>
+                  <Row label="Jarak"><NumField value={gapNow} min={0} max={50} step={0.5} unit="mm" label="Jarak antarbingkai" onChange={setGapMm} /><Btn label="Samakan" tip="Susun ulang dengan jarak ini, urutan dari kiri/atas tetap" onClick={doSpace} /></Row>
+                  <div className="fs" style={{ gap: 6 }}><span className="caption">Samakan ukuran dengan bingkai yang terakhir diklik</span>
+                    <div className="hrow"><Btn label="Lebar" full onClick={() => doMatch("w")} /><Btn label="Tinggi" full onClick={() => doMatch("h")} /><Btn label="Keduanya" full onClick={() => doMatch("both")} /></div></div>
+                  <div className="fs" style={{ gap: 6 }}><span className="caption">Rata ke</span>
+                    <Seg full value={alignTo} onChange={setAlignTo} items={[{ v: "sel", label: "Seleksi" }, { v: "page", label: "Halaman" }, { v: "safe", label: "Area aman" }]} /></div>
+                  <p className="caption">Seleksi = tepi kotak seleksi. Halaman = tepi halaman dengan margin. Area aman = garis area aman.</p>
+                </Section>
+                <Section id="e-multi-photos" title={`${group.length} bingkai`}>
+                  <div className="pair"><Btn label="Kosongkan" icon="eraser" full onClick={() => { setAlbum(group.reduce((a, id) => clearFrame(a, id), album)); deselect(); }} /><Btn label={`Hapus ${group.length}`} icon="trash-2" full cmd="e.delete" /></div>
+                </Section>
+              </>
+            )}
+            {!tb && !multi && selOnSpread && selPhoto && (
               <Section id="e-frame" title="Bingkai foto">
                 <Row label="Perbesar">{slider(selPl.z, 1, 3, 0.01, (v) => setPlace(sel, { z: v }), `${Math.round(selPl.z * 100)}%`)}</Row>
                 <Row label="Geser datar">{slider(selPl.x, 0, 1, 0.01, (v) => setPlace(sel, { x: v }), `${Math.round(selPl.x * 100)}%`)}</Row>

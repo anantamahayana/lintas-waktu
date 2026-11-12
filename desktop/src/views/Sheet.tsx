@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties, type MouseEvent as ME,
 import type { Spread } from "../lib/export";
 import { boxToMm, currentBoxes, frameRectMm, mmToBox } from "../lib/frames";
 import { isEmpty, snap, type Box, type LaidPage, type TextBox } from "../lib/layout";
+import { bounds as groupBounds } from "../lib/align";
 import { LINE, pageBgRectMm } from "../lib/paint";
 import type { Photo } from "../lib/photos";
 import { CENTER, pageBoxMm, spreadMm, type Placement, type Preset, type Rect } from "../lib/print";
@@ -18,7 +19,14 @@ type Props = {
   sel: string;
   selText: TextSel;
   guides: boolean;
-  onSelectPhoto: (id: string) => void;
+  /** `add`: Shift+click, add the frame to (or take it out of) the selection. */
+  onSelectPhoto: (id: string, add?: boolean) => void;
+  /** Other selected frames besides `sel` (several frames selected). */
+  more?: string[];
+  /** Frames caught by dragging a box on the paper. */
+  onSelectMany?: (ids: string[], add: boolean) => void;
+  /** New places of several frames moved together; `replace` folds one drag into a single undo. */
+  onGroup?: (rects: Map<string, Rect>, replace: boolean) => void;
   onSelectText: (t: TextSel) => void;
   onDrop: (onto: string, dragged: string) => void;
   /** Hand-placed frames for a page; `replace` folds the steps of one drag into a single undo. */
@@ -53,19 +61,53 @@ const pct = (n: number) => `${n * 100}%`;
 const SNAP_MM = 2;
 
 /** One sheet of the album, editable: photos in frames, frames and text that can be moved and resized. */
-export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSelectPhoto, onSelectText, onDrop, onFrames, onText, onEditText, lowres, passive, crop = "", onCrop, onPlace, hiSide = null, onSelectPage }: Props) {
+export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSelectPhoto, onSelectText, onDrop, onFrames, onText, onEditText, lowres, passive, crop = "", onCrop, onPlace, hiSide = null, onSelectPage, more = [], onSelectMany, onGroup }: Props) {
   const [dragOver, setDragOver] = useState("");
   const ref = useRef<HTMLDivElement>(null);
   const sheet = spreadMm(preset);
   const [lines, setLines] = useState<{ x: number[]; y: number[] }>({ x: [], y: [] });
-  const drag = useRef<{ pg: LaidPage; k: number; text?: string; handle: Handle; start: { x: number; y: number }; rect: Rect; boxes: Box[]; moved: boolean } | null>(null);
+  const drag = useRef<{ pg: LaidPage; k: number; text?: string; handle: Handle; start: { x: number; y: number }; rect: Rect; boxes: Box[]; moved: boolean; group?: { id: string; rect: Rect }[] } | null>(null);
+  const chosen = new Set([sel, ...more].filter(Boolean));
+  const multi = chosen.size > 1;
+  /** Box being dragged on the paper to select frames (sheet mm), and whether the click after it is swallowed. */
+  const [marquee, setMarquee] = useState<Rect | null>(null);
+  const mq = useRef<{ x: number; y: number; moved: boolean; add: boolean } | null>(null);
+  const swallowClick = useRef(false);
 
   const box = (r: Rect): CSSProperties => ({ left: pct(r.x / sheet.w), top: pct(r.y / sheet.h), width: pct(r.w / sheet.w), height: pct(r.h / sheet.h) });
   const mmPerPx = () => sheet.w / (ref.current?.getBoundingClientRect().width || 1);
   const pages = [spread.left, spread.right].filter((p): p is LaidPage => !!p && p.side !== "tail");
   /** Sides of this sheet with no page at all (an odd album's last page, or the page before a panorama). */
   const blanks = ([0, 1] as const).filter((side) => !pages.some((p) => p.side === side || p.side === "both"));
+  const toMm = (cx: number, cy: number) => { const r = ref.current!.getBoundingClientRect(); return { x: ((cx - r.left) / r.width) * sheet.w, y: ((cy - r.top) / r.height) * sheet.h }; };
+  const isPaper = (e: { target: EventTarget; currentTarget: EventTarget }) => { const t = e.target as Element; return t === e.currentTarget || t.classList.contains("pagebg") || !!t.closest(".blankpage"); };
+  /** Every frame on this sheet with its page and place, for box selection and group moves. */
+  const allFrames = () => pages.flatMap((pg) => (pg.tpl ? pg.ids.map((id, k) => ({ id, pg, k, rect: frameRectMm(preset, pg, k) })) : []));
+  const paperDown = (e: PE) => {
+    if (!onSelectMany || e.button !== 0 || !isPaper(e)) return;
+    mq.current = { x: e.clientX, y: e.clientY, moved: false, add: e.shiftKey };
+    (e.currentTarget as Element).setPointerCapture(e.pointerId);
+  };
+  const paperMove = (e: PE) => {
+    const m = mq.current;
+    if (!m) return;
+    if (!m.moved && Math.hypot(e.clientX - m.x, e.clientY - m.y) < 5) return;
+    m.moved = true;
+    const a = toMm(m.x, m.y), b = toMm(e.clientX, e.clientY);
+    setMarquee({ x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(a.x - b.x), h: Math.abs(a.y - b.y) });
+  };
+  const paperUp = () => {
+    const m = mq.current;
+    mq.current = null;
+    if (!m?.moved || !marquee) { setMarquee(null); return; }
+    const r = marquee;
+    const hit = allFrames().filter((f) => f.rect.x < r.x + r.w && f.rect.x + f.rect.w > r.x && f.rect.y < r.y + r.h && f.rect.y + f.rect.h > r.y).map((f) => f.id);
+    swallowClick.current = true;
+    setMarquee(null);
+    onSelectMany?.(hit, m.add);
+  };
   const paperClick = (e: ME) => {
+    if (swallowClick.current) { swallowClick.current = false; return; }
     const t = e.target as Element;
     if (t !== e.currentTarget && !t.classList.contains("pagebg") && !t.closest(".blankpage")) return;
     const r = ref.current!.getBoundingClientRect(), xmm = ((e.clientX - r.left) / r.width) * sheet.w;
@@ -74,13 +116,13 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
   };
 
   /** Lines a frame edge can snap to on its page: trim edges, centre, margins, safe area, other frames. */
-  const guidesFor = (pg: LaidPage, skip: number, textId?: string) => {
+  const guidesFor = (pg: LaidPage, skip: number, textId?: string, skipIds?: Set<string>) => {
     const t = pageBoxMm(preset, pg.side as Side), m = (preset.marginPct / 100) * preset.pageWmm;
     const xs = [t.x, t.x + t.w, t.x + t.w / 2, t.x + m, t.x + t.w - m, t.x + preset.safeMm, t.x + t.w - preset.safeMm];
     const ys = [t.y, t.y + t.h, t.y + t.h / 2, t.y + m, t.y + t.h - m, t.y + preset.safeMm, t.y + t.h - preset.safeMm];
     if (pg.side === "both") xs.push(t.x + t.w / 4, t.x + (3 * t.w) / 4);
     pg.ids.forEach((_, k) => {
-      if (k === skip && !textId) return;
+      if ((k === skip && !textId) || skipIds?.has(pg.ids[k])) return;
       const r = frameRectMm(preset, pg, k);
       xs.push(r.x, r.x + r.w); ys.push(r.y, r.y + r.h);
     });
@@ -94,6 +136,16 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
     const rect = text ? boxToMm(preset, pg.side as Side, text) : frameRectMm(preset, pg, k);
     drag.current = { pg, k, text: text?.id, handle, start: { x: e.clientX, y: e.clientY }, rect, boxes: currentBoxes(preset, pg), moved: false };
   };
+  /** Drag several selected frames together by the grip on their shared box. */
+  const beginGroup = (e: PE) => {
+    e.stopPropagation(); e.preventDefault();
+    (e.target as Element).setPointerCapture(e.pointerId);
+    const group = allFrames().filter((f) => chosen.has(f.id));
+    const lead = group.find((f) => f.id === sel) ?? group[0];
+    if (!lead) return;
+    const b = groupBounds(group.map((f) => f.rect));
+    drag.current = { pg: lead.pg, k: lead.k, handle: "move", start: { x: e.clientX, y: e.clientY }, rect: b, boxes: [], moved: false, group: group.map((f) => ({ id: f.id, rect: f.rect })) };
+  };
 
   const move = (e: PE) => {
     const d = drag.current;
@@ -101,7 +153,7 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
     const s = mmPerPx(), dx = (e.clientX - d.start.x) * s, dy = (e.clientY - d.start.y) * s;
     if (!d.moved && Math.hypot(dx, dy) < 0.8) return;
     const r = { ...d.rect }, h = d.handle, free = !e.altKey;
-    const g = free ? guidesFor(d.pg, d.k, d.text) : { xs: [], ys: [] };
+    const g = free ? guidesFor(d.pg, d.k, d.text, d.group ? chosen : undefined) : { xs: [], ys: [] };
     const hit = { x: [] as number[], y: [] as number[] };
     const sx = (v: number) => { const o = snap(v, g.xs, SNAP_MM); if (o.at !== null) hit.x.push(o.at); return o.v; };
     const sy = (v: number) => { const o = snap(v, g.ys, SNAP_MM); if (o.at !== null) hit.y.push(o.at); return o.v; };
@@ -131,13 +183,19 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
       r.w = Math.max(5, x2 - x1); r.h = Math.max(5, y2 - y1);
     }
     setLines(hit);
+    if (d.group) {
+      const mx = r.x - d.rect.x, my = r.y - d.rect.y;
+      onGroup?.(new Map(d.group.map((f) => [f.id, { ...f.rect, x: f.rect.x + mx, y: f.rect.y + my }])), d.moved);
+      d.moved = true;
+      return;
+    }
     const b = mmToBox(preset, d.pg.side as Side, r);
     if (d.text) onText(d.pg.index, d.text, { x: b.x, y: b.y, w: b.w, h: b.h }, d.moved);
     else onFrames(d.pg.index, d.boxes.map((x, j) => (j === d.k ? b : x)), d.moved);
     d.moved = true;
   };
 
-  const end = () => { drag.current = null; cdrag.current = null; setLines({ x: [], y: [] }); };
+  const end = () => { drag.current = null; cdrag.current = null; setLines({ x: [], y: [] }); paperUp(); };
 
   // ---- photo inside its frame (crop mode) ----
   // The wheel zooms the photo; a native listener because React's wheel handler cannot stop the page scrolling.
@@ -204,7 +262,7 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
 
   const frame = (pg: LaidPage, k: number) => {
     const id = pg.ids[k], ph = byId.get(id), pl = place[id] ?? CENTER;
-    const r = frameRectMm(preset, pg, k), selected = sel === id;
+    const r = frameRectMm(preset, pg, k), selected = chosen.has(id), single = selected && !multi;
     const pos = `${pl.x * 100}% ${pl.y * 100}%`;
     const cropping = crop === id && !!ph?.thumb;
     const aspect = ph?.w && ph.h ? ph.w / ph.h : 1.5;
@@ -212,12 +270,12 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
     if (cropping) wheel.current = (e) => cropWheel(e, id, aspect);
     const stroke = pg.cfg.stroke && pg.cfg.stroke.mm > 0 ? { boxShadow: `inset 0 0 0 ${(pg.cfg.stroke.mm / sheet.w) * 100}cqw ${pg.cfg.stroke.color}` } : undefined;
     return (
-      <div key={id} className={`frame ${selected ? "on" : ""} ${cropping ? "cropping" : ""} ${dragOver === id ? "over" : ""} ${lowres?.has(id) ? "lowres" : ""}`} style={box(r)}>
+      <div key={id} className={`frame ${selected ? "on" : ""} ${selected && multi ? "multi" : ""} ${cropping ? "cropping" : ""} ${dragOver === id ? "over" : ""} ${lowres?.has(id) ? "lowres" : ""}`} style={box(r)}>
         {pb && <img className="crop-ghost" src={ph!.thumb} alt="" draggable={false} style={{ left: pct(pb.x), top: pct(pb.y), width: pct(pb.w), height: pct(pb.h) }} />}
         <button type="button" className={ph ? "cell" : "cell blank"} style={stroke} aria-pressed={selected}
           aria-label={ph ? `Foto ${ph.name}` : `Bingkai kosong`} draggable={!!ph && !cropping}
           title={ph && selected && !cropping ? "Klik dua kali untuk mengatur foto di dalam bingkai" : undefined}
-          onClick={(e) => { e.stopPropagation(); onSelectPhoto(id); }}
+          onClick={(e) => { e.stopPropagation(); onSelectPhoto(id, e.shiftKey); }}
           onDoubleClick={(e) => { e.stopPropagation(); if (ph?.thumb) { onSelectPhoto(id); onCrop?.(cropping ? "" : id); } }}
           onDragStart={(e) => { e.dataTransfer.setData("text/plain", id); e.dataTransfer.effectAllowed = "move"; }}
           onDragOver={(e) => { e.preventDefault(); if (dragOver !== id) setDragOver(id); }}
@@ -235,8 +293,8 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
           </div>
         )}
         {cropping && <span className="crop-tag">{Math.round(pl.z * 100)}% · Enter selesai</span>}
-        {selected && !cropping && handles(pg, k)}
-        {selected && !cropping && <span className="dimtag">{(Math.round(r.w * 10) / 10).toLocaleString("id-ID")} × {(Math.round(r.h * 10) / 10).toLocaleString("id-ID")} mm</span>}
+        {single && !cropping && handles(pg, k)}
+        {single && !cropping && <span className="dimtag">{(Math.round(r.w * 10) / 10).toLocaleString("id-ID")} × {(Math.round(r.h * 10) / 10).toLocaleString("id-ID")} mm</span>}
       </div>
     );
   };
@@ -258,8 +316,8 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
 
   return (
     <div ref={ref} className="sheet" style={{ aspectRatio: `${sheet.w} / ${sheet.h}`, background: preset.bg, pointerEvents: passive ? "none" : undefined }}
-      onClick={paperClick}
-      onPointerMove={(e) => { move(e); cropMove(e); }} onPointerUp={end} onPointerCancel={end}>
+      onClick={paperClick} onPointerDown={paperDown}
+      onPointerMove={(e) => { move(e); cropMove(e); paperMove(e); }} onPointerUp={end} onPointerCancel={end}>
       {pages.filter((pg) => pg.cfg.bg).map((pg) => <div key={`bg${pg.index}`} className="pagebg" style={{ ...box(pageBgRectMm(preset, pg.side as Side)), background: pg.cfg.bg }} />)}
       {blanks.map((side) => (
         <div key={`blank${side}`} className={`blankpage ${hiSide === side ? "on" : ""}`} style={box(pageBoxMm(preset, side))}>
@@ -281,6 +339,18 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
           ))}
         </>
       )}
+      {multi && (() => {
+        const rs = allFrames().filter((f) => chosen.has(f.id)).map((f) => f.rect);
+        if (rs.length < 2) return null;
+        const b = groupBounds(rs);
+        return (
+          <div className="groupbox" style={box(b)}>
+            <button type="button" className="grip" aria-label={`Geser ${rs.length} bingkai`} title="Seret untuk menggeser semua (Alt: tanpa magnet)" onPointerDown={beginGroup} />
+            <span className="dimtag">{rs.length} bingkai · {(Math.round(b.w * 10) / 10).toLocaleString("id-ID")} × {(Math.round(b.h * 10) / 10).toLocaleString("id-ID")} mm</span>
+          </div>
+        );
+      })()}
+      {marquee && <div className="marquee" style={box(marquee)} />}
       {lines.x.map((x, i) => <div key={`gx${i}`} className="snapline v" style={{ left: pct(x / sheet.w) }} />)}
       {lines.y.map((y, i) => <div key={`gy${i}`} className="snapline h" style={{ top: pct(y / sheet.h) }} />)}
     </div>

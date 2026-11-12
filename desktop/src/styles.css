@@ -432,6 +432,11 @@ dialog.dlg::backdrop { background: rgba(17, 18, 19, 0.6); }
 .hd-ne { left: 100%; top: 0; cursor: nesw-resize; } .hd-sw { left: 0; top: 100%; cursor: nesw-resize; }
 .hd-nw { left: 0; top: 0; cursor: nwse-resize; } .hd-se { left: 100%; top: 100%; cursor: nwse-resize; }
 .dimtag { position: absolute; left: 50%; top: calc(100% + 8px); transform: translateX(-50%); z-index: 3; padding: 2px 5px; border-radius: 3px; background: var(--selection); color: #fff; font-size: 10px; white-space: nowrap; pointer-events: none; }
+/* Several frames selected: thin outline each, one dashed box with a grip to move them together; drag on paper = box select. */
+.frame.multi > .cell { outline: 1.5px solid var(--selection); outline-offset: 0; }
+.groupbox { position: absolute; z-index: 3; outline: 1px dashed var(--selection); outline-offset: 3px; pointer-events: none; }
+.groupbox .grip { pointer-events: auto; }
+.marquee { position: absolute; z-index: 8; background: rgba(47, 111, 228, .12); outline: 1px solid var(--selection); pointer-events: none; }
 /* Pages: a picked page is outlined; a side with no page shows a placeholder you can click. */
 .pagehi { position: absolute; outline: 2px solid var(--selection); outline-offset: -1px; pointer-events: none; z-index: 1; }
 .blankpage { position: absolute; display: flex; align-items: center; justify-content: center; text-align: center; color: #8b8f96; font-size: 11px; line-height: 1.4;
