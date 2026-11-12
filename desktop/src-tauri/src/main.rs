@@ -112,9 +112,10 @@ fn snapshot(path: String, dir: String, keep: usize) -> Result<(), String> {
     Ok(())
 }
 
-/// Public key that signed updates are checked against, set at build time by the release workflow
-/// (GitHub secret LW_UPDATER_PUBKEY). Builds without it cannot update themselves.
-const UPDATER_PUBKEY: &str = match option_env!("LW_UPDATER_PUBKEY") { Some(k) => k, None => "" };
+/// Public key that signed updates are checked against (also in tauri.conf.json → plugins.updater).
+/// Public by design; the matching private key is the GitHub secret TAURI_SIGNING_PRIVATE_KEY.
+/// LW_UPDATER_PUBKEY at build time overrides it (only if the key is ever replaced).
+const UPDATER_PUBKEY: &str = match option_env!("LW_UPDATER_PUBKEY") { Some(k) if !k.is_empty() => k, _ => "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDI1RkM4MTc4NEYxMTc0M0UKUldRK2RCRlBlSUg4SlhxbWVmUlg4MndUQUk1THc5Z3pvcSszWlRmR2hkUXRKS3Jtc0c4KzRqVFAK" };
 
 #[tauri::command]
 fn updater_ready() -> bool { !UPDATER_PUBKEY.trim().is_empty() }

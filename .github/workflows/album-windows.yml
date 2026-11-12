@@ -47,11 +47,11 @@ jobs:
       - run: npm test
       - name: Build
         run: |
-          if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ] && [ -n "$LW_UPDATER_PUBKEY" ]; then
+          if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
             echo "Signed build: installed apps can update to this version."
             npx tauri build --config '{"bundle":{"createUpdaterArtifacts":true}}'
           else
-            echo "::warning::Unsigned build (secrets LW_UPDATER_PUBKEY / TAURI_SIGNING_PRIVATE_KEY not set): this installer cannot update itself."
+            echo "::warning::Unsigned build (secret TAURI_SIGNING_PRIVATE_KEY not set): this installer cannot update itself."
             npx tauri build
           fi
       - uses: actions/upload-artifact@v4

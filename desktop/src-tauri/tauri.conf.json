@@ -53,7 +53,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDI1RkM4MTc4NEYxMTc0M0UKUldRK2RCRlBlSUg4SlhxbWVmUlg4MndUQUk1THc5Z3pvcSszWlRmR2hkUXRKS3Jtc0c4KzRqVFAK",
       "endpoints": [
         "https://github.com/anantamahayana/lintas-waktu/releases/latest/download/latest.json"
       ],
