@@ -6,6 +6,9 @@ dan **langkah manual** kalau ada. Detail teknis lengkap ada di pesan commit (`gi
 
 ---
 
+### 2026-11-12 · NantaPakeAI
+- Aplikasi album: **atur foto di dalam bingkai seperti di Canva**. Klik dua kali foto (atau pilih lalu Enter, atau tombol "Atur foto") → seluruh foto tampil samar melewati bingkai; seret untuk menggeser, roda mouse atau lingkaran di sudut untuk memperbesar, panah untuk menggeser halus; Enter, Esc, atau klik dua kali lagi untuk selesai. Satu seretan = satu langkah urungkan. Hasilnya sama dengan slider Perbesar/Geser dan ikut ke ekspor.
+
 ### 2026-11-11 · NantaPakeAI
 - Aplikasi album 0.3.0, **tampilan baru** sesuai desain Figma "Editing Album LW": bilah menu (File, Edit, Foto, Album, Halaman, Tampilan, Bantuan; Alt+huruf membuka menu), bilah modul (Kurasi, Tata letak, Sampul, Ekspor) dan bilah status di bawah; beranda, papan produksi, Kurasi, editor, Sampul, Ekspor, dan semua dialog digambar ulang (tema gelap, Inter, ikon). **Sistem pintasan keyboard** baru: satu daftar untuk menu, tooltip, dan lembar pintasan (Ctrl+/), pintasan bisa diubah sendiri dengan peringatan bentrok (Ctrl+,), pintasan satu huruf tidak aktif saat mengetik, pintasan tetap jalan setelah mengklik tombol, Spasi ditahan untuk menggeser kanvas, Ctrl+=/−/0 untuk zoom, Tab menyembunyikan panel, F11 layar penuh. Pindah modul kini **Ctrl+Alt+1–4** (sebelumnya Ctrl+1–4; angka 1–5 tetap untuk bintang). Baru juga: pemeriksaan sebelum ekspor (bingkai kosong, resolusi rendah, catatan revisi terbuka, sampul) dengan tombol langsung ke halamannya, ukuran bingkai dalam mm dan tanda resolusi rendah di halaman, histogram jam di saringan Kurasi.
   **Manual:** jalankan ulang workflow "Album app (Windows installer)" untuk installer 0.3.0 (sudah dijalankan dari branch `main-83krjd`).

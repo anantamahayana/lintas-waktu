@@ -432,6 +432,13 @@ dialog.dlg::backdrop { background: rgba(17, 18, 19, 0.6); }
 .hd-ne { left: 100%; top: 0; cursor: nesw-resize; } .hd-sw { left: 0; top: 100%; cursor: nesw-resize; }
 .hd-nw { left: 0; top: 0; cursor: nwse-resize; } .hd-se { left: 100%; top: 100%; cursor: nwse-resize; }
 .dimtag { position: absolute; left: 50%; top: calc(100% + 8px); transform: translateX(-50%); z-index: 3; padding: 2px 5px; border-radius: 3px; background: var(--selection); color: #fff; font-size: 10px; white-space: nowrap; pointer-events: none; }
+/* Crop mode: double-click a frame, drag the photo inside it (Canva-style). */
+.frame.cropping { z-index: 6; }
+.frame.cropping > .cell { cursor: move; outline: 2px solid var(--selection); outline-offset: 0; pointer-events: none; }
+.crop-ghost { position: absolute; max-width: none; opacity: .38; z-index: -1; pointer-events: none; object-fit: fill; }
+.crop-box { position: absolute; z-index: 4; cursor: move; outline: 1px dashed rgba(255,255,255,.9); box-shadow: 0 0 0 1px rgba(0,0,0,.35); touch-action: none; }
+.crop-box .hd { width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; }
+.crop-tag { position: absolute; left: 50%; top: calc(100% + 8px); transform: translateX(-50%); z-index: 7; padding: 2px 6px; border-radius: 3px; background: var(--selection); color: #fff; font-size: 10px; white-space: nowrap; pointer-events: none; }
 .textbox { position: absolute; cursor: pointer; z-index: 2; }
 .textbox:hover { outline: 1px dashed var(--selection); }
 .textbox.on { outline: 1px solid var(--selection); z-index: 4; }

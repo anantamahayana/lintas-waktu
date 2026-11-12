@@ -65,6 +65,9 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
   const canvas = useRef<HTMLDivElement>(null);
   const pan = useRef<{ x: number; y: number; sl: number; st: number } | null>(null);
   const [grabbing, setGrabbing] = useState(false);
+  /** Frame whose photo is being moved inside it (double-click a photo, Enter to finish). */
+  const [cropId, setCropId] = useState("");
+  useEffect(() => { if (cropId && cropId !== sel) setCropId(""); }, [sel, cropId]);
 
   const s = Math.min(si, Math.max(0, spreads.length - 1));
   const spread = spreads[s];
@@ -84,6 +87,7 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
   const joined = selPage?.side === "both";
   const selPhoto = sel ? byId.get(sel) : undefined;
   const selOnSpread = !!sel && !!selPage && (selPage === spread?.left || selPage === spread?.right);
+  const crop = cropId && cropId === sel && selOnSpread ? cropId : "";
   const tb: TextBox | undefined = selText ? pages[selText.page]?.cfg.texts?.find((x) => x.id === selText.id) : undefined;
 
   const setAlbum = (a: Album, replace = false) => { if (a !== album) commit({ ...design, album: a }, replace); };
@@ -122,6 +126,15 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
     if (selText && tb && textPage) {
       const k = (textPage.side === "both" ? 2 : 1) * preset.pageWmm;
       setText(selText.page, selText.id, { x: tb.x + dx / k, y: tb.y + dy / preset.pageHmm }, sliding.current);
+      return;
+    }
+    if (crop && selRect) {
+      // Crop mode: arrows slide the photo inside its frame by the same distance on paper.
+      const ph = byId.get(crop), pl = place[crop] ?? CENTER;
+      if (!ph?.w) return;
+      const a = ph.w / ph.h, fa = selRect.w / selRect.h, z = Math.max(1, pl.z);
+      const w = (a > fa ? a / fa : 1) * z, h = (a > fa ? 1 : fa / a) * z;
+      setPlace(crop, { x: w > 1 ? Math.min(1, Math.max(0, pl.x - dx / selRect.w / (w - 1))) : pl.x, y: h > 1 ? Math.min(1, Math.max(0, pl.y - dy / selRect.h / (h - 1))) : pl.y });
       return;
     }
     if (sel && selPage && selOnSpread) {
@@ -215,7 +228,7 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
     "e.lock": { run: () => selPage && setPage(selPage.index, { locked: !selPage.cfg.locked }), enabled: !!selPage, checked: !!selPage?.cfg.locked },
     "e.join": { run: toggleJoin, enabled: !!selPage, checked: joined },
     "e.delete": { run: deleteSel, enabled: !!tb || selOnSpread },
-    "e.edit": { run: () => { setTab("props"); setTimeout(() => textArea.current?.focus(), 30); }, enabled: !!tb },
+    "e.edit": { run: () => { if (tb) { setTab("props"); setTimeout(() => textArea.current?.focus(), 30); } else setCropId(crop ? "" : sel); }, enabled: !!tb || (selOnSpread && !!selPhoto?.thumb) },
     "e.dup": { run: dupText, enabled: !!tb },
     "e.copyLayout": { run: copyLayout, enabled: !!selPage },
     "e.pasteLayout": { run: pasteLayout, enabled: !!clip && !!selPage },
@@ -226,7 +239,7 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
     "e.zoomOut": { run: () => stepZoom(-1), enabled: !overview },
     "e.fit": { run: () => zoomTo("fit"), enabled: !overview },
     "e.actual": { run: () => zoomTo(1), enabled: !overview },
-    "e.esc": { run: () => { if (overview) setOverview(false); else deselect(); } },
+    "e.esc": { run: () => { if (crop) setCropId(""); else if (overview) setOverview(false); else deselect(); } },
   });
   const useRef2 = useRef<(t: Tpl) => void>(() => {});
   useRef2.current = (t: Tpl) => { if (selPage && !!t.spread === joined) setAlbum(applyTpl(album, selPage.index, t)); };
@@ -261,13 +274,15 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
         </>
       ) : selOnSpread && selPhoto ? (
         <>
-          <span className="ctx"><Icon name="image" size={14} />Bingkai foto</span><span className="vdiv" />
+          <span className="ctx"><Icon name="image" size={14} />{crop ? "Atur foto di bingkai" : "Bingkai foto"}</span><span className="vdiv" />
+          <Btn label={crop ? "Selesai" : "Atur foto"} icon={crop ? "check" : "crop"} kind={crop ? "primary" : "secondary"} cmd="e.edit" tip={crop ? "Selesai mengatur (Enter / Esc)" : "Geser foto di dalam bingkai dengan mouse (klik dua kali foto / Enter)"} />
+          <span className="vdiv" />
           <span className="lbl">Perbesar</span>{slider(selPl.z, 1, 3, 0.01, (v) => setPlace(sel, { z: v }), `${Math.round(selPl.z * 100)}%`)}
           <span className="vdiv" />
           <IconBtn icon="rotate-ccw" tip="Atur ulang posisi foto" onClick={() => commit({ ...design, place: { ...place, [sel]: CENTER } })} />
           <IconBtn icon="x" tip="Kosongkan bingkai (foto kembali ke panel)" onClick={() => { setAlbum(clearFrame(album, sel)); setSel(""); }} />
           <IconBtn icon="trash-2" cmd="e.delete" />
-          <span className="grow" /><span className="caption">{pageLabel}{selPage?.tpl ? ` · ${selPage.cfg.free ? "manual" : selPage.tpl.label}` : ""}</span>
+          <span className="grow" /><span className="caption">{crop ? "Seret foto · roda mouse/sudut = perbesar · panah = geser" : <>{pageLabel}{selPage?.tpl ? ` · ${selPage.cfg.free ? "manual" : selPage.tpl.label}` : ""}</>}</span>
         </>
       ) : selOnSpread && isEmpty(sel) ? (
         <>
@@ -300,6 +315,8 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
           <div className="sheetbox" style={{ width: sheetW }}>
             <div className="pagenos"><span>Halaman {s * 2 + 1}</span>{spread.left?.side === "both" && <span>panorama dua halaman</span>}<span>Spread {s + 1} dari {spreads.length} · halaman {s * 2 + 2}</span></div>
             <Sheet spread={spread} preset={preset} byId={byId} place={place} sel={sel} selText={selText} guides={guides} lowres={lowres} passive={hand}
+              crop={crop} onCrop={setCropId}
+              onPlace={(id, pl, replace) => commit({ ...design, place: { ...place, [id]: pl } }, replace)}
               onSelectPhoto={(id) => { setSel(id); setSelText(null); if (id) setTab("props"); }}
               onSelectText={(t) => { setSelText(t); setSel(""); if (t) setTab("props"); }}
               onEditText={(t) => { setSelText(t); setSel(""); setTab("props"); setTimeout(() => textArea.current?.focus(), 30); }}

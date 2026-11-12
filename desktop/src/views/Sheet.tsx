@@ -1,4 +1,4 @@
-import { useRef, useState, type CSSProperties, type PointerEvent as PE } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as PE } from "react";
 import type { Spread } from "../lib/export";
 import { boxToMm, currentBoxes, frameRectMm, mmToBox } from "../lib/frames";
 import { isEmpty, snap, type Box, type LaidPage, type TextBox } from "../lib/layout";
@@ -29,13 +29,27 @@ type Props = {
   lowres?: Map<string, number>;
   /** Hand tool: the sheet ignores the pointer so the canvas can be dragged. */
   passive?: boolean;
+  /** Frame whose photo is being repositioned inside it (double-click), or "". */
+  crop?: string;
+  onCrop?: (id: string) => void;
+  /** New placement of a photo in its frame; `replace` folds one drag into a single undo. */
+  onPlace?: (id: string, pl: Placement, replace: boolean) => void;
 };
+
+const MAX_Z = 3;
+/** Size and offset of the whole photo against its frame (frame = 1 × 1), matching the CSS cover crop. */
+export function photoBox(aspect: number, frameAspect: number, pl: Placement) {
+  const z = Math.max(1, pl.z);
+  const w = (aspect > frameAspect ? aspect / frameAspect : 1) * z, h = (aspect > frameAspect ? 1 : frameAspect / aspect) * z;
+  return { w, h, x: -pl.x * (w - 1), y: -pl.y * (h - 1) };
+}
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
 const pct = (n: number) => `${n * 100}%`;
 const SNAP_MM = 2;
 
 /** One sheet of the album, editable: photos in frames, frames and text that can be moved and resized. */
-export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSelectPhoto, onSelectText, onDrop, onFrames, onText, onEditText, lowres, passive }: Props) {
+export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSelectPhoto, onSelectText, onDrop, onFrames, onText, onEditText, lowres, passive, crop = "", onCrop, onPlace }: Props) {
   const [dragOver, setDragOver] = useState("");
   const ref = useRef<HTMLDivElement>(null);
   const sheet = spreadMm(preset);
@@ -110,7 +124,61 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
     d.moved = true;
   };
 
-  const end = () => { drag.current = null; setLines({ x: [], y: [] }); };
+  const end = () => { drag.current = null; cdrag.current = null; setLines({ x: [], y: [] }); };
+
+  // ---- photo inside its frame (crop mode) ----
+  // The wheel zooms the photo; a native listener because React's wheel handler cannot stop the page scrolling.
+  const wheel = useRef<(e: WheelEvent) => void>(() => {});
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const fn = (e: WheelEvent) => { if ((e.target as Element).closest?.(".crop-box")) wheel.current(e); };
+    el.addEventListener("wheel", fn, { passive: false });
+    return () => el.removeEventListener("wheel", fn);
+  }, []);
+  const cdrag = useRef<{ id: string; mode: "move" | "nw" | "ne" | "sw" | "se"; start: { x: number; y: number }; pl: Placement; fw: number; fh: number; aspect: number; moved: boolean } | null>(null);
+  const cropBegin = (e: PE, id: string, aspect: number, mode: "move" | "nw" | "ne" | "sw" | "se") => {
+    e.stopPropagation(); e.preventDefault();
+    (e.target as Element).setPointerCapture(e.pointerId);
+    const fr = (e.currentTarget as Element).closest(".frame")?.getBoundingClientRect();
+    if (!fr) return;
+    cdrag.current = { id, mode, start: { x: e.clientX, y: e.clientY }, pl: place[id] ?? CENTER, fw: fr.width, fh: fr.height, aspect, moved: false };
+  };
+  const cropMove = (e: PE) => {
+    const d = cdrag.current;
+    if (!d || !onPlace) return;
+    const dx = (e.clientX - d.start.x) / d.fw, dy = (e.clientY - d.start.y) / d.fh;
+    const b = photoBox(d.aspect, d.fw / d.fh, d.pl);
+    let next: Placement;
+    if (d.mode === "move") {
+      next = { ...d.pl, x: b.w > 1 ? clamp01(d.pl.x - dx / (b.w - 1)) : d.pl.x, y: b.h > 1 ? clamp01(d.pl.y - dy / (b.h - 1)) : d.pl.y };
+    } else {
+      // Corner: grow or shrink around the opposite corner of the photo, like Canva.
+      const sx = d.mode.includes("e") ? 1 : -1, sy = d.mode.includes("s") ? 1 : -1;
+      const g = ((b.w + sx * dx) / b.w + (b.h + sy * dy) / b.h) / 2;
+      const z = Math.min(MAX_Z, Math.max(1, d.pl.z * g)), k = z / Math.max(1, d.pl.z);
+      const w = b.w * k, h = b.h * k;
+      const ax = sx > 0 ? b.x : b.x + b.w, ay = sy > 0 ? b.y : b.y + b.h; // fixed corner
+      const x0 = sx > 0 ? ax : ax - w, y0 = sy > 0 ? ay : ay - h;
+      next = { z, x: w > 1 ? clamp01(-x0 / (w - 1)) : 0.5, y: h > 1 ? clamp01(-y0 / (h - 1)) : 0.5 };
+    }
+    onPlace(d.id, next, d.moved);
+    d.moved = true;
+  };
+  const cropWheel = (e: WheelEvent, id: string, aspect: number) => {
+    if (e.ctrlKey || !onPlace) return;
+    e.preventDefault(); e.stopPropagation();
+    const fr = (e.target as Element).closest(".frame")?.getBoundingClientRect();
+    if (!fr) return;
+    const pl = place[id] ?? CENTER, fa = fr.width / fr.height, b = photoBox(aspect, fa, pl);
+    // Keep the point under the pointer still while zooming.
+    const px = (e.clientX - fr.left) / fr.width, py = (e.clientY - fr.top) / fr.height;
+    const u = (px - b.x) / b.w, v = (py - b.y) / b.h;
+    const z = Math.min(MAX_Z, Math.max(1, pl.z * (e.deltaY < 0 ? 1.08 : 1 / 1.08)));
+    const nb = photoBox(aspect, fa, { ...pl, z });
+    const x0 = px - u * nb.w, y0 = py - v * nb.h;
+    onPlace(id, { z, x: nb.w > 1 ? clamp01(-x0 / (nb.w - 1)) : 0.5, y: nb.h > 1 ? clamp01(-y0 / (nb.h - 1)) : 0.5 }, false);
+  };
 
   const handles = (pg: LaidPage, k: number, text?: TextBox) => (
     <>
@@ -125,12 +193,19 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
     const id = pg.ids[k], ph = byId.get(id), pl = place[id] ?? CENTER;
     const r = frameRectMm(preset, pg, k), selected = sel === id;
     const pos = `${pl.x * 100}% ${pl.y * 100}%`;
+    const cropping = crop === id && !!ph?.thumb;
+    const aspect = ph?.w && ph.h ? ph.w / ph.h : 1.5;
+    const pb = cropping ? photoBox(aspect, r.w / r.h, pl) : null;
+    if (cropping) wheel.current = (e) => cropWheel(e, id, aspect);
     const stroke = pg.cfg.stroke && pg.cfg.stroke.mm > 0 ? { boxShadow: `inset 0 0 0 ${(pg.cfg.stroke.mm / sheet.w) * 100}cqw ${pg.cfg.stroke.color}` } : undefined;
     return (
-      <div key={id} className={`frame ${selected ? "on" : ""} ${dragOver === id ? "over" : ""} ${lowres?.has(id) ? "lowres" : ""}`} style={box(r)}>
+      <div key={id} className={`frame ${selected ? "on" : ""} ${cropping ? "cropping" : ""} ${dragOver === id ? "over" : ""} ${lowres?.has(id) ? "lowres" : ""}`} style={box(r)}>
+        {pb && <img className="crop-ghost" src={ph!.thumb} alt="" draggable={false} style={{ left: pct(pb.x), top: pct(pb.y), width: pct(pb.w), height: pct(pb.h) }} />}
         <button type="button" className={ph ? "cell" : "cell blank"} style={stroke} aria-pressed={selected}
-          aria-label={ph ? `Foto ${ph.name}` : `Bingkai kosong`} draggable={!!ph}
+          aria-label={ph ? `Foto ${ph.name}` : `Bingkai kosong`} draggable={!!ph && !cropping}
+          title={ph && selected && !cropping ? "Klik dua kali untuk mengatur foto di dalam bingkai" : undefined}
           onClick={(e) => { e.stopPropagation(); onSelectPhoto(id); }}
+          onDoubleClick={(e) => { e.stopPropagation(); if (ph?.thumb) { onSelectPhoto(id); onCrop?.(cropping ? "" : id); } }}
           onDragStart={(e) => { e.dataTransfer.setData("text/plain", id); e.dataTransfer.effectAllowed = "move"; }}
           onDragOver={(e) => { e.preventDefault(); if (dragOver !== id) setDragOver(id); }}
           onDragLeave={() => setDragOver((d) => (d === id ? "" : d))}
@@ -139,8 +214,16 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
           {!ph && <span>{isEmpty(id) ? "Seret foto ke sini" : "Foto tidak ditemukan"}</span>}
         </button>
         {lowres?.has(id) && <span className="lowres-badge">{lowres.get(id)} dpi</span>}
-        {selected && handles(pg, k)}
-        {selected && <span className="dimtag">{(Math.round(r.w * 10) / 10).toLocaleString("id-ID")} × {(Math.round(r.h * 10) / 10).toLocaleString("id-ID")} mm</span>}
+        {pb && (
+          <div className="crop-box" style={{ left: pct(pb.x), top: pct(pb.y), width: pct(pb.w), height: pct(pb.h) }}
+            onPointerDown={(e) => cropBegin(e, id, aspect, "move")}
+            onDoubleClick={(e) => { e.stopPropagation(); onCrop?.(""); }} title="Seret untuk menggeser foto · roda mouse atau sudut untuk memperbesar · Enter/Esc selesai">
+            {(["nw", "ne", "sw", "se"] as const).map((h) => <span key={h} className={`hd hd-${h}`} onPointerDown={(e) => cropBegin(e, id, aspect, h)} />)}
+          </div>
+        )}
+        {cropping && <span className="crop-tag">{Math.round(pl.z * 100)}% · Enter selesai</span>}
+        {selected && !cropping && handles(pg, k)}
+        {selected && !cropping && <span className="dimtag">{(Math.round(r.w * 10) / 10).toLocaleString("id-ID")} × {(Math.round(r.h * 10) / 10).toLocaleString("id-ID")} mm</span>}
       </div>
     );
   };
@@ -163,7 +246,7 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
   return (
     <div ref={ref} className="sheet" style={{ aspectRatio: `${sheet.w} / ${sheet.h}`, background: preset.bg, pointerEvents: passive ? "none" : undefined }}
       onClick={(e) => { if (e.target === e.currentTarget) { onSelectPhoto(""); onSelectText(null); } }}
-      onPointerMove={move} onPointerUp={end} onPointerCancel={end}>
+      onPointerMove={(e) => { move(e); cropMove(e); }} onPointerUp={end} onPointerCancel={end}>
       {pages.filter((pg) => pg.cfg.bg).map((pg) => <div key={`bg${pg.index}`} className="pagebg" style={{ ...box(pageBgRectMm(preset, pg.side as Side)), background: pg.cfg.bg }} />)}
       {pages.map((pg) => pg.tpl && pg.ids.map((_, k) => frame(pg, k)))}
       {pages.map((pg) => (pg.cfg.texts ?? []).map((t) => text(pg, t)))}

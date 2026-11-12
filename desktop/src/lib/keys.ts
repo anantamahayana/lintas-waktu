@@ -66,7 +66,7 @@ export const CATALOG = {
   "e.lock": E("Kunci tata letak", ["L"], "editor", "Tata letak"),
   "e.join": E("Sambung / pisahkan panorama", ["J"], "editor", "Tata letak"),
   "e.delete": E("Hapus yang dipilih", ["Del", "Backspace"], "editor", "Tata letak"),
-  "e.edit": E("Edit teks", ["Enter"], "editor", "Tata letak"),
+  "e.edit": E("Edit teks / atur foto di bingkai", ["Enter"], "editor", "Tata letak"),
   "e.dup": E("Duplikat teks", ["Ctrl+D"], "editor", "Tata letak"),
   "e.copyLayout": E("Salin tata letak", ["Ctrl+Alt+C"], "editor", "Tata letak"),
   "e.pasteLayout": E("Tempel tata letak", ["Ctrl+Alt+V"], "editor", "Tata letak"),
