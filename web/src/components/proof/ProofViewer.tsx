@@ -32,7 +32,7 @@ const T = {
     writeNote: "Write a note", approveAfter: (a: number, b: number) => `Approve · ${a}/${b}`, page: (p: string) => `Page ${p}`, nextPage: (p: string) => `swipe for page ${p} →`,
     summary: (n: number) => (n ? `${n} note${n > 1 ? "s" : ""} for us to look at. Approve when the album feels right.` : "No notes so far. Approve when the album feels right."),
     chips: ["Swap this photo", "Brighter", "Move it", "Remove this photo"], noteHere: (l: string) => (/\d/.test(l) ? `Note for pages ${l}` : `Note for the ${l.toLowerCase()}`),
-    pinch: "Pinch to zoom", close: "Close",
+    pinch: "Pinch to zoom", close: "Close", lastPage: "Last page",
     tour: {
       welcome: (n: string) => `Welcome, ${n}`, intro: "This is your album before it goes to print. Look through every page, leave notes where you'd like changes, and approve when it feels right.",
       tiles: ["Flip through", "Point & note", "Approve"], tilesSub: ["Every page, as it will be printed.", "Tell us what you'd like changed.", "When everything feels right."],
@@ -64,7 +64,7 @@ const T = {
     writeNote: "Tulis catatan", approveAfter: (a: number, b: number) => `Setujui · ${a}/${b}`, page: (p: string) => `Halaman ${p}`, nextPage: (p: string) => `geser untuk halaman ${p} →`,
     summary: (n: number) => (n ? `${n} catatan akan kami periksa. Setujui kalau album sudah pas.` : "Belum ada catatan. Setujui kalau album sudah pas."),
     chips: ["Ganti foto ini", "Lebih terang", "Geser posisi", "Hapus foto ini"], noteHere: (l: string) => (/\d/.test(l) ? `Catatan halaman ${l}` : `Catatan ${l.toLowerCase()}`),
-    pinch: "Cubit untuk memperbesar", close: "Tutup",
+    pinch: "Cubit untuk memperbesar", close: "Tutup", lastPage: "Halaman terakhir",
     tour: {
       welcome: (n: string) => `Selamat datang, ${n}`, intro: "Ini album Anda sebelum dicetak. Lihat setiap halaman, tulis catatan di bagian yang ingin diubah, lalu setujui kalau sudah pas.",
       tiles: ["Lihat halaman", "Tunjuk & catat", "Setujui"], tilesSub: ["Setiap halaman, seperti nanti dicetak.", "Ceritakan apa yang ingin diubah.", "Kalau semuanya sudah pas."],
@@ -229,13 +229,16 @@ function Viewer({ slug, data, setData, lang, setLang }: { slug: string; data: Pr
   // Upright phone: one page at a time, large; the cover and odd shapes stay whole.
   const single = mode === "portrait" && pageView && !!nums && !!sp && sp.w / sp.h > 1.6;
   const step = useCallback((d: 1 | -1) => {
+    // The ends of the album stay put: no swipe past the last page or before the first.
+    if (d > 0 && i >= n - 1 && (!single || half === 1)) return;
+    if (d < 0 && i <= 0 && (!single || half === 0)) return;
     if (single) {
       if (d > 0 && half === 0) { setHalf(1); setPoint(null); return; }
       if (d < 0 && half === 1) { setHalf(0); setPoint(null); return; }
       if (d < 0) { if (i > 0) go(i - 1, 1); return; }
     }
     go(i + d);
-  }, [single, half, i, go]);
+  }, [single, half, i, n, go]);
 
   const endTour = () => { setTour(null); store.set(`lw_p_tour_${slug}`, "1"); };
 
@@ -462,7 +465,7 @@ function Viewer({ slug, data, setData, lang, setLang }: { slug: string; data: Pr
           <div className="flex justify-between items-center text-[13px] text-mute">
             <span>{single ? t.page(pageNo) : t.pages(label)}</span>
             {single ? <span className="flex gap-1.5" aria-hidden><span className={clsx("h-1.5 w-1.5 rounded-full", half === 0 ? "bg-ink" : "bg-line")} /><span className={clsx("h-1.5 w-1.5 rounded-full", half === 1 ? "bg-ink" : "bg-line")} /></span> : <span>{t.spreadOf(i + 1, n)}</span>}
-            <span>{single && half === 0 ? t.nextPage(nums![2]) : !single ? t.pinch : ""}</span>
+            <span>{single && half === 0 ? t.nextPage(nums![2]) : i >= n - 1 ? t.lastPage : !single ? t.pinch : ""}</span>
           </div>
         </main>
         <div className="shrink-0 border-t border-line bg-white">
