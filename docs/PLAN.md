@@ -156,3 +156,25 @@ CreativeWork (/work/[slug]). Meta EN/ID diperbarui, judul Layanan "Layanan & Har
 **Tahap berikutnya (butuh keputusan pemilik):** halaman khusus per layanan (mis. /services/prewedding "Fotografer prewedding Bali")
 dengan teks dan foto sendiri; Google Business Profile (paling berpengaruh untuk pencarian lokal, dibuat pemilik di Google).
 **Selesai:** `faint` #75736D dan `mute` #66645F (keduanya ≥ 4,5:1), aksesibilitas 100. Halaman per layanan: tidak dikerjakan (keputusan pemilik).
+
+## QOL web & admin (13 Nov 2026) — rencana, menunggu pilihan pemilik
+Dari pemakaian nyata minggu ini (invoice YUNITA, pindah ke VPS, proof online). Urut dari dampak terbesar.
+
+**A. Cepat (± 1 jam masing-masing)**
+1. **Nomor WA dinormalisasi.** `0812…` → `62812…` saat membuat link wa.me (invoice, sesi, inquiry). Sekarang tombol "Send via WhatsApp" gagal untuk nomor yang diawali 0.
+2. **Bahasa dokumen bawaan = Indonesia** (bisa diatur di Settings), dan invoice baru dari klien lama memakai bahasa invoice terakhirnya.
+3. **Status server di dashboard admin:** backup terakhir (di server dan di GitHub), sisa disk VPS, versi API. Peringatan merah kalau backup > 2 hari.
+4. **Pemantau uptime gratis** (UptimeRobot / Better Stack) untuk `api.lintaswaktuvisual.com/api/health` → email/WA kalau server mati. Langkah manual 5 menit.
+
+**B. Menengah (setengah hari)**
+5. **Catat pembayaran** di halaman invoice: tombol "Terima pembayaran" (jumlah, tanggal, metode). Riwayat pembayaran tampil di dokumen; DP otomatis berkurang dari sisa; lunas → otomatis Paid. Ganti isian "Deposit received" yang manual.
+6. **Kuitansi** (bukti terima DP / pelunasan) satu klik dari pembayaran, bahasa klien, nomor sendiri (`KW-2026-0001`).
+7. **Unduh PDF langsung** (dibuat di server), tanpa dialog cetak browser — rapi juga dari HP.
+8. **Pengingat jatuh tempo:** daftar "jatuh tempo minggu ini / lewat" di dashboard + tombol WA berisi pesan pengingat sopan (EN/ID).
+
+**C. Lebih besar (1–2 hari)**
+9. **Notifikasi aktivitas klien:** klien membuka proof, menulis catatan, menyetujui album, membuka invoice → muncul di dashboard (lonceng) dan opsional email ke pemilik.
+10. **Admin berbahasa Indonesia** (pilihan bahasa antarmuka admin; dokumen untuk klien tetap EN/ID).
+11. **Halaman klien terpadu:** satu halaman per klien berisi sesi, galeri, proof, invoice, pembayaran, dan kontak — tidak perlu lompat antar menu.
+
+Rekomendasi urutan: 1 → 5 → 6 → 3 → 4 → 2 → 8 → 7 → 9 → 11 → 10.
