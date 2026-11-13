@@ -1,0 +1,38 @@
+# Backup harian API di VPS: database + uploads, dienkripsi (kunci = secret SECRET_KEY), disimpan 30 hari
+# sebagai artifact run ini. Repo publik, jadi isinya WAJIB terenkripsi. Cara memulihkan: docs/DEPLOYMENT.md.
+name: Backup API (VPS)
+
+on:
+  schedule:
+    - cron: "17 20 * * *" # 04.17 WITA
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    env:
+      HOST: 103.217.144.86
+      SSHPASS: ${{ secrets.VPS_PASSWORD }}
+      PASS: ${{ secrets.SECRET_KEY }}
+    steps:
+      - name: Ambil dari VPS
+        run: |
+          sudo apt-get install -y -qq sshpass >/dev/null
+          O="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
+          printf '%s\n' "$SSHPASS" | sshpass -e ssh $O lw@$HOST 'read -r P; printf "%s\n" "$P" | sudo -S -p "" bash -c "
+            set -e; D=/srv/lintas-waktu/data; T=\$(mktemp -d)
+            sqlite3 \$D/photo_platform.db \".backup \$T/photo_platform.db\"
+            tar -cz -C \$T photo_platform.db -C \$D uploads; rm -rf \$T
+          "' > backup.tgz
+          tar -tzf backup.tgz | head -3
+          ls -lh backup.tgz
+      - name: Enkripsi
+        run: |
+          printf '%s' "$PASS" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 --symmetric --cipher-algo AES256 -o "lw-backup-$(date -u +%F).tgz.gpg" backup.tgz
+          shred -u backup.tgz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lw-backup-${{ github.run_id }}
+          path: lw-backup-*.tgz.gpg
+          retention-days: 30
+          if-no-files-found: error

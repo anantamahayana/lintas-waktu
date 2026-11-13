@@ -2,6 +2,7 @@
 
 Yang terbaru di atas. Setiap perubahan yang di-push menambah satu entri di sini (aturannya di `CLAUDE.md`).
 Format: `### 2026-11-13 · NantaPakeAI (album 0.4.2)
+- Backup harian API (database + uploads) terenkripsi di GitHub Actions, 30 hari: `.github/workflows/backup-vps.yml`; cara memulihkan di `docs/DEPLOYMENT.md`.
 - Aplikasi album memakai API baru `https://api.lintaswaktuvisual.com` (VPS); Vercel `API_URL` sudah diganti.
 
 ### 2026-11-13 · NantaPakeAI (VPS)

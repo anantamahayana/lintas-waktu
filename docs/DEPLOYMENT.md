@@ -35,6 +35,11 @@ Ruang disk: volume menyimpan database **dan** cache foto. Cache tidak pernah mem
 Database: SQLite di volume. Tanpa Alembic — `migrate()` jalan saat start. Data produksi diisi lewat /admin.
 Revalidasi: API memanggil `/api/revalidate` di Vercel dengan `REVALIDATE_SECRET`.
 
+## Backup API (VPS)
+- Otomatis setiap hari 04.17 WITA: Actions → "Backup API (VPS)" (bisa juga Run workflow manual). Isi: database + `uploads/`, terenkripsi, disimpan 30 hari sebagai artifact di run tersebut.
+- Di server juga ada salinan harian database 14 hari: `/srv/lintas-waktu/data/backups/`.
+- Memulihkan: unduh artifact → `gpg -d lw-backup-TANGGAL.tgz.gpg > b.tgz` (passphrase = nilai secret `SECRET_KEY`) → `tar -xzf b.tgz` → salin `photo_platform.db` dan `uploads/` ke `/srv/lintas-waktu/data/` di server (hentikan API dulu: `cd /srv/lintas-waktu/repo/deploy/vps && sudo docker compose stop api`, lalu `start api`).
+
 ## Domain — lintaswaktuvisual.com
 - Registrar **Hostinger**, berakhir 2027-09-23 (? auto-renew aktif).
 - **DNS di Cloudflare** (plan Free, akun komangant25) sejak 27 Sep 2026 — nameserver dipindah dari `ns1/ns2.anjas.id` karena nameserver anjas hilang-timbul (SERVFAIL dari Google DNS & DNS kampus ISI, 26 Sep; DNSViz bersih, tanpa DNSSEC). Record Vercel sebaiknya **DNS only** (awan abu-abu); kalau diproksikan, SSL/TLS harus **Full (strict)**.
