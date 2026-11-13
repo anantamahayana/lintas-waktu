@@ -229,6 +229,45 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
   const zoomTo = (next: number | "fit") => setZoom(next === "fit" ? "fit" : Math.min(4, Math.max(0.1, next)));
   const stepZoom = (d: 1 | -1) => { const i = d > 0 ? STEPS.findIndex((x) => x > z + 0.001) : STEPS.length - 1 - [...STEPS].reverse().findIndex((x) => x < z - 0.001); zoomTo(STEPS[Math.max(0, Math.min(STEPS.length - 1, i))] ?? z); };
   const hand = tool === "hand" || spaceHand;
+  // Zoom kept under the pointer: remember the sheet point, restore the scroll after the new size is laid out.
+  const anchor = useRef<{ cx: number; cy: number; px: number; py: number; z: number } | null>(null);
+  const zoomAt = (next: number, cx: number, cy: number) => {
+    const el = canvas.current; const nz = Math.min(4, Math.max(0.1, next));
+    if (el) anchor.current = { cx, cy, px: el.scrollLeft + cx, py: el.scrollTop + cy, z };
+    setZoom(nz);
+  };
+  useLayoutEffect(() => {
+    const a = anchor.current, el = canvas.current; anchor.current = null;
+    if (!a || !el) return;
+    const r = z / a.z; el.scrollLeft = a.px * r - a.cx; el.scrollTop = a.py * r - a.cy;
+  }, [z]);
+  // Touchpad: pinch (WebView sends it as Ctrl+wheel) zooms smoothly; Ctrl+mouse wheel steps.
+  // At "Pas layar" a two-finger sideways swipe turns the spread.
+  const wheelFn = useRef<(e: WheelEvent) => void>(() => {});
+  const swipe = useRef({ acc: 0, until: 0 });
+  wheelFn.current = (e) => {
+    const el = canvas.current; if (!el || (e.target as Element).closest?.(".crop-box")) return;
+    if (e.ctrlKey) {
+      e.preventDefault();
+      const b = el.getBoundingClientRect(), cx = e.clientX - b.left, cy = e.clientY - b.top;
+      const pinch = e.deltaMode === 0 && Math.abs(e.deltaY) < 50; // a mouse notch is ~100
+      if (pinch) zoomAt(z * Math.exp(-e.deltaY * 0.01), cx, cy);
+      else { const i = e.deltaY < 0 ? STEPS.findIndex((x) => x > z + 0.001) : STEPS.length - 1 - [...STEPS].reverse().findIndex((x) => x < z - 0.001); zoomAt(STEPS[Math.max(0, Math.min(STEPS.length - 1, i))] ?? z, cx, cy); }
+      return;
+    }
+    if (zoom === "fit" && Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.5) {
+      const now = Date.now(), w = swipe.current;
+      if (now < w.until) return;
+      w.acc += e.deltaX;
+      if (Math.abs(w.acc) > 120) { runCommand(w.acc > 0 ? "e.next" : "e.prev"); w.acc = 0; w.until = now + 600; }
+    } else swipe.current.acc = 0;
+  };
+  useEffect(() => {
+    const el = canvas.current; if (!el) return;
+    const fn = (e: WheelEvent) => wheelFn.current(e);
+    el.addEventListener("wheel", fn, { passive: false });
+    return () => el.removeEventListener("wheel", fn);
+  }, [!!canvas.current, overview]);
 
   /** Nudge the selected frame or text by `dx`, `dy` millimetres. */
   const nudge = (dx: number, dy: number) => {
@@ -428,6 +467,7 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
     "e.zoomIn": { run: () => stepZoom(1), enabled: !overview },
     "e.zoomOut": { run: () => stepZoom(-1), enabled: !overview },
     "e.fit": { run: () => zoomTo("fit"), enabled: !overview },
+    "e.zoom100": { run: () => zoomTo(1), enabled: !overview },
     "e.actual": { run: () => zoomTo(1), enabled: !overview },
     "e.selectAll": { run: () => selectMany([...onSheet]), enabled: !overview && onSheet.size > 0 },
     "e.alignLeft": { run: () => doAlign("left"), enabled: canAlign },
@@ -521,8 +561,9 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
   const canvasEl = spread ? (
     <div className="canvas-wrap">
       <div ref={canvas} className={`canvas ${hand ? "panning" : ""} ${grabbing ? "grabbing" : ""}`}
-        onWheel={(e) => { if (e.ctrlKey) { e.preventDefault(); stepZoom(e.deltaY < 0 ? 1 : -1); } }}
-        onPointerDown={(e) => { if (!hand || !canvas.current) return; pan.current = { x: e.clientX, y: e.clientY, sl: canvas.current.scrollLeft, st: canvas.current.scrollTop }; setGrabbing(true); (e.currentTarget as Element).setPointerCapture(e.pointerId); }}
+        onDoubleClick={(e) => { if (e.target === e.currentTarget || (e.target as Element).classList.contains("canvas-in")) zoomTo("fit"); }}
+        onAuxClick={(e) => { if (e.button === 1) e.preventDefault(); }}
+        onPointerDown={(e) => { const mid = e.button === 1; if ((!hand && !mid) || !canvas.current) return; if (mid) e.preventDefault(); pan.current = { x: e.clientX, y: e.clientY, sl: canvas.current.scrollLeft, st: canvas.current.scrollTop }; setGrabbing(true); (e.currentTarget as Element).setPointerCapture(e.pointerId); }}
         onPointerMove={(e) => { const p = pan.current; if (p && canvas.current) { canvas.current.scrollLeft = p.sl - (e.clientX - p.x); canvas.current.scrollTop = p.st - (e.clientY - p.y); } }}
         onPointerUp={() => { pan.current = null; setGrabbing(false); }}
         onClick={(e) => { if (e.target === e.currentTarget || (e.target as Element).classList.contains("canvas-in")) deselect(); }}>
@@ -599,7 +640,7 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
       <div className="scroll">
         {tab === "revisi" ? (
           <RevisionPanel info={proof} loading={proofBusy} error={proofErr} onRefresh={() => void loadProof()} onSend={() => onSendProof?.()}
-            onOpen={(n) => { const k = spreadOfProof(n.spread); if (k >= 0) { setSi(k); deselect(); } }} onMark={(n, d) => void markProofNote(n, d)} labelOf={proofLabel} />
+            onOpen={(n) => { const k = spreadOfProof(n.spread); if (k >= 0) { setSi(k); deselect(); } else runCommand("mod.sampul"); }} onMark={(n, d) => void markProofNote(n, d)} labelOf={proofLabel} />
         ) : tab === "album" ? (
           <>
             <Section id="e-all" title="Semua halaman">

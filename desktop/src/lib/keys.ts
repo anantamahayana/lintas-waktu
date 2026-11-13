@@ -57,7 +57,7 @@ export const CATALOG = {
   "k.esc": E("Keluar zoom / bandingkan", ["Esc"], "kurasi", "Kurasi"),
 
   "e.select": E("Alat pilih", ["V"], "editor", "Tata letak"),
-  "e.hand": E("Geser kanvas (tahan Spasi)", ["H", "Space"], "editor", "Tata letak"),
+  "e.hand": E("Geser kanvas (tahan Spasi, atau seret klik tengah)", ["H", "Space"], "editor", "Tata letak"),
   "e.text": E("Tambah teks", ["T"], "editor", "Tata letak"),
   "e.frame": E("Tambah bingkai kosong", ["F"], "editor", "Tata letak"),
   "e.nudge": E("Geser 0,5 mm (Shift: 5 mm)", ["Left", "Right", "Up", "Down", "Shift+Left", "Shift+Right", "Shift+Up", "Shift+Down"], "editor", "Tata letak", true),
@@ -86,7 +86,8 @@ export const CATALOG = {
   "e.guides": E("Garis bantu", ["Ctrl+;"], "editor", "Tampilan"),
   "e.zoomIn": E("Perbesar", ["Ctrl+="], "editor", "Tampilan", true),
   "e.zoomOut": E("Perkecil", ["Ctrl+-"], "editor", "Tampilan", true),
-  "e.fit": E("Pas layar", ["Ctrl+0"], "editor", "Tampilan"),
+  "e.fit": E("Pas layar (atau klik dua kali area kosong)", ["Ctrl+0"], "editor", "Tampilan"),
+  "e.zoom100": E("Zoom 100%", ["Ctrl+1"], "editor", "Tampilan"),
   "e.actual": E("Ukuran 100%", ["Ctrl+1"], "editor", "Tampilan"),
   "e.selectAll": E("Pilih semua bingkai di spread", ["Ctrl+A"], "editor", "Tata letak"),
   "e.alignLeft": E("Rata kiri", ["Alt+Shift+A"], "editor", "Tata letak"),
