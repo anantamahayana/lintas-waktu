@@ -32,7 +32,7 @@ const T = {
     writeNote: "Write a note", approveAfter: (a: number, b: number) => `Approve · ${a}/${b}`, page: (p: string) => `Page ${p}`, nextPage: (p: string) => `swipe for page ${p} →`,
     summary: (n: number) => (n ? `${n} note${n > 1 ? "s" : ""} for us to look at. Approve when the album feels right.` : "No notes so far. Approve when the album feels right."),
     chips: ["Swap this photo", "Brighter", "Move it", "Remove this photo"], noteHere: (l: string) => (/\d/.test(l) ? `Note for pages ${l}` : `Note for the ${l.toLowerCase()}`),
-    pinch: "Pinch to zoom", close: "Close", lastPage: "Last page",
+    pinch: "Pinch to zoom", close: "Close", lastPage: "Last page", frontCover: "Front cover", swipeOn: "swipe to open →",
     tour: {
       welcome: (n: string) => `Welcome, ${n}`, intro: "This is your album before it goes to print. Look through every page, leave notes where you'd like changes, and approve when it feels right.",
       tiles: ["Flip through", "Point & note", "Approve"], tilesSub: ["Every page, as it will be printed.", "Tell us what you'd like changed.", "When everything feels right."],
@@ -64,7 +64,7 @@ const T = {
     writeNote: "Tulis catatan", approveAfter: (a: number, b: number) => `Setujui · ${a}/${b}`, page: (p: string) => `Halaman ${p}`, nextPage: (p: string) => `geser untuk halaman ${p} →`,
     summary: (n: number) => (n ? `${n} catatan akan kami periksa. Setujui kalau album sudah pas.` : "Belum ada catatan. Setujui kalau album sudah pas."),
     chips: ["Ganti foto ini", "Lebih terang", "Geser posisi", "Hapus foto ini"], noteHere: (l: string) => (/\d/.test(l) ? `Catatan halaman ${l}` : `Catatan ${l.toLowerCase()}`),
-    pinch: "Cubit untuk memperbesar", close: "Tutup", lastPage: "Halaman terakhir",
+    pinch: "Cubit untuk memperbesar", close: "Tutup", lastPage: "Halaman terakhir", frontCover: "Sampul depan", swipeOn: "geser untuk membuka →",
     tour: {
       welcome: (n: string) => `Selamat datang, ${n}`, intro: "Ini album Anda sebelum dicetak. Lihat setiap halaman, tulis catatan di bagian yang ingin diubah, lalu setujui kalau sudah pas.",
       tiles: ["Lihat halaman", "Tunjuk & catat", "Setujui"], tilesSub: ["Setiap halaman, seperti nanti dicetak.", "Ceritakan apa yang ingin diubah.", "Kalau semuanya sudah pas."],
@@ -186,7 +186,7 @@ function Viewer({ slug, data, setData, lang, setLang }: { slug: string; data: Pr
   const mobile = mode !== "desk";
   const n = data.spreads.length;
   const [i, setI] = useState(0);
-  const [half, setHalf] = useState<0 | 1>(0);
+  const [halfRaw, setHalf] = useState<0 | 1>(0);
   const [pageView, setPageView] = useState(true);
   const [drawer, setDrawer] = useState(false);
   // Spreads seen on this device, per version: Approve waits until every one has been looked at.
@@ -227,18 +227,22 @@ function Viewer({ slug, data, setData, lang, setLang }: { slug: string; data: Pr
   const seenAll = data.spreads.every((x) => seen.has(x.index));
   const nums = label.match(/(\d+)\D+(\d+)/);
   // Upright phone: one page at a time, large; the cover and odd shapes stay whole.
-  const single = mode === "portrait" && pageView && !!nums && !!sp && sp.w / sp.h > 1.6;
+  const single = mode === "portrait" && pageView && !!sp && sp.w / sp.h > 1.6;
+  // The cover sheet (back · spine · front) shows its front in page view: one page, like the album in the hand.
+  const cover = !nums;
+  const half: 0 | 1 = single && cover ? 1 : halfRaw;
+  const anyWide = data.spreads.some((x) => x.w / x.h > 1.6);
   const step = useCallback((d: 1 | -1) => {
     // The ends of the album stay put: no swipe past the last page or before the first.
     if (d > 0 && i >= n - 1 && (!single || half === 1)) return;
-    if (d < 0 && i <= 0 && (!single || half === 0)) return;
+    if (d < 0 && i <= 0 && (!single || half === 0 || cover)) return;
     if (single) {
       if (d > 0 && half === 0) { setHalf(1); setPoint(null); return; }
       if (d < 0 && half === 1) { setHalf(0); setPoint(null); return; }
       if (d < 0) { if (i > 0) go(i - 1, 1); return; }
     }
     go(i + d);
-  }, [single, half, i, n, go]);
+  }, [single, half, cover, i, n, go]);
 
   const endTour = () => { setTour(null); store.set(`lw_p_tour_${slug}`, "1"); };
 
@@ -379,9 +383,9 @@ function Viewer({ slug, data, setData, lang, setLang }: { slug: string; data: Pr
     <nav className="flex gap-2.5 overflow-x-auto px-4 pt-3 pb-1" aria-label="Spreads">
       {data.spreads.map((s, k) => (
         <button type="button" key={s.index} onClick={() => go(k)} aria-current={k === i ? "true" : undefined} className="shrink-0 flex flex-col items-center gap-1">
-          <span className={clsx("relative block h-[34px]", k === i ? "outline outline-2 outline-ink" : seen.has(s.index) ? "outline outline-1 outline-line" : "outline outline-1 outline-dashed outline-faint opacity-70")} style={{ aspectRatio: `${s.w} / ${s.h}` }}>
+          <span className={clsx("relative block h-[34px] shrink-0", k === i ? "outline outline-2 outline-ink" : seen.has(s.index) ? "outline outline-1 outline-line" : "outline outline-1 outline-dashed outline-faint opacity-70")} style={{ width: Math.round((34 * s.w) / s.h) }}>
             {/* eslint-disable-next-line @next/next/no-img-element -- small signed thumbnail */}
-            <img src={papi.img(s.url)} alt="" loading="lazy" className="h-full w-full object-cover" />
+            <img src={papi.img(s.url)} alt="" className="h-full w-full object-cover" />
             {(counts.get(s.index) ?? 0) > 0 && <span className="absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 rounded-full text-white text-[9px] font-semibold flex items-center justify-center" style={{ background: GOLD }}>{counts.get(s.index)}</span>}
           </span>
           <span className={clsx("text-[11px]", k === i ? "text-ink font-medium" : "text-faint")}>{s.label}</span>
@@ -436,7 +440,7 @@ function Viewer({ slug, data, setData, lang, setLang }: { slug: string; data: Pr
   );
 
   if (mode === "portrait") {
-    const pageNo = nums ? nums[half + 1] : "";
+    const pageNo = nums ? t.page(nums[half + 1]) : t.frontCover;
     return (
       <div className="h-dvh flex flex-col bg-[#fbfaf7] overflow-hidden">
         {preview}
@@ -449,7 +453,7 @@ function Viewer({ slug, data, setData, lang, setLang }: { slug: string; data: Pr
           {helpBtn}
         </header>
         <div className="shrink-0 px-4 pt-3 flex items-center gap-2">
-          {nums && sp && sp.w / sp.h > 1.6 && (
+          {anyWide && (
             <div role="group" aria-label={t.viewSpread} className="flex p-[3px] bg-[#efece5] rounded-[10px]">
               {([[true, t.viewPage], [false, t.viewSpread]] as const).map(([v, l]) => (
                 <button type="button" key={l} aria-pressed={pageView === v} onClick={() => { setPageView(v); setHalf(0); }}
@@ -463,9 +467,9 @@ function Viewer({ slug, data, setData, lang, setLang }: { slug: string; data: Pr
         <main className="flex-1 min-h-0 flex flex-col justify-center px-4 gap-3" {...swipeProps}>
           {figure({ width: `min(100%, calc((100dvh - 330px) * ${ratio}))`, alignSelf: "center" })}
           <div className="flex justify-between items-center text-[13px] text-mute">
-            <span>{single ? t.page(pageNo) : t.pages(label)}</span>
-            {single ? <span className="flex gap-1.5" aria-hidden><span className={clsx("h-1.5 w-1.5 rounded-full", half === 0 ? "bg-ink" : "bg-line")} /><span className={clsx("h-1.5 w-1.5 rounded-full", half === 1 ? "bg-ink" : "bg-line")} /></span> : <span>{t.spreadOf(i + 1, n)}</span>}
-            <span>{single && half === 0 ? t.nextPage(nums![2]) : i >= n - 1 ? t.lastPage : !single ? t.pinch : ""}</span>
+            <span>{single ? pageNo : t.pages(label)}</span>
+            {single && cover ? <span /> : single ? <span className="flex gap-1.5" aria-hidden><span className={clsx("h-1.5 w-1.5 rounded-full", half === 0 ? "bg-ink" : "bg-line")} /><span className={clsx("h-1.5 w-1.5 rounded-full", half === 1 ? "bg-ink" : "bg-line")} /></span> : <span>{t.spreadOf(i + 1, n)}</span>}
+            <span>{i >= n - 1 && (!single || half === 1) ? t.lastPage : single && cover ? t.swipeOn : single && half === 0 ? t.nextPage(nums![2]) : !single ? t.pinch : ""}</span>
           </div>
         </main>
         <div className="shrink-0 border-t border-line bg-white">
