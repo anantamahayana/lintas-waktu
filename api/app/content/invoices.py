@@ -174,6 +174,7 @@ class Business(BaseModel):
     bank_details: str = ""  # free text: bank, account name, number
     prefix: str = "LW"
     default_terms: str = "50% booking fee secures the date. Balance due 7 days before the event. Prices include delivery through the private gallery."
+    default_terms_id: str = "DP 50% mengunci tanggal. Pelunasan paling lambat 7 hari sebelum acara. Harga sudah termasuk pengiriman lewat galeri privat."
     default_due_days: int = 7
     tax_percent: int = 0
 
@@ -187,6 +188,7 @@ class BusinessUpdate(BaseModel):
     bank_details: str | None = None
     prefix: str | None = Field(None, max_length=8, pattern=r"^[A-Za-z0-9-]*$")
     default_terms: str | None = None
+    default_terms_id: str | None = None
     default_due_days: int | None = Field(None, ge=0, le=365)
     tax_percent: int | None = Field(None, ge=0, le=100)
 
@@ -357,7 +359,7 @@ def create_invoice(body: InvoiceIn, db: DbSession = Depends(get_db)):
     data = body.model_dump()
     data["issued_at"] = data["issued_at"] or date.today()
     if data.get("notes") is None:
-        data["notes"] = biz.default_terms
+        data["notes"] = biz.default_terms_id if data.get("lang") == "id" else biz.default_terms
     _apply(inv, data)
     db.add(inv)
     db.flush()
@@ -481,6 +483,7 @@ def public_invoice(token: str, db: DbSession = Depends(get_db)):
     biz = get_business(db).model_dump()
     biz.pop("prefix", None)
     biz.pop("default_terms", None)
+    biz.pop("default_terms_id", None)
     biz.pop("default_due_days", None)
     biz.pop("tax_percent", None)
     return PublicInvoice(

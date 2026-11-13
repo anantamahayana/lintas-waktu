@@ -70,3 +70,9 @@ def test_events_record_the_trail_and_sent_hash_is_kept(client, admin):
     cur = client.get(f"/api/admin/invoices/{inv['id']}", headers=admin).json()
     assert cur["sent_hash"] and cur["sent_hash"] != cur["current_hash"]
     assert client.delete(f"/api/admin/invoices/{inv['id']}", headers=admin).status_code == 400  # issued → void, never delete
+
+
+def test_default_notes_follow_the_document_language(client, admin):
+    assert _new(client, admin, lang="id")["notes"].startswith("DP 50%")
+    assert _new(client, admin)["notes"].startswith("50% booking fee")
+    assert _new(client, admin, lang="id", notes="Tulisan sendiri")["notes"] == "Tulisan sendiri"

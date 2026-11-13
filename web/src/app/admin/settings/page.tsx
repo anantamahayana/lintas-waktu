@@ -190,7 +190,8 @@ function InvoiceCard() {
       </div>
       <Field label="Address" hint="footer of the document"><Textarea value={b.address} onChange={set("address")} rows={2} className="!min-h-[64px]" /></Field>
       <Field label="Bank / payment details" hint="printed on invoices that still have a balance"><Textarea value={b.bank_details} onChange={set("bank_details")} rows={3} placeholder={"BCA 123 456 7890 · a.n. I Komang Ananta Mahayana"} /></Field>
-      <Field label="Default notes / terms"><Textarea value={b.default_terms} onChange={set("default_terms")} rows={3} /></Field>
+      <Field label="Default notes / terms · English"><Textarea value={b.default_terms} onChange={set("default_terms")} rows={3} /></Field>
+      <Field label="Default notes / terms · Bahasa Indonesia"><Textarea value={b.default_terms_id ?? ""} onChange={set("default_terms_id")} rows={3} /></Field>
       <div><Btn type="button" kind="ink" onClick={save} disabled={busy || !dirty}>{busy ? "Saving…" : dirty ? "Save invoice details" : "Saved"}</Btn></div>
     </Card>
   );

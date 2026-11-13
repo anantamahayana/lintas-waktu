@@ -53,6 +53,9 @@ export function InvoiceForm({ invoice, business }: { invoice?: Invoice; business
     tax_percent: business.tax_percent || 0, deposit_paid: 0, notes: business.default_terms || "", session_id: "",
   };
   const [v, setV] = useState<Values>(initial);
+  // The default notes follow the document language, unless they were edited by hand.
+  const termsOf = (l: "en" | "id") => (l === "id" ? business.default_terms_id : business.default_terms) || "";
+  const swapTerms = (notes: string, from: "en" | "id", to: "en" | "id") => (from !== to && (!notes.trim() || notes.trim() === termsOf(from).trim()) ? termsOf(to) : notes);
   const [saved, setSaved] = useState<Values>(initial);
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -181,10 +184,10 @@ export function InvoiceForm({ invoice, business }: { invoice?: Invoice; business
           <Card title="Money">
             <div className="grid sm:grid-cols-2 gap-4">
               <Field label="Currency" hint={cur === "USD" ? "whole dollars" : "rupiah"}>
-                <Select value={v.currency} onChange={(e) => setV((s) => ({ ...s, currency: e.target.value as "IDR" | "USD", lang: e.target.value === "USD" ? "en" : s.lang }))}><option value="IDR">IDR — Rupiah</option><option value="USD">USD — US Dollar</option></Select>
+                <Select value={v.currency} onChange={(e) => setV((s) => { const lang = e.target.value === "USD" ? "en" : s.lang; return { ...s, currency: e.target.value as "IDR" | "USD", lang, notes: swapTerms(s.notes, s.lang, lang) }; })}><option value="IDR">IDR — Rupiah</option><option value="USD">USD — US Dollar</option></Select>
               </Field>
               <Field label="Document language" hint="what the client reads">
-                <Select value={v.lang} onChange={set("lang")}><option value="en">English</option><option value="id">Bahasa Indonesia</option></Select>
+                <Select value={v.lang} onChange={(e) => { const lang = e.target.value as "en" | "id"; setV((s) => ({ ...s, lang, notes: swapTerms(s.notes, s.lang, lang) })); }}><option value="en">English</option><option value="id">Bahasa Indonesia</option></Select>
               </Field>
               <Field label="Deposit received" hint="already paid, deducted from the balance" error={errors.deposit_paid}><Input invalid={!!errors.deposit_paid} type="number" min={0} value={v.deposit_paid} onChange={set("deposit_paid")} /></Field>
               <Field label="Discount" hint="amount"><Input type="number" min={0} value={v.discount} onChange={set("discount")} /></Field>

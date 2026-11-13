@@ -1,7 +1,12 @@
 # Catatan perubahan
 
 Yang terbaru di atas. Setiap perubahan yang di-push menambah satu entri di sini (aturannya di `CLAUDE.md`).
-Format: `### 2026-11-13 · NantaPakeAI (album 0.4.7)
+Format: `### 2026-11-13 · NantaPakeAI (invoice)
+- Invoice: catatan bawaan mengikuti bahasa dokumen (ganti bahasa = catatan ikut berganti, kecuali sudah diketik sendiri). Pengaturan punya catatan bawaan EN dan ID.
+- Invoice: cetak/PDF tidak lagi bisa terpotong di kanan, apa pun kertas, margin, atau skala di dialog cetak.
+- **Manual:** tidak ada (API sudah dideploy ulang ke VPS lewat Actions).
+
+### 2026-11-13 · NantaPakeAI (album 0.4.7)
 - Tata letak: pin bernomor catatan klien (proof online) tampil di spread, di titik yang sama dengan di web. Klik pin = buka catatannya di tab Revisi. N = tampilkan/sembunyikan pin.
 
 ### 2026-11-13 · NantaPakeAI (album 0.4.6)

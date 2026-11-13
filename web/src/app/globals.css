@@ -231,7 +231,12 @@
 @media print {
   @page { size: A4; margin: 14mm; }
   body { background: #fff !important; }
-  .invoice-doc { border: 0 !important; max-width: none !important; padding: 0 !important; }
+  /* Whatever the paper, margins or scale chosen in the print dialog, the sheet never runs past the page edge. */
+  html, body, main, .print-page { width: auto !important; min-width: 0 !important; max-width: none !important; overflow: visible !important; }
+  main:has(.invoice-doc) { padding: 0 !important; margin: 0 !important; }
+  .invoice-doc { border: 0 !important; width: 100% !important; max-width: 100% !important; padding: 0 !important; box-sizing: border-box; }
+  .invoice-doc table { table-layout: fixed; width: 100%; }
+  .invoice-doc td, .invoice-doc dd { overflow-wrap: anywhere; }
 }
 
 /* Album preview ---------------------------------------------------------------
