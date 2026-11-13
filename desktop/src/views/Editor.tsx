@@ -312,11 +312,55 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
     a = patchPage(a, selPage.index, { tpl: clip.tpl, free: clip.free, texts: clip.texts?.map((x) => ({ ...x, id: x.id + Date.now().toString(36) })), bg: clip.bg, stroke: clip.stroke });
     setAlbum(a);
   };
+  /** Del: the photo goes back to the panel and its frame stays (an empty frame itself is removed). */
   const deleteSel = () => {
     if (selText && tb) { setPage(selText.page, { texts: (album.pages[selText.page].texts ?? []).filter((x) => x.id !== tb.id) }); setSelText(null); return; }
-    if (multi) { setAlbum(group.reduce((a, id) => removePhoto(a, id), album)); deselect(); return; }
-    if (sel && selOnSpread) { setAlbum(removePhoto(album, sel)); setSel(""); }
+    const ids = multi ? group : sel && selOnSpread ? [sel] : [];
+    if (!ids.length) return;
+    if (ids.every(isEmpty)) { deleteFrames(); return; }
+    setAlbum(ids.reduce((a, id) => (isEmpty(id) ? a : clearFrame(a, id)), album)); deselect();
   };
+  /** Shift+Del: the frame goes too (its photo back to the panel); the page keeps its other frames. */
+  const deleteFrames = () => {
+    const ids = multi ? group : sel && selOnSpread ? [sel] : [];
+    if (!ids.length) return;
+    setAlbum(ids.reduce((a, id) => removePhoto(a, id), album)); deselect();
+  };
+  // ---- cut / copy / paste a photo (moves it: a photo is in the album once) ----
+  const [photoClip, setPhotoClip] = useState<string | null>(null);
+  const [photoOver, setPhotoOver] = useState<number | null>(null);
+  const clipPhoto = () => { if (sel && selOnSpread && !isEmpty(sel)) { setPhotoClip(sel); void 0; } };
+  const pastePhoto = () => {
+    if (!photoClip || !album.order.includes(photoClip)) { setPhotoClip(null); return; }
+    if (sel && selOnSpread && sel !== photoClip) {
+      // Onto a frame: the two swap (an empty frame simply takes the photo).
+      setAlbum(swapPhotos(album, photoClip, sel)); setSel(photoClip); setMore([]); setPhotoClip(null); return;
+    }
+    if (selPage && placeOnPage(photoClip, selPage)) setPhotoClip(null);
+  };
+  /** Move the selected photo into the biggest frame of its page (the one it was in takes the other photo). */
+  const makeHero = () => {
+    if (!sel || !selPage?.tpl || multi) return;
+    const areas = selPage.ids.map((_, k) => { const r = frameRectMm(preset, selPage, k); return r.w * r.h; });
+    const big = areas.indexOf(Math.max(...areas)), there = selPage.ids[big];
+    if (there === sel) return;
+    // Keep the frames where they are: fix the current template so it does not change with the new aspect.
+    const a = selPage.cfg.free || selPage.cfg.tpl ? album : patchPage(album, selPage.index, { tpl: selPage.tpl.id });
+    setAlbum(swapPhotos(a, sel, there));
+  };
+  /** Put a photo (from the album or the panel) on a page in a new frame; its old frame stays empty. */
+  const placeOnPage = (id: string, pg: LaidPage): boolean => {
+    if (pg.cfg.locked || pg.side === "tail") return false;
+    const a = addEmptyFrames(album, pg.index);
+    if (a === album) return false;
+    const st = a.pages.slice(0, pg.index).reduce((t, p) => t + p.n, 0), fresh = a.order[st + a.pages[pg.index].n - 1];
+    setAlbum(a.order.includes(id) ? swapPhotos(a, id, fresh) : replacePhoto(a, fresh, id));
+    setSel(id); setMore([]); setSelText(null);
+    return true;
+  };
+  /** Dragging a photo over a spread in the strip: wait a moment, then open that spread so it can be dropped in a frame. */
+  const hoverTimer = useRef(0);
+  const hoverSpread = (i: number) => { clearTimeout(hoverTimer.current); hoverTimer.current = window.setTimeout(() => { setSi(i); }, 600); };
   const deleteSpread = async () => {
     if (!spread) return;
     const pgs = [spread.left, spread.right].filter((p): p is LaidPage => !!p && p.side !== "tail");
@@ -369,6 +413,11 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
     "e.lock": { run: () => selPage && setPage(selPage.index, { locked: !selPage.cfg.locked }), enabled: !!selPage, checked: !!selPage?.cfg.locked },
     "e.join": { run: toggleJoin, enabled: !!selPage, checked: joined },
     "e.delete": { run: deleteSel, enabled: !!tb || selOnSpread },
+    "e.deleteFrame": { run: deleteFrames, enabled: selOnSpread },
+    "e.hero": { run: makeHero, enabled: selOnSpread && !!selPhoto && !multi && (selPage?.ids.length ?? 0) > 1 },
+    "e.cut": { run: clipPhoto, enabled: selOnSpread && !isEmpty(sel) && !multi },
+    "e.copyPhoto": { run: clipPhoto, enabled: selOnSpread && !isEmpty(sel) && !multi },
+    "e.paste": { run: pastePhoto, enabled: !!photoClip && (selOnSpread || !!selPage) },
     "e.edit": { run: () => { if (tb) { setTab("props"); setTimeout(() => textArea.current?.focus(), 30); } else setCropId(crop ? "" : sel); }, enabled: !!tb || (selOnSpread && !!selPhoto?.thumb) },
     "e.dup": { run: dupText, enabled: !!tb },
     "e.copyLayout": { run: copyLayout, enabled: !!selPage },
@@ -443,6 +492,7 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
           <span className="vdiv" />
           <span className="lbl">Perbesar</span>{slider(selPl.z, 1, 3, 0.01, (v) => setPlace(sel, { z: v }), `${Math.round(selPl.z * 100)}%`)}
           <span className="vdiv" />
+          <Btn label="Jadikan utama" icon="maximize-2" kind="ghost" cmd="e.hero" />
           <IconBtn icon="rotate-ccw" tip="Atur ulang posisi foto" onClick={() => commit({ ...design, place: { ...place, [sel]: CENTER } })} />
           <IconBtn icon="x" tip="Kosongkan bingkai (foto kembali ke panel)" onClick={() => { setAlbum(clearFrame(album, sel)); setSel(""); }} />
           <IconBtn icon="trash-2" cmd="e.delete" />
@@ -462,6 +512,7 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
           <span className="grow" /><span className="caption">Klik foto atau teks untuk mengeditnya</span>
         </>
       )}
+      {photoClip && <span className="clipnote" role="status"><Icon name="copy" size={12} />1 foto siap ditempel · pilih bingkai atau halaman, Ctrl+V</span>}
       <span className="vdiv" /><IconBtn icon="panel-left" cmd="app.panels" />
     </div>
   );
@@ -518,12 +569,19 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
           const note = [sp.left, sp.right].some((x) => x?.cfg.note && !x.cfg.noteDone);
           const warn = warnPages.has(i * 2 + 1) || warnPages.has(i * 2 + 2);
           return (
-            <button key={i} type="button" className={`st-item ${i === s ? "cur" : ""} ${warn ? "warn" : ""} ${stripDrag && stripDrag.over === i && stripDrag.from !== i ? "drop" : ""}`} draggable
+            <button key={i} type="button" className={`st-item ${i === s ? "cur" : ""} ${warn ? "warn" : ""} ${(stripDrag && stripDrag.over === i && stripDrag.from !== i) || photoOver === i ? "drop" : ""}`} draggable
               ref={(el) => { if (el && i === s) el.scrollIntoView?.({ block: "nearest", inline: "nearest" }); }}
               onClick={() => { setSi(i); deselect(); }}
               onDragStart={(e) => { setStripDrag({ from: i, over: i }); e.dataTransfer.setData("text/plain", `spread:${i}`); e.dataTransfer.effectAllowed = "move"; }}
-              onDragOver={(e) => { if (stripDrag) { e.preventDefault(); if (stripDrag.over !== i) setStripDrag({ ...stripDrag, over: i }); } }}
-              onDrop={(e) => { e.preventDefault(); if (stripDrag && stripDrag.from !== i) { setAlbum(moveSheet(album, pages, stripDrag.from, i)); setSi(i); } setStripDrag(null); }}
+              onDragOver={(e) => { e.preventDefault(); if (stripDrag) { if (stripDrag.over !== i) setStripDrag({ ...stripDrag, over: i }); } else if (i !== s) { if (photoOver !== i) { setPhotoOver(i); hoverSpread(i); } } }}
+              onDragLeave={() => { if (!stripDrag) { clearTimeout(hoverTimer.current); setPhotoOver(null); } }}
+              onDrop={(e) => {
+                e.preventDefault(); clearTimeout(hoverTimer.current); setPhotoOver(null);
+                if (stripDrag) { if (stripDrag.from !== i) { setAlbum(moveSheet(album, pages, stripDrag.from, i)); setSi(i); } setStripDrag(null); return; }
+                // A photo dropped on a spread thumbnail lands on that spread in a new frame.
+                const id = e.dataTransfer.getData("text/plain"), pg = [sp.left, sp.right].find((x) => x && x.side !== "tail" && !x.cfg.locked);
+                if (id && !id.startsWith("spread:") && pg && placeOnPage(id, pg)) setSi(i);
+              }}
               onDragEnd={() => setStripDrag(null)}>
               <MiniSheet sp={sp} preset={preset} byId={byId} place={place} />
               <span className="lb">{warn && <Icon name="triangle-alert" size={11} className="warn-text" />}{i * 2 + 1}–{i * 2 + 2}{sp.left?.side === "both" ? " · panorama" : ""}{note && <i className="dot" />}</span>
@@ -609,14 +667,14 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
                 <Row label="Geser tegak">{slider(selPl.y, 0, 1, 0.01, (v) => setPlace(sel, { y: v }), `${Math.round(selPl.y * 100)}%`)}</Row>
                 {selDpi > 0 && <div className={`note ${selDpi < (preset.dpi * 2) / 3 ? "warn" : "ok"}`}><Icon name={selDpi < (preset.dpi * 2) / 3 ? "triangle-alert" : "circle-check"} size={14} />
                   {selDpi < (preset.dpi * 2) / 3 ? `Resolusi cetak ${selDpi} dpi (target ${preset.dpi}). Perkecil bingkai atau ganti foto.` : `Resolusi cetak ${selDpi} dpi · aman`}</div>}
-                <div className="pair"><Btn label="Kosongkan" icon="x" full onClick={() => { setAlbum(clearFrame(album, sel)); setSel(""); }} /><Btn label="Hapus bingkai" icon="trash-2" full cmd="e.delete" /></div>
+                <div className="pair"><Btn label="Kosongkan" icon="x" full onClick={() => { setAlbum(clearFrame(album, sel)); setSel(""); }} /><Btn label="Hapus bingkai" icon="trash-2" full cmd="e.deleteFrame" /></div>
                 <p className="caption" title={selPhoto.name}>{selPhoto.name}</p>
               </Section>
             )}
             {!tb && selOnSpread && isEmpty(sel) && (
               <Section id="e-empty" title="Bingkai kosong">
                 <p className="caption">Seret foto dari panel kiri ke bingkai ini.</p>
-                <Btn label="Hapus bingkai" icon="trash-2" full cmd="e.delete" />
+                <Btn label="Hapus bingkai" icon="trash-2" full cmd="e.deleteFrame" />
               </Section>
             )}
             {blankPick && (
@@ -632,12 +690,12 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
               <>
                 <Section id="e-layout" title={`Tata letak ${pageLabel}`}>
                   <div className="counts" role="group" aria-label="Jumlah foto">
-                    {countsFor(joined).map((n) => <button key={n} type="button" className={selPage.cfg.n === n ? "on" : ""} aria-pressed={selPage.cfg.n === n} data-tip={`${n} foto`} onClick={() => setAlbum(setCount(album, selPage.index, n))}>{n}</button>)}
+                    {countsFor(joined).map((n) => <button key={n} type="button" className={selPage.cfg.n === n ? "on" : ""} aria-pressed={selPage.cfg.n === n} data-tip={`${n} foto`} disabled={!!selPage.cfg.locked} onClick={() => setAlbum(setCount(album, selPage.index, n, sel && selPage.ids.includes(sel) ? [sel] : []))}>{n}</button>)}
                   </div>
                   <div className={joined ? "tpls wide" : "tpls"}>
                     {templatesFor(selPage.ids.length, joined).map((t) => (
                       <button key={t.id} type="button" className={`tpl ${!selPage.cfg.free && selPage.tpl?.id === t.id ? "on" : ""}`} aria-label={t.label} data-tip={t.label}
-                        onClick={() => setAlbum(applyTpl(album, selPage.index, t))}
+                        disabled={!!selPage.cfg.locked} onClick={() => setAlbum(applyTpl(album, selPage.index, t, sel && selPage.ids.includes(sel) ? [sel] : []))}
                         style={{ gridTemplateColumns: `repeat(${t.cols}, 1fr)`, gridTemplateRows: `repeat(${t.rows}, 1fr)` }}>
                         {t.cells.map(([c, r, cs, rs], k) => <span key={k} style={{ gridColumn: `${c + 1} / span ${cs}`, gridRow: `${r + 1} / span ${rs}` }} />)}
                       </button>

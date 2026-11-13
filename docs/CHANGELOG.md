@@ -6,6 +6,10 @@ dan **langkah manual** kalau ada. Detail teknis lengkap ada di pesan commit (`gi
 
 ---
 
+### 2026-11-13 · NantaPakeAI
+- Aplikasi album 0.4.1, dari masukan Yukti: **mengubah jumlah foto atau template satu halaman tidak lagi menggeser foto halaman lain** (termasuk yang dikunci). Halaman yang bertambah mendapat bingkai kosong; yang berkurang mengembalikan foto ke panel, dan foto yang diklik tetap tinggal di bingkai terbesar. Halaman terkunci tidak bisa diubah jumlah/templatenya. Menghapus bingkai terakhir tidak lagi menghapus halaman (sebelumnya semua halaman sesudahnya bergeser). Panorama/pisahkan juga hanya mengubah halaman itu.
+- **Potong/salin + tempel foto** (Ctrl+X / Ctrl+C lalu Ctrl+V): ke bingkai = tukar, ke halaman = bingkai baru. **Seret foto ke thumbnail spread** di bawah: tahan sebentar untuk membuka spread itu, atau lepas di thumbnail untuk menaruhnya di sana. **Del** = hapus foto saja (bingkai tetap), **Shift+Del** = hapus bingkai. **Jadikan utama** (Shift+H) memindah foto ke bingkai terbesar halamannya. Editor template: kotak tidak lagi "lompat" setelah membuat bingkai. Pegangan bingkai sedikit lebih besar.
+
 ### 2026-11-12 · NantaPakeAI
 - Aplikasi album 0.4.0: **Kirim proof ke klien** (Album › Kirim proof ke klien…, Ctrl+Shift+K, atau tombol di Ekspor): masuk sekali dengan password admin situs (yang disimpan hanya tanda masuk 8 jam), pilih nama, bahasa klien, masa berlaku, catatan boleh/tidak, tanda air PROOF, sampul; aplikasi membuat gambar ±2.000 px per spread, mengunggah, dan memberi link + PIN + pesan WhatsApp siap kirim. Mengirim lagi = versi baru di link yang sama. Panel kanan editor punya tab **Revisi**: status proof (dibuka berapa kali, disetujui), catatan klien dengan nomor pin, centang Selesai (tersimpan di server), Buka ke halamannya, dan catatan baru otomatis masuk ke Catatan revisi halaman. Setelah terkirim, tahap proyek jadi "Proof ke klien".
   **Manual:** proof online baru jalan setelah branch ini digabung ke `main` (API + situs ter-deploy).
