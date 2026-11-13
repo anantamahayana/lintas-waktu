@@ -16,6 +16,7 @@ from .content import bookings as content_bookings
 from .content import invoices as content_invoices
 from .content import site_images as content_site_images
 from .content import proofs as content_proofs
+from .content import activity as content_activity
 from .content import models as content_models  # noqa: F401  (registers tables)
 from .services import backup, drive_service
 
@@ -115,6 +116,7 @@ app.add_middleware(
 app.include_router(admin.router)
 app.include_router(gallery.router)
 app.include_router(system.router)
+app.include_router(content_activity.router)
 app.include_router(content_admin.router)
 app.include_router(content_public.router)
 app.include_router(content_invoices.router)

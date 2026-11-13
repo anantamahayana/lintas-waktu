@@ -190,6 +190,10 @@ def get_gallery(slug: str, background: BackgroundTasks, db: DbSession = Depends(
 
     if not admin:  # the photographer's own preview must not count as "client opened the gallery"
         now = utcnow()
+        from ..content.activity import record
+
+        record(db, "gallery_open", f"{s.client_name} opened their gallery" if not s.first_opened_at else f"{s.client_name} is back in their gallery",
+               f"/admin/sessions/{s.id}", key=s.id, every_hours=6)
         s.first_opened_at = s.first_opened_at or now
         s.last_seen_at = now
         try:
@@ -323,6 +327,9 @@ def submit(slug: str, body: SubmitRequest, background: BackgroundTasks, db: DbSe
         )
     s.status = SessionStatus.completed
     s.submitted_at = utcnow()
+    from ..content.activity import record
+
+    record(db, "gallery_submit", f"{s.client_name} sent their selection · {len(ids)} photos", f"/admin/sessions/{s.id}", key=s.id)
     s.draft_ids = s.draft_notes = s.draft_maybe = None
     s.draft_version = (s.draft_version or 0) + 1
     db.commit()

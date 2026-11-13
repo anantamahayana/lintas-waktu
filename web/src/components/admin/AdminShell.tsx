@@ -5,10 +5,11 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
 import { Logo } from "@/components/brand/Logo";
-import { token } from "@/lib/admin-api";
+import { api, token } from "@/lib/admin-api";
 import { confirm, confirmLeave, hasUnsavedChanges } from "@/components/admin/ui";
 
 const groups: { label: string; items: { href: string; label: string; exact?: boolean }[] }[] = [
+  { label: "", items: [{ href: "/admin/activity", label: "Activity" }] },
   { label: "Proofing", items: [{ href: "/admin", label: "Sessions", exact: true }, { href: "/admin/sessions/new", label: "New session" }] },
   { label: "Business", items: [{ href: "/admin/calendar", label: "Calendar" }, { href: "/admin/invoices", label: "Invoices" }] },
   { label: "Website", items: [{ href: "/admin/projects", label: "Projects" }, { href: "/admin/content", label: "Site text" }, { href: "/admin/site-images", label: "Site images" }, { href: "/admin/inquiries", label: "Inquiries" }] },
@@ -51,6 +52,17 @@ export function AdminShell({ children }: { children: ReactNode }) {
     return () => document.removeEventListener("click", onClick, true);
   }, [pathname, router]);
 
+  // Unread client activity for the badge: checked on each page change and once a minute while the tab is visible.
+  const [unread, setUnread] = useState(0);
+  useEffect(() => {
+    if (isLogin || !token.get()) return;
+    const check = () => { if (!document.hidden) api.get<{ unread: number }>("/api/admin/activity?limit=1").then((r) => setUnread(r.unread)).catch(() => {}); };
+    check();
+    const t = setInterval(check, 60_000);
+    document.addEventListener("visibilitychange", check);
+    return () => { clearInterval(t); document.removeEventListener("visibilitychange", check); };
+  }, [isLogin, pathname]);
+
   async function logout() {
     if (!(await confirmLeave())) return;
     const ok = await confirm({ title: "Log out?", body: "You will need the admin password to get back in. Client galleries stay open.", action: "Log out" });
@@ -87,6 +99,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                   className={clsx("px-2 py-2 text-[14px] transition-colors", active(it.href, it.exact) ? "bg-white border border-line" : "text-ink/80 hover:text-ink")}
                 >
                   {it.label}
+                  {it.href === "/admin/activity" && unread > 0 && <span className="ml-2 inline-flex min-w-5 h-5 px-1.5 items-center justify-center rounded-full bg-ink text-white text-[11px] tabular-nums">{unread > 99 ? "99+" : unread}</span>}
                 </Link>
               ))}
             </div>

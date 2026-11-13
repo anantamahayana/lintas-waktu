@@ -624,6 +624,10 @@ def public_invoice(token: str, db: DbSession = Depends(get_db)):
     inv = db.query(Invoice).filter(Invoice.token == token).first()
     if not inv or inv.status == InvoiceStatus.draft:
         raise HTTPException(404, "Invoice not found")
+    from .activity import record
+
+    record(db, "invoice_open", f"{inv.client_name} opened {'quotation' if inv.kind == 'quote' else 'invoice'} {inv.number}", f"/admin/invoices/{inv.id}", key=inv.id, every_hours=6)
+    db.commit()
     biz = get_business(db).model_dump()
     biz.pop("prefix", None)
     biz.pop("default_terms", None)
@@ -665,6 +669,10 @@ def public_receipt(token: str, db: DbSession = Depends(get_db)):
     inv = db.get(Invoice, p.invoice_id) if p else None
     if not p or not inv or inv.status == InvoiceStatus.void:
         raise HTTPException(404, "Receipt not found")
+    from .activity import record
+
+    record(db, "receipt_open", f"{inv.client_name} opened receipt {p.receipt_no}", f"/admin/invoices/{inv.id}", key=p.receipt_no, every_hours=24)
+    db.commit()
     upto = [x for x in payments_of(db, inv) if (x.paid_on, x.id) <= (p.paid_on, p.id)]
     total = totals(inv).total
     biz = get_business(db)

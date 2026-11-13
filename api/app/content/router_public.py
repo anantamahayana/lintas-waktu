@@ -128,6 +128,9 @@ def create_inquiry(body: InquiryCreate, request: Request, db: DbSession = Depend
 
     i = Inquiry(**body.model_dump(exclude={"website"}))
     db.add(i)
+    from .activity import record
+
+    record(db, "inquiry", f"New inquiry from {i.name}", "/admin/inquiries")
     db.commit()
     return {"ok": True, "id": i.id}
 

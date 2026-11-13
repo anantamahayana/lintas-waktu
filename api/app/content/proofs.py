@@ -434,6 +434,9 @@ def view(slug: str, db: DbSession = Depends(get_db), x_proof_token: str | None =
         last = _aware(p.last_seen_at)
         if not last or now - last > timedelta(minutes=30):
             p.open_count = (p.open_count or 0) + 1
+        from .activity import record
+
+        record(db, "proof_open", f"{p.client_name} opened the album proof (v{p.version})", "/admin", key=f"{p.id}:{p.version}", every_hours=6)
         p.first_opened_at = p.first_opened_at or now
         p.last_seen_at = now
         db.commit()
@@ -466,6 +469,9 @@ def add_note(slug: str, body: NoteIn, db: DbSession = Depends(get_db), x_proof_t
         raise HTTPException(429, "Too many notes. Please message us instead.")
     n = ProofNote(version=p.version, spread=body.spread, x=body.x, y=body.y, author=body.author.strip(), text=body.text.strip(), key=secrets.token_urlsafe(12))
     p.notes.append(n)
+    from .activity import record
+
+    record(db, "proof_note", f"{body.author.strip() or p.client_name} left a note on the album proof: “{body.text.strip()[:80]}”", "/admin", key=p.id)
     db.commit()
     return NoteCreated(**_note(n).model_dump(), key=n.key)
 
@@ -494,5 +500,8 @@ def approve(slug: str, body: ApproveIn, db: DbSession = Depends(get_db), x_proof
         p.status = "approved"
         p.approved_at = utcnow()
         p.approved_by = body.name.strip()
+        from .activity import record
+
+        record(db, "proof_approve", f"{p.approved_by or p.client_name} approved the album (v{p.version})", "/admin", key=p.id)
         db.commit()
     return _public_out(p, False)

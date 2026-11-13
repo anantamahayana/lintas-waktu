@@ -32,6 +32,7 @@ def migrate() -> None:
     from .content import invoices as _invoices  # noqa: F401
     from .content import bookings as _bookings  # noqa: F401
     from .content import proofs as _proofs  # noqa: F401
+    from .content import activity as _activity  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
     insp = inspect(engine)

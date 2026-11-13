@@ -1,7 +1,12 @@
 # Catatan perubahan
 
 Yang terbaru di atas. Setiap perubahan yang di-push menambah satu entri di sini (aturannya di `CLAUDE.md`).
-Format: `### 2026-11-13 · NantaPakeAI (bahasa & pengingat)
+Format: `### 2026-11-13 · NantaPakeAI (aktivitas klien)
+- Admin: menu **Activity** dengan angka belum dibaca — klien membuka/mengirim galeri, membuka proof, menulis catatan, menyetujui album, membuka invoice/kuitansi, inquiry baru. Buka halaman = semua terbaca.
+- API: tabel `activity`, `GET /api/admin/activity`, `POST /api/admin/activity/read`; kunjungan berulang dicatat paling sering tiap 6 jam.
+- **Manual:** tidak ada.
+
+### 2026-11-13 · NantaPakeAI (bahasa & pengingat)
 - Invoice baru memakai bahasa bawaan dari Settings (default **Bahasa Indonesia**); memilih sesi klien memakai bahasa klien itu.
 - Dashboard admin: daftar **Payments due** (jatuh tempo ≤ 7 hari atau telat) dengan tombol pengingat WhatsApp yang sopan (EN/ID).
 - Status server: peringatan disk hanya kalau sisa < 2 GB atau < 5%.
