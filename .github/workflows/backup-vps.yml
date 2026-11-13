@@ -36,3 +36,7 @@ jobs:
           path: lw-backup-*.tgz.gpg
           retention-days: 30
           if-no-files-found: error
+      - name: Tandai di server (untuk dashboard admin)
+        run: |
+          O="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
+          printf '%s\n' "$SSHPASS" | sshpass -e ssh $O lw@$HOST 'read -r P; printf "%s\n" "$P" | sudo -S -p "" touch /srv/lintas-waktu/data/backups/.offsite'

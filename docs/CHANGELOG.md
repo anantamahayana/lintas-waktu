@@ -1,7 +1,12 @@
 # Catatan perubahan
 
 Yang terbaru di atas. Setiap perubahan yang di-push menambah satu entri di sini (aturannya di `CLAUDE.md`).
-Format: `### 2026-11-13 · NantaPakeAI (pembayaran & kuitansi)
+Format: `### 2026-11-13 · NantaPakeAI (status server)
+- Admin: baris status server di dashboard Sessions (backup di server, backup di GitHub, sisa disk; merah kalau telat/penuh). API: `GET /api/admin/system`.
+- Pemantau otomatis tiap 30 menit (`.github/workflows/uptime.yml`): API/situs mati → email dari GitHub.
+- **Manual:** pastikan email notifikasi Actions aktif di GitHub (Settings → Notifications → Actions).
+
+### 2026-11-13 · NantaPakeAI (pembayaran & kuitansi)
 - Invoice: kartu **Payments** — "Receive payment" (jumlah, tanggal, metode; tombol 50% / Full balance). Sisa tagihan berkurang otomatis; lunas → otomatis Paid; hapus pembayaran → kembali Sent. Deposit lama otomatis jadi pembayaran pertama.
 - Kuitansi untuk setiap pembayaran (`KW-2026-0001`), link klien `/r/<token>` dalam bahasa invoice, bisa dicetak; tombol kirim kuitansi lewat WhatsApp.
 - WhatsApp: nomor klien `0812…` dinormalisasi ke `62812…` (tombol "Send via WhatsApp" di invoice sebelumnya bisa gagal).

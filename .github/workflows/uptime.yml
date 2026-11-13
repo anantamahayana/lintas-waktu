@@ -1,0 +1,23 @@
+# Cek tiap 30 menit apakah API hidup. Kalau gagal, run ini merah dan GitHub mengirim email ke pemilik repo
+# (Settings → Notifications → Actions: "Send notifications for failed workflows only").
+name: Pemantau API
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: api.lintaswaktuvisual.com/api/health
+        run: |
+          for i in 1 2 3; do
+            if curl -fsS --max-time 20 https://api.lintaswaktuvisual.com/api/health | tee /tmp/h.json | grep -q '"database":"ok"'; then cat /tmp/h.json; exit 0; fi
+            sleep 60
+          done
+          echo "::error::API tidak menjawab 3 kali berturut-turut. Cek VPS di IDCloudHost (status Running?) lalu jalankan Actions → Deploy API ke VPS."
+          exit 1
+      - name: Situs www.lintaswaktuvisual.com
+        run: curl -fsS --max-time 20 -o /dev/null -w "HTTP %{http_code}\n" https://www.lintaswaktuvisual.com/

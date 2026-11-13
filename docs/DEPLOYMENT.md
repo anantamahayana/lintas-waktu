@@ -40,6 +40,11 @@ Revalidasi: API memanggil `/api/revalidate` di Vercel dengan `REVALIDATE_SECRET`
 - Di server juga ada salinan harian database 14 hari: `/srv/lintas-waktu/data/backups/`.
 - Memulihkan: unduh artifact → `gpg -d lw-backup-TANGGAL.tgz.gpg > b.tgz` (passphrase = nilai secret `SECRET_KEY`) → `tar -xzf b.tgz` → salin `photo_platform.db` dan `uploads/` ke `/srv/lintas-waktu/data/` di server (hentikan API dulu: `cd /srv/lintas-waktu/repo/deploy/vps && sudo docker compose stop api`, lalu `start api`).
 
+## Pemantau
+- Actions → "Pemantau API" (`.github/workflows/uptime.yml`) mengecek API dan situs tiap 30 menit. Kalau mati, run merah dan GitHub mengirim email ke pemilik.
+- Dashboard admin (Sessions) menampilkan status server: backup di server, backup di luar server (GitHub), sisa disk; merah kalau ada yang telat.
+- Catatan: GitHub menghentikan jadwal otomatis kalau repo tidak ada aktivitas 60 hari; aktifkan lagi di tab Actions.
+
 ## Domain — lintaswaktuvisual.com
 - Registrar **Hostinger**, berakhir 2027-09-23 (? auto-renew aktif).
 - **DNS di Cloudflare** (plan Free, akun komangant25) sejak 27 Sep 2026 — nameserver dipindah dari `ns1/ns2.anjas.id` karena nameserver anjas hilang-timbul (SERVFAIL dari Google DNS & DNS kampus ISI, 26 Sep; DNSViz bersih, tanpa DNSSEC). Record Vercel sebaiknya **DNS only** (awan abu-abu); kalau diproksikan, SSL/TLS harus **Full (strict)**.
