@@ -3,7 +3,7 @@
  * Lintas Waktu API with the admin password (the token, never the password, is kept for ~8 hours),
  * uploads one JPEG per spread and publishes them; the client opens /p/<code> on the site.
  */
-const DEFAULT_API = "https://lintas-waktu-production.up.railway.app";
+const DEFAULT_API = "https://api.lintaswaktuvisual.com";
 const API_KEY = "lwalbum:api", TOKEN_KEY = "lwalbum:apiToken";
 const get = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
 const set = (k: string, v: string | null) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* ignore */ } };

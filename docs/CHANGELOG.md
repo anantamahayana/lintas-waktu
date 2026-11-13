@@ -1,7 +1,10 @@
 # Catatan perubahan
 
 Yang terbaru di atas. Setiap perubahan yang di-push menambah satu entri di sini (aturannya di `CLAUDE.md`).
-Format: `### 2026-11-13 · NantaPakeAI (VPS)
+Format: `### 2026-11-13 · NantaPakeAI (album 0.4.2)
+- Aplikasi album memakai API baru `https://api.lintaswaktuvisual.com` (VPS); Vercel `API_URL` sudah diganti.
+
+### 2026-11-13 · NantaPakeAI (VPS)
 - API bisa dipasang di VPS sendiri (IDCloudHost) pengganti Railway: `deploy/vps/` (Docker + Caddy HTTPS, backup DB harian).
 - Tombol Actions "Deploy API ke VPS" (`.github/workflows/deploy-vps.yml`): pasang/perbarui tanpa terminal, rahasia dari GitHub Secrets.
 - **Manual:** jalankan `setup.sh` di Console VPS; DNS `api.lintaswaktuvisual.com` → IP VPS; ganti `API_URL` di Vercel.
