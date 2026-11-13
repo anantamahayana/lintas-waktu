@@ -198,116 +198,85 @@ export function newAlbum(ids: string[], pages: number): Album {
   return { order: [...ids], pages: autoCounts(ids.length, pages).map((n) => ({ n })) };
 }
 
-const fixedPage = (p: PageCfg) => !!(p.locked || p.tail || p.joined);
-
 /**
- * Make the page counts add up again after page `i` changed by `diff` photos
- * (positive: `diff` photos need a new home; negative: page `i` needs that many more).
- * Returns null when there is nothing to borrow.
+ * Change how many frames page `i` has. Only this page changes: a page that grows gets empty frames
+ * (drop photos in later); a page that shrinks loses its empty frames first, then photos from the end
+ * (they go back to the photo panel). Photos named in `keep` (e.g. the one clicked) stay on the page.
+ * Other pages never move, locked or not.
  */
-function settle(pages: PageCfg[], i: number, diff: number): PageCfg[] | null {
-  if (diff > 0) {
-    const others = [...pages.keys()].filter((j) => j > i).concat([...pages.keys()].filter((j) => j < i).reverse());
-    for (const j of others) {
-      if (diff === 0) break;
-      if (fixedPage(pages[j])) continue;
-      const next = Math.min(MAX_PER_PAGE, pages[j].n + diff);
-      if (next > pages[j].n) { diff -= next - pages[j].n; pages[j] = { ...pages[j], n: next, tpl: undefined }; }
-    }
-    while (diff > 0) { const take = Math.min(MAX_PER_PAGE, diff); pages.push({ n: take }); diff -= take; }
-  } else if (diff < 0) {
-    // Borrow from the end of the book; a page left empty is removed.
-    for (let j = pages.length - 1; j >= 0 && diff < 0; j--) {
-      if (j === i || fixedPage(pages[j])) continue;
-      const give = Math.min(pages[j].n, -diff);
-      pages[j] = { ...pages[j], n: pages[j].n - give, tpl: undefined };
-      diff += give;
-    }
-    if (diff < 0) return null;
+export function setCount(album: Album, i: number, n: number, keep: string[] = []): Album {
+  const page = album.pages[i];
+  if (!page || page.tail || n < 1 || n > MAX_CELLS) return album;
+  const start = startOf(album, i), ids = album.order.slice(start, start + page.n);
+  let next = ids;
+  if (n > ids.length) next = [...ids, ...freshEmpties(album.order, n - ids.length)];
+  else if (n < ids.length) {
+    let drop = ids.length - n;
+    const out = new Set<string>();
+    for (const id of [...ids].reverse()) if (drop > 0 && isEmpty(id)) { out.add(id); drop--; }
+    for (const id of [...ids].reverse()) if (drop > 0 && !out.has(id) && !keep.includes(id)) { out.add(id); drop--; }
+    next = ids.filter((id) => !out.has(id));
+    // `keep` first, so the photo the user meant goes into the biggest frame of the new layout.
+    next = [...next.filter((id) => keep.includes(id)), ...next.filter((id) => !keep.includes(id))];
   }
-  return pages.filter((p) => p.n > 0 || p.tail);
-}
-
-/**
- * Change how many photos page `i` holds. The difference is given to, or borrowed from, other
- * unlocked pages, so the photos reflow and every photo stays in the album exactly once.
- */
-export function setCount(album: Album, i: number, n: number): Album {
-  const pages = album.pages.map((p) => ({ ...p }));
-  if (!pages[i] || pages[i].tail || n < 1 || n > MAX_CELLS) return album;
-  let diff = pages[i].n - n;
-  let order = album.order;
-  const start = pages.slice(0, i).reduce((s, p) => s + p.n, 0), end = start + pages[i].n;
-  if (diff < 0 && order.some(isEmpty)) {
-    // An album filled by hand: a page that grows gets new empty frames instead of taking other pages' photos.
-    order = [...order.slice(0, end), ...freshEmpties(order, -diff), ...order.slice(end)];
-    diff = 0;
-  } else if (diff > 0) {
-    // A page that shrinks gives up its empty frames first.
-    const drop = new Set(order.slice(start, end).filter(isEmpty).slice(-diff));
-    order = order.filter((id) => !drop.has(id));
-    diff -= drop.size;
-  }
-  pages[i] = { ...pages[i], n, tpl: undefined, free: undefined };
-  const out = settle(pages, i, diff);
-  return out ? { order, pages: out } : album;
+  const order = [...album.order.slice(0, start), ...next, ...album.order.slice(start + page.n)];
+  return { order, pages: album.pages.map((p, j) => (j === i ? { ...p, n: next.length, tpl: undefined, free: undefined } : p)) };
 }
 
 /** Use a template on page `i`, changing the page's photo count to fit it. */
-export function applyTpl(album: Album, i: number, tpl: Tpl): Album {
+export function applyTpl(album: Album, i: number, tpl: Tpl, keep: string[] = []): Album {
   const page = album.pages[i];
   if (!page || page.tail || !!page.joined !== !!tpl.spread) return album;
-  const a = page.n === tpl.n ? album : setCount(album, i, tpl.n);
+  const a = page.n === tpl.n ? album : setCount(album, i, tpl.n, keep);
   if (a.pages[i]?.n !== tpl.n) return album;
   return { ...a, pages: a.pages.map((p, j) => (j === i ? { ...p, tpl: tpl.id, free: undefined } : p)) };
 }
 
 /**
- * Make page `i` and the page after it one sheet. The second page's photos join the panorama while
- * a panorama template can hold them; only the rest move to later pages, so the album keeps its length.
+ * Make page `i` and the page after it one sheet. The second page's photos join the panorama while a
+ * panorama template can hold them; any others go back to the photo panel. No other page changes.
  */
 export function joinPages(album: Album, i: number): Album {
-  const pages = album.pages.map((p) => ({ ...p }));
-  const a = pages[i];
+  const a = album.pages[i];
   if (!a || a.joined || a.tail) return album;
-  const b = pages[i + 1];
-  let spare = 0;
-  if (b && !b.joined && !b.tail) { spare = b.n; pages[i + 1] = { n: 0, tail: true }; }
-  else pages.splice(i + 1, 0, { n: 0, tail: true });
-  const room = Math.max(0, Math.max(a.n, ...countsFor(true)) - a.n), take = Math.min(room, spare);
-  spare -= take;
-  pages[i] = { ...a, n: a.n + take, joined: true, tpl: undefined, free: undefined };
-  const out = settle(pages, i + 1, spare);
-  return out ? { ...album, pages: out } : album;
+  const b = album.pages[i + 1];
+  const startA = startOf(album, i), idsA = album.order.slice(startA, startA + a.n);
+  const hasB = !!b && !b.joined && !b.tail;
+  const idsB = hasB ? album.order.slice(startA + a.n, startA + a.n + b.n) : [];
+  const room = Math.max(a.n, ...countsFor(true));
+  const both = [...idsA, ...idsB.filter((id) => !isEmpty(id)), ...idsB.filter(isEmpty)].slice(0, Math.max(room, idsA.length));
+  const order = [...album.order.slice(0, startA), ...both, ...album.order.slice(startA + a.n + idsB.length)];
+  const pages = album.pages.map((p) => ({ ...p }));
+  pages[i] = { ...a, n: both.length, joined: true, tpl: undefined, free: undefined };
+  if (hasB) pages[i + 1] = { n: 0, tail: true }; else pages.splice(i + 1, 0, { n: 0, tail: true });
+  return { order, pages };
 }
 
-/** Split a joined sheet back into two pages, sharing its photos between them. */
+/** Split a joined sheet back into two pages, sharing its photos between them (at most 4 each; the rest go to the panel). */
 export function splitPages(album: Album, i: number): Album {
+  const a = album.pages[i];
+  if (!a?.joined || !album.pages[i + 1]?.tail) return album;
+  const start = startOf(album, i), ids = album.order.slice(start, start + a.n);
+  const left = Math.min(MAX_PER_PAGE, Math.ceil(ids.length / 2)), right = Math.min(MAX_PER_PAGE, ids.length - left);
+  const keep = ids.slice(0, left + right);
+  const order = [...album.order.slice(0, start), ...keep, ...album.order.slice(start + a.n)];
   const pages = album.pages.map((p) => ({ ...p }));
-  const a = pages[i];
-  if (!a?.joined || !pages[i + 1]?.tail) return album;
-  const left = Math.min(MAX_PER_PAGE, Math.ceil(a.n / 2));
-  const right = Math.min(MAX_PER_PAGE, a.n - left);
   pages[i] = { n: left, locked: a.locked };
   pages[i + 1] = { n: right };
-  const out = settle(pages, i + 1, a.n - left - right);
-  return out ? { ...album, pages: out } : album;
+  return { order, pages: pages.filter((p, j) => p.n > 0 || j < i || j > i + 1 || p.tail) };
 }
 
 /** Take one photo out of the album (it goes back to the tray). */
 export function removePhoto(album: Album, id: string): Album {
   const at = album.order.indexOf(id);
   if (at < 0) return album;
-  let seen = 0, dropTail = false;
-  const pages: PageCfg[] = [];
-  for (const p of album.pages) {
-    if (dropTail && p.tail) { dropTail = false; continue; }
-    if (at >= seen && at < seen + p.n) {
-      if (p.n > 1) pages.push({ ...p, n: p.n - 1, tpl: undefined, free: p.free?.filter((_, k) => k !== at - seen) });
-      else dropTail = !!p.joined;
-    } else pages.push(p);
+  // The page stays even when this was its last frame (it becomes an empty page), so the pages after it never shift.
+  let seen = 0;
+  const pages = album.pages.map((p) => {
+    const hit = at >= seen && at < seen + p.n, k = at - seen;
     seen += p.n;
-  }
+    return hit ? { ...p, n: p.n - 1, tpl: undefined, free: p.free?.filter((_, j) => j !== k) } : p;
+  });
   return { order: album.order.filter((x) => x !== id), pages };
 }
 

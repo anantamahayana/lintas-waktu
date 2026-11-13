@@ -74,14 +74,15 @@ export function TemplateEditor({ preset, custom, setCustom, startSpread, onClose
             {Array.from({ length: rows * cols }, (_, i) => {
               const c = i % cols, r = Math.floor(i / cols), k = owner(c, r);
               return (
-                <button key={i} type="button" className={`tcell ${k >= 0 ? "on" : ""} ${inDraft(c, r) ? (draftOk ? "draft" : "bad") : ""}`}
+                // Every cell has a fixed place: auto-placed cells would slide into the gaps left by frames.
+                <button key={i} type="button" className={`tcell ${k >= 0 ? "on" : ""} ${inDraft(c, r) ? (draftOk ? "draft" : "bad") : ""}`} style={{ gridColumn: c + 1, gridRow: r + 1 }}
                   aria-label={`Kolom ${c + 1}, baris ${r + 1}${k >= 0 ? `, bingkai ${k + 1}` : ""}`}
                   onClick={() => click(c, r)} onMouseEnter={() => from && setHover([c, r])} onFocus={() => from && setHover([c, r])} />
               );
             })}
             {cells.map(([c, r, cs, rs], k) => (
               <button key={k} type="button" className="tframe" aria-label={`Bingkai ${k + 1}, klik untuk menghapus`} data-tip="Klik untuk menghapus bingkai ini"
-                style={{ gridColumn: `${c + 1} / span ${cs}`, gridRow: `${r + 1} / span ${rs}` }}
+                style={{ gridColumn: `${c + 1} / span ${cs}`, gridRow: `${r + 1} / span ${rs}`, pointerEvents: from ? "none" : undefined }}
                 onClick={() => { if (from) { setFrom(null); setHover(null); } else setCells(cells.filter((_, j) => j !== k)); }}>{k + 1}</button>
             ))}
             {spread && <span className="tfold" />}

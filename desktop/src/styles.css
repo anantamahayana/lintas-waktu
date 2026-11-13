@@ -426,7 +426,7 @@ dialog.dlg::backdrop { background: rgba(17, 18, 19, 0.6); }
 .grip { position: absolute; left: 50%; top: -24px; width: 28px; height: 16px; margin-left: -14px; padding: 0; border: 0; border-radius: 3px;
   background: var(--selection) center / 12px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M12 2v20M2 12h20M15 19l-3 3-3-3M19 9l3 3-3 3M5 9l-3 3 3 3M9 5l3-3 3 3'/%3E%3C/svg%3E");
   cursor: move; z-index: 3; }
-.hd { position: absolute; width: 8px; height: 8px; margin: -4px 0 0 -4px; background: #fff; border: 1px solid var(--selection); z-index: 3; }
+.hd { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; background: #fff; border: 1px solid var(--selection); z-index: 3; }
 .hd-n { left: 50%; top: 0; cursor: ns-resize; } .hd-s { left: 50%; top: 100%; cursor: ns-resize; }
 .hd-e { left: 100%; top: 50%; cursor: ew-resize; } .hd-w { left: 0; top: 50%; cursor: ew-resize; }
 .hd-ne { left: 100%; top: 0; cursor: nesw-resize; } .hd-sw { left: 0; top: 100%; cursor: nesw-resize; }
@@ -560,3 +560,5 @@ dialog.dlg .row-label { width: 128px; }
 .rev-note p { margin: 0; line-height: 17px; }
 .rev-note.done { opacity: .6; }
 .rev-no { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 10px; font-weight: 600; }
+
+.clipnote { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; margin-left: 8px; border-radius: 11px; background: rgba(47,111,228,.18); color: #8db5ff; font-size: 11px; white-space: nowrap; }

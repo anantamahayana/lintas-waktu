@@ -38,31 +38,27 @@ describe("album edits keep every photo exactly once", () => {
     expect(new Set(a.order).size).toBe(n);
     expect(a.order).toHaveLength(n);
   };
-  it("setCount reflows onto later pages", () => {
-    let a = newAlbum(ids(60), 20);
-    a = setCount(a, 3, 1);
-    check(a, 60);
-    expect(a.pages[3].n).toBe(1);
-    a = setCount(a, 0, 4);
-    check(a, 60);
-    expect(a.pages[0].n).toBe(4);
+  it("setCount changes only that page: grows with empty frames, shrinks to the panel", () => {
+    const a0 = newAlbum(ids(12), 6); // 2 per page
+    const pageIds = (a: typeof a0, i: number) => { const st = a.pages.slice(0, i).reduce((t, p) => t + p.n, 0); return a.order.slice(st, st + a.pages[i].n); };
+    const others = (a: typeof a0) => [0, 1, 3, 4, 5].map((i) => pageIds(a, i));
+    let a = setCount(a0, 2, 4);
+    expect(pageIds(a, 2).filter((x) => !isEmpty(x))).toEqual(pageIds(a0, 2));
+    expect(pageIds(a, 2).filter(isEmpty)).toHaveLength(2);
+    expect(others(a)).toEqual(others(a0)); // nothing else moves
+    a = setCount(a, 2, 1, ["p5"]); // keep the clicked photo
+    expect(pageIds(a, 2)).toEqual(["p5"]);
+    expect(a.order).not.toContain("p4"); // back to the photo panel
+    expect(others(a)).toEqual(others(a0));
   });
-  it("setCount leaves locked pages alone and adds a page when needed", () => {
-    let a = newAlbum(ids(8), 2); // 4 + 4
+  it("a locked page keeps its photos whatever happens next to it", () => {
+    let a = newAlbum(ids(8), 2);
     a = { ...a, pages: [a.pages[0], { ...a.pages[1], locked: true }] };
-    a = setCount(a, 0, 2);
-    check(a, 8);
-    expect(a.pages[1].n).toBe(4);
-    expect(a.pages).toHaveLength(3);
-  });
-  it("setCount can grow a page in a one-photo-per-page album by dropping end pages", () => {
-    let a = newAlbum(ids(12), 20);
-    expect(a.pages).toHaveLength(12);
-    a = setCount(a, 2, 3);
-    check(a, 12);
-    expect(a.pages[2].n).toBe(3);
-    expect(a.pages).toHaveLength(10);
-    expect(setCount({ order: ids(2), pages: [{ n: 2 }] }, 0, 3).pages[0].n).toBe(2);
+    const locked = a.order.slice(4);
+    a = setCount(a, 0, 1);
+    expect(a.order.slice(1)).toEqual(locked);
+    a = setCount(a, 0, 3);
+    expect(a.order.slice(3)).toEqual(locked);
   });
   it("remove, swap and replace", () => {
     let a = newAlbum(ids(10), 4);
@@ -119,10 +115,11 @@ describe("joined pages (layflat)", () => {
     expect(sum(a.pages.map((p) => p.n))).toBe(n);
     expect(new Set(a.order).size).toBe(n);
   };
-  it("join makes one sheet, moves the second page's photos on, and split undoes it", () => {
+  it("join makes one sheet from both pages' photos, and split undoes it", () => {
     let a = newAlbum(ids(12), 6); // 2 per page
     a = joinPages(a, 2);
     check(a, 12);
+    expect(a.order.slice(4, 8)).toEqual(["p4", "p5", "p6", "p7"]);
     expect(a.pages[2]).toMatchObject({ n: 4, joined: true }); // page 4's photos join the panorama
     expect(a.pages[3]).toMatchObject({ n: 0, tail: true });
     const laid = layPages(a, () => 1.5, SHAPE);
@@ -133,10 +130,10 @@ describe("joined pages (layflat)", () => {
     expect(sp[1].left).toBe(laid[2]);
     expect(sp[1].right).toBe(laid[3]);
     a = setCount(a, 2, 1);
-    check(a, 12);
+    check(a, 9);
     expect(layPages(a, () => 1.5, SHAPE)[2].tpl!.id).toBe("s1-full");
     a = splitPages(a, 2);
-    check(a, 12);
+    check(a, 9);
     expect(a.pages.some((p) => p.joined || p.tail)).toBe(false);
   });
   it("a joined sheet starts on a left page; the page before it faces a blank", () => {
@@ -145,11 +142,13 @@ describe("joined pages (layflat)", () => {
     expect(laid.map((p) => [p.side, p.spread])).toEqual([[0, 0], ["both", 1], ["tail", 1], [0, 2], [1, 2], [0, 3], [1, 3]].slice(0, laid.length));
     expect(toSpreads(laid)[0].right).toBeNull();
   });
-  it("removing the only photo of a joined sheet removes both pages", () => {
+  it("removing the only photo of a page or sheet keeps it as an empty one (nothing after it shifts)", () => {
     let a = setCount(joinPages(newAlbum(ids(8), 4), 0), 0, 1);
+    const after = a.order.slice(1);
     a = removePhoto(a, a.order[0]);
-    check(a, 7);
-    expect(a.pages.some((p) => p.joined || p.tail)).toBe(false);
+    check(a, 4);
+    expect(a.pages[0]).toMatchObject({ n: 0, joined: true });
+    expect(a.order).toEqual(after);
   });
   it("a frame may cross the fold", () => {
     const p = DEFAULT_PRESET;
@@ -197,12 +196,12 @@ describe("custom templates", () => {
     expect(validTpl(2, 2, [])).toBe(false);
     expect(validTpl(3, 3, [[0, 0, 1, 1], [2, 2, 1, 1]])).toBe(true); // gaps are white space
   });
-  it("applying one changes the page's photo count and reflows", () => {
+  it("applying one changes only that page's photo count", () => {
     setCustomTemplates([mine]);
     expect(templatesFor(5)).toEqual([mine]);
     let a = newAlbum(ids(20), 10);
     a = applyTpl(a, 1, mine);
-    expect(sum(a.pages.map((p) => p.n))).toBe(20);
+    expect(sum(a.pages.map((p) => p.n))).toBe(23); // two photos + three empty frames on page 2
     expect(a.pages[1]).toMatchObject({ n: 5, tpl: "c-test" });
     expect(layPages(a, () => 1.5, SHAPE)[1].tpl).toBe(mine);
     // Deleted later: the page falls back to a plain grid instead of breaking.
@@ -419,7 +418,8 @@ describe("page controls (insert, delete, placeholders)", () => {
     const a = joinPages(newAlbum(Array.from({ length: 20 }, (_, i) => `q${i}`), 6), 0); // 3,3,4,4,3,3
     expect(a.pages.length).toBe(6);
     expect(a.pages[0]).toMatchObject({ n: 4, joined: true });
-    expect(a.pages.reduce((s, p) => s + p.n, 0)).toBe(20);
+    expect(a.order.filter((x) => !isEmpty(x))).toHaveLength(18); // 3 + 3 photos, a panorama holds 4: two go back to the panel
+    expect(a.pages.slice(2).map((p) => p.n)).toEqual([4, 4, 3, 3]); // later pages untouched
   });
   it("clears a page into placeholders", () => {
     const a = clearPage(base, 2);

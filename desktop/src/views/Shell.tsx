@@ -103,7 +103,7 @@ const MENUS: { label: string; access: string; items: Item[] }[] = [
   { label: "Edit", access: "E", items: ["app.undo", "app.redo", "-", "e.dup", "e.delete", "-", "app.prefs"] },
   { label: "Foto", access: "O", items: ["k.pick", "k.reject", "k.unflag", "-", "k.grid", "k.one", "k.compare", "k.zoom", "-", "k.stack", "k.keep"] },
   { label: "Album", access: "A", items: ["app.props", "app.auto", "e.shuffleAll", "-", "app.templates", "-", "app.proof"] },
-  { label: "Halaman", access: "H", items: ["e.newSpread", "e.deleteSpread", "-", "e.addPage", "e.clearPage", "e.deletePage", "-", "e.shuffle", "e.copyLayout", "e.pasteLayout", "e.lock", "-", "e.join", "-", "e.text", "e.frame", "-", "e.selectAll", "e.alignLeft", "e.alignHCenter", "e.alignRight", "e.alignTop", "e.alignVCenter", "e.alignBottom", "e.distH", "e.distV", "-", "e.prev", "e.next"] },
+  { label: "Halaman", access: "H", items: ["e.newSpread", "e.deleteSpread", "-", "e.addPage", "e.clearPage", "e.deletePage", "-", "e.hero", "e.cut", "e.copyPhoto", "e.paste", "e.delete", "e.deleteFrame", "-", "e.shuffle", "e.copyLayout", "e.pasteLayout", "e.lock", "-", "e.join", "-", "e.text", "e.frame", "-", "e.selectAll", "e.alignLeft", "e.alignHCenter", "e.alignRight", "e.alignTop", "e.alignVCenter", "e.alignBottom", "e.distH", "e.distV", "-", "e.prev", "e.next"] },
   { label: "Tampilan", access: "T", items: ["mod.kurasi", "mod.editor", "mod.sampul", "mod.ekspor", "-", "e.overview", "-", "e.zoomIn", "e.zoomOut", "e.fit", "e.actual", "-", "e.guides", "app.panels", "app.full"] },
   { label: "Bantuan", access: "B", items: ["app.keys", "app.prefs", "-", "app.update", "app.about"] },
 ];
