@@ -52,11 +52,44 @@ export function Sampul({ photos, design, commit, preset, setPreset, panels }: Pr
   const list = useMemo(() => { const picked = photos.filter((p) => p.pick === true); return all || !picked.length ? photos : picked; }, [photos, all]);
   const sheet = coverMm(preset), parts = coverParts(preset);
   const box = (r: { x: number; y: number; w: number; h: number }) => ({ left: pct(r.x / sheet.w), top: pct(r.y / sheet.h), width: pct(r.w / sheet.w), height: pct(r.h / sheet.h) });
-  const placeKey = side === "front" ? "frontPlace" : "backPlace";
+  const pano = !!cover.panorama;
+  const sideNow: "front" | "back" = pano ? "front" : side;
+  const placeKey = sideNow === "front" ? "frontPlace" : "backPlace";
   const pl: Placement = cover[placeKey] ?? CENTER;
-  const chosen = side === "front" ? cover.front : cover.back;
-  const drop = (zone: "front" | "back", id: string) => { if (!byId.has(id)) return; setSide(zone); set(zone === "front" ? { front: id, frontPlace: CENTER } : { back: id, backPlace: CENTER }); };
-  useCommands({ "s.side": { run: () => setSide((s) => (s === "front" ? "back" : "front")) } });
+  const chosen = sideNow === "front" ? cover.front : cover.back;
+  const drop = (zone: "front" | "back", id: string) => { if (!byId.has(id)) return; if (pano) zone = "front"; setSide(zone); set(zone === "front" ? { front: id, frontPlace: CENTER } : { back: id, backPlace: CENTER }); };
+  const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
+  const place = (patch: Partial<Placement>, replace = false) => set({ [placeKey]: { ...pl, ...patch } }, replace);
+  const togglePano = () => { set(pano ? { panorama: false } : { panorama: true, front: cover.front ?? cover.back, frontPlace: cover.front ? cover.frontPlace : cover.backPlace }); setSide("front"); };
+  useCommands({
+    "s.side": { run: () => setSide((s) => (s === "front" ? "back" : "front")), enabled: !pano },
+    "s.pano": { run: togglePano, checked: pano },
+    "s.swap": { run: () => set({ front: cover.back, back: cover.front, frontPlace: cover.backPlace, backPlace: cover.frontPlace }), enabled: !pano && !!(cover.front || cover.back) },
+    "s.clear": { run: () => set(sideNow === "front" ? { front: undefined } : { back: undefined }), enabled: !!chosen },
+    "s.reset": { run: () => place(CENTER), enabled: !!chosen },
+    "s.nudge": { run: (c) => { const st = c?.startsWith("Shift+") ? 0.05 : 0.01, k = (c ?? "").replace("Shift+", ""); const d = ({ Left: [-st, 0], Right: [st, 0], Up: [0, -st], Down: [0, st] } as Record<string, number[]>)[k]; if (d) place({ x: clamp(pl.x + d[0], 0, 1), y: clamp(pl.y + d[1], 0, 1) }); }, enabled: !!chosen },
+    "s.zoomIn": { run: () => place({ z: clamp(pl.z + 0.05, 1, 3) }), enabled: !!chosen },
+    "s.zoomOut": { run: () => place({ z: clamp(pl.z - 0.05, 1, 3) }), enabled: !!chosen },
+  });
+  // Drag the photo to move it inside its area; pinch / Ctrl+wheel over it zooms it.
+  const drag = useRef<{ x: number; y: number; pl: Placement; w: number; h: number; moved: boolean } | null>(null);
+  const plRef = useRef(pl); plRef.current = pl;
+  const wheelOn = useRef<(e: WheelEvent) => void>(() => {});
+  wheelOn.current = (e) => {
+    if (!e.ctrlKey || !chosen) return;
+    e.preventDefault();
+    const p0 = plRef.current;
+    slide({ [placeKey]: { ...p0, z: clamp(p0.z * Math.exp(-e.deltaY * (Math.abs(e.deltaY) < 50 ? 0.01 : 0.001)), 1, 3) } });
+    clearTimeout(wheelEnd.current); wheelEnd.current = window.setTimeout(endSlide, 300);
+  };
+  const wheelEnd = useRef(0);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = sheetRef.current; if (!el) return;
+    const fn = (e: WheelEvent) => wheelOn.current(e);
+    el.addEventListener("wheel", fn, { passive: false });
+    return () => el.removeEventListener("wheel", fn);
+  }, []);
   const aspect = sheet.w / sheet.h;
   const slider = (value: number, min: number, max: number, on: (v: number) => void, show: string) => (
     <div className="slider"><input type="range" min={min} max={max} step={0.01} value={value} onChange={(e) => on(+e.target.value)} onPointerUp={endSlide} onKeyUp={endSlide} onBlur={endSlide} /><span className="val">{show}</span></div>
@@ -68,7 +101,7 @@ export function Sampul({ photos, design, commit, preset, setPreset, panels }: Pr
         <aside className="side" aria-label="Foto">
           <div className="tabs-h" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <Seg full items={[{ v: "pick", label: "Dipilih" }, { v: "all", label: "Semua" }]} value={all ? "all" : "pick"} onChange={(v) => setAll(v === "all")} />
-            <span className="caption">Klik foto = pasang di sisi {side === "front" ? "depan" : "belakang"}. Seret ke depan/belakang.</span>
+            <span className="caption">{pano ? "Klik foto = pasang sebagai panorama." : <>Klik foto = pasang di sisi {side === "front" ? "depan" : "belakang"}. Seret ke depan/belakang.</>}</span>
           </div>
           <div className="scroll">
             <div className="tray">
@@ -85,10 +118,12 @@ export function Sampul({ photos, design, commit, preset, setPreset, panels }: Pr
 
         <main className="center">
           <div className="optbar">
-            <Seg items={[{ v: "back", label: "Belakang" }, { v: "front", label: "Depan" }]} value={side} onChange={setSide} label="Sisi" />
+            {!pano && <Seg items={[{ v: "back", label: "Belakang" }, { v: "front", label: "Depan" }]} value={side} onChange={setSide} label="Sisi" />}
+            <Btn label={pano ? "Pisahkan" : "Panorama"} icon={pano ? "unlink-2" : "link-2"} kind="ghost" cmd="s.pano" />
+            {!pano && <Btn label="Tukar foto" icon="refresh-cw" kind="ghost" cmd="s.swap" />}
             <span className="vdiv" />
             <IconBtn icon="grid-3x3" tip="Garis bantu" on={guides} onClick={() => setGuides(!guides)} />
-            <span className="grow" /><span className="caption">S = tukar sisi · ukuran mengikuti properti album</span>
+            <span className="grow" /><span className="caption">Seret foto = geser · pinch / Ctrl+roda = perbesar · klik dua kali = pusatkan</span>
             <span className="vdiv" /><IconBtn icon="panel-left" cmd="app.panels" />
           </div>
           <div className="canvas" style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "56px 40px" }}>
@@ -98,11 +133,16 @@ export function Sampul({ photos, design, commit, preset, setPreset, panels }: Pr
                 <span>Punggung {preset.spineMm} mm</span>
                 <span style={{ width: pct(parts.front.w / sheet.w), textAlign: "center" }}>Depan</span>
               </div>
-              <div className="sheet" style={{ aspectRatio: `${sheet.w} / ${sheet.h}`, background: cover.bg }}>
+              <div ref={sheetRef} className="sheet" style={{ aspectRatio: `${sheet.w} / ${sheet.h}`, background: cover.bg }}>
                 {img && <img className="coverimg" src={img} alt="Pratinjau sampul" />}
-                {(["back", "front"] as const).map((zn) => (
-                  <button key={zn} type="button" className={`zone ${side === zn ? "on" : ""} ${over === zn ? "over" : ""}`} aria-pressed={side === zn} aria-label={zn === "front" ? "Sampul depan" : "Sampul belakang"}
-                    style={box(parts[zn])} onClick={() => setSide(zn)}
+                {(pano ? (["front"] as const) : (["back", "front"] as const)).map((zn) => (
+                  <button key={zn} type="button" className={`zone ${sideNow === zn ? "on" : ""} ${over === zn ? "over" : ""} ${chosen && sideNow === zn ? "movable" : ""}`} aria-pressed={sideNow === zn} aria-label={pano ? "Sampul panorama" : zn === "front" ? "Sampul depan" : "Sampul belakang"}
+                    style={pano ? box({ x: 0, y: 0, w: sheet.w, h: sheet.h }) : box(parts[zn])}
+                    onClick={() => { if (!drag.current?.moved) setSide(zn); }}
+                    onDoubleClick={() => { if (chosen && sideNow === zn) place(CENTER); }}
+                    onPointerDown={(e) => { if (e.button !== 0 || sideNow !== zn || !chosen) return; const r = e.currentTarget.getBoundingClientRect(); drag.current = { x: e.clientX, y: e.clientY, pl, w: r.width, h: r.height, moved: false }; e.currentTarget.setPointerCapture(e.pointerId); }}
+                    onPointerMove={(e) => { const d = drag.current; if (!d) return; const dx = e.clientX - d.x, dy = e.clientY - d.y; if (!d.moved && Math.hypot(dx, dy) < 3) return; d.moved = true; slide({ [placeKey]: { ...d.pl, x: clamp(d.pl.x - dx / d.w / d.pl.z, 0, 1), y: clamp(d.pl.y - dy / d.h / d.pl.z, 0, 1) } }); }}
+                    onPointerUp={() => { endSlide(); setTimeout(() => { drag.current = null; }, 0); }}
                     onDragOver={(e) => { e.preventDefault(); setOver(zn); }} onDragLeave={() => setOver("")}
                     onDrop={(e) => { e.preventDefault(); setOver(""); drop(zn, e.dataTransfer.getData("text/plain")); }} />
                 ))}
@@ -119,15 +159,16 @@ export function Sampul({ photos, design, commit, preset, setPreset, panels }: Pr
 
         <aside className="props" aria-label="Pengaturan sampul">
           <div className="scroll">
-            <Section id="s-photo" title={`Foto ${side === "front" ? "depan" : "belakang"}`}>
-              {side === "front" && <Row label="Gaya"><select value={cover.frontStyle} onChange={(e) => set({ frontStyle: e.target.value as Cover["frontStyle"] })}>
+            <Section id="s-photo" title={pano ? "Foto panorama" : `Foto ${side === "front" ? "depan" : "belakang"}`}>
+              <label className="ck"><input type="checkbox" checked={pano} onChange={togglePano} />Panorama (satu foto belakang–depan)</label>
+              {sideNow === "front" && !pano && <Row label="Gaya"><select value={cover.frontStyle} onChange={(e) => set({ frontStyle: e.target.value as Cover["frontStyle"] })}>
                 <option value="full">Penuh sampai tepi</option><option value="frame">Berbingkai, judul di bawah</option></select></Row>}
               {chosen ? (
                 <>
                   <Row label="Perbesar">{slider(pl.z, 1, 3, (v) => slide({ [placeKey]: { ...pl, z: v } }), `${Math.round(pl.z * 100)}%`)}</Row>
                   <Row label="Geser datar">{slider(pl.x, 0, 1, (v) => slide({ [placeKey]: { ...pl, x: v } }), `${Math.round(pl.x * 100)}%`)}</Row>
                   <Row label="Geser tegak">{slider(pl.y, 0, 1, (v) => slide({ [placeKey]: { ...pl, y: v } }), `${Math.round(pl.y * 100)}%`)}</Row>
-                  <Btn label="Lepas foto" icon="x" full onClick={() => set(side === "front" ? { front: undefined } : { back: undefined })} />
+                  <div className="hrow"><Btn label="Pusatkan" icon="move" cmd="s.reset" /><Btn label="Lepas foto" icon="x" cmd="s.clear" /></div>
                 </>
               ) : <p className="caption">Belum ada foto di sisi ini. Klik foto di panel kiri.</p>}
             </Section>
@@ -152,7 +193,7 @@ export function Sampul({ photos, design, commit, preset, setPreset, panels }: Pr
         </aside>
       </div>
       <StatusBar left={`Sampul · ${Math.round(sheet.w)} × ${Math.round(sheet.h)} mm (belakang ${preset.pageWmm} + punggung ${preset.spineMm} + depan ${preset.pageWmm}${preset.wrapMm ? ` + lipatan ${preset.wrapMm}` : ""} + bleed ${preset.bleedMm})`}
-        right={<span className="dimtext">Sisi {side === "front" ? "depan" : "belakang"}</span>} />
+        right={<span className="dimtext">{pano ? "Panorama" : `Sisi ${side === "front" ? "depan" : "belakang"}`}</span>} />
     </>
   );
 }

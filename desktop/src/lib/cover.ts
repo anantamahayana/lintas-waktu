@@ -9,6 +9,8 @@ export type Cover = {
   backPlace?: Placement;
   /** "full": photo runs to the edges. "frame": photo inside a margin, on the cover colour. */
   frontStyle: "full" | "frame";
+  /** One photo (the front one) across back, spine and front. */
+  panorama?: boolean;
   bg: string;
   title: string;
   subtitle: string;
@@ -64,10 +66,11 @@ export async function drawCover(cover: Cover, byId: Map<string, Photo>, p: Prese
   ctx.fillStyle = cover.bg;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   const parts = coverParts(p);
-  const back = cover.back ? byId.get(cover.back) : undefined;
+  const back = cover.back && !cover.panorama ? byId.get(cover.back) : undefined;
   if (back) await drawPhoto(ctx, back, parts.back, cover.backPlace ?? CENTER, dpi, src);
   const front = cover.front ? byId.get(cover.front) : undefined;
-  if (front) {
+  if (front && cover.panorama) await drawPhoto(ctx, front, { x: 0, y: 0, w, h }, cover.frontPlace ?? CENTER, dpi, src);
+  else if (front) {
     const m = 0.1 * p.pageWmm, t = parts.trimFront;
     const r = cover.frontStyle === "full" ? parts.front : { x: t.x + m, y: t.y + m, w: t.w - 2 * m, h: t.h * 0.72 - m };
     await drawPhoto(ctx, front, r, cover.frontPlace ?? CENTER, dpi, src);

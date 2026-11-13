@@ -101,6 +101,13 @@ export const CATALOG = {
   "e.esc": E("Batal pilih", ["Esc"], "editor", "Tata letak"),
 
   "s.side": E("Tukar sisi depan / belakang", ["S"], "sampul", "Sampul"),
+  "s.pano": E("Panorama: satu foto dari belakang sampai depan", ["P"], "sampul", "Sampul"),
+  "s.swap": E("Tukar foto depan ↔ belakang", ["Shift+S"], "sampul", "Sampul"),
+  "s.clear": E("Lepas foto sisi ini", ["Del", "Backspace"], "sampul", "Sampul"),
+  "s.reset": E("Pusatkan foto (atau klik dua kali foto)", ["0"], "sampul", "Sampul"),
+  "s.nudge": E("Geser foto (Shift: lebih jauh) · seret foto juga bisa", ["Left", "Right", "Up", "Down", "Shift+Left", "Shift+Right", "Shift+Up", "Shift+Down"], "sampul", "Sampul", true),
+  "s.zoomIn": E("Perbesar foto (atau pinch / Ctrl+roda di foto)", ["="], "sampul", "Sampul", true),
+  "s.zoomOut": E("Perkecil foto", ["-"], "sampul", "Sampul", true),
   "x.run": E("Mulai ekspor", ["Ctrl+Enter"], "ekspor", "Ekspor"),
 } satisfies Record<string, Entry>;
 
