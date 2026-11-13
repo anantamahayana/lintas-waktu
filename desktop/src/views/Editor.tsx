@@ -262,12 +262,12 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
       if (Math.abs(w.acc) > 120) { runCommand(w.acc > 0 ? "e.next" : "e.prev"); w.acc = 0; w.until = now + 600; }
     } else swipe.current.acc = 0;
   };
+  // On the window, so it works whenever the canvas (re)mounts; only wheels over the canvas count.
   useEffect(() => {
-    const el = canvas.current; if (!el) return;
-    const fn = (e: WheelEvent) => wheelFn.current(e);
-    el.addEventListener("wheel", fn, { passive: false });
-    return () => el.removeEventListener("wheel", fn);
-  }, [!!canvas.current, overview]);
+    const fn = (e: WheelEvent) => { const el = canvas.current; if (el && e.target instanceof Node && el.contains(e.target)) wheelFn.current(e); };
+    window.addEventListener("wheel", fn, { passive: false });
+    return () => window.removeEventListener("wheel", fn);
+  }, []);
 
   /** Nudge the selected frame or text by `dx`, `dy` millimetres. */
   const nudge = (dx: number, dy: number) => {

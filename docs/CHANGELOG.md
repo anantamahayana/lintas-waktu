@@ -1,7 +1,10 @@
 # Catatan perubahan
 
 Yang terbaru di atas. Setiap perubahan yang di-push menambah satu entri di sini (aturannya di `CLAUDE.md`).
-Format: `### 2026-11-13 · NantaPakeAI (album 0.4.5)
+Format: `### 2026-11-13 · NantaPakeAI (album 0.4.6)
+- Tata letak: pinch-zoom touchpad di tampilan spread kini terpasang andal (pendengar roda di window, bukan di elemen kanvas yang bisa dipasang ulang).
+
+### 2026-11-13 · NantaPakeAI (album 0.4.5)
 - Sampul: mode **Panorama** (P) — satu foto melintang dari belakang, punggung, sampai depan; ikut di ekspor dan proof.
 - Sampul: seret foto untuk menggeser, pinch/Ctrl+roda untuk memperbesar, klik dua kali = pusatkan, panah = geser, = / - = perbesar/perkecil, Shift+S = tukar foto depan↔belakang, Del = lepas foto, 0 = pusatkan.
 
