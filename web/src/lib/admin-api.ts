@@ -186,7 +186,7 @@ export type Invoice = {
 export type InvoicePayment = { id: number; amount: number; paid_on: string; method: "transfer" | "cash" | "qris" | "other"; note: string | null; receipt_no: string; receipt_url: string };
 export type InvoiceBusiness = {
   name: string; tagline: string; address: string; email: string; phone: string; bank_details: string; prefix: string;
-  default_terms: string; default_terms_id: string; default_due_days: number; tax_percent: number;
+  default_terms: string; default_terms_id: string; default_lang?: "en" | "id"; default_due_days: number; tax_percent: number;
 };
 
 // ---------------------------------------------------------------- calendar

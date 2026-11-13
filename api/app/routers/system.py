@@ -61,7 +61,7 @@ def system_status():
     try:
         u = shutil.disk_usage(probe)
         free, total = int(u.free / 1e6), int(u.total / 1e6)
-        if u.free / u.total < 0.1 or u.free < 2e9:
+        if u.free < 2e9 or u.free / u.total < 0.05:
             warnings.append("Disk almost full")
     except OSError:
         pass

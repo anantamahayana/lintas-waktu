@@ -49,8 +49,8 @@ export function InvoiceForm({ invoice, business }: { invoice?: Invoice; business
   const router = useRouter();
   const initial: Values = invoice ? fromInvoice(invoice) : {
     kind: "invoice", client_name: "", client_email: "", client_phone: "", client_address: "", event_label: "", issued_at: today(),
-    due_at: plusDays(business.default_due_days || 7), currency: "IDR", lang: "en", items: [{ description: "", qty: 1, unit_price: 0 }], discount: 0,
-    tax_percent: business.tax_percent || 0, deposit_paid: 0, notes: business.default_terms || "", session_id: "",
+    due_at: plusDays(business.default_due_days || 7), currency: "IDR", lang: business.default_lang ?? "id", items: [{ description: "", qty: 1, unit_price: 0 }], discount: 0,
+    tax_percent: business.tax_percent || 0, deposit_paid: 0, notes: ((business.default_lang ?? "id") === "id" ? business.default_terms_id : business.default_terms) || "", session_id: "",
   };
   const [v, setV] = useState<Values>(initial);
   // The default notes follow the document language, unless they were edited by hand.
@@ -76,7 +76,7 @@ export function InvoiceForm({ invoice, business }: { invoice?: Invoice; business
   // Link a proofing session: fills the client and offers its extras as a line
   const linkSession = (id: string) => {
     const s = sessions.find((x) => x.id === id);
-    setV((x) => ({ ...x, session_id: id, client_name: x.client_name || s?.client_name || "", client_phone: x.client_phone || (s?.client_wa ? `+${s.client_wa}` : ""), event_label: x.event_label || s?.notes?.split("\n")[0] || "" }));
+    setV((x) => ({ ...x, session_id: id, client_name: x.client_name || s?.client_name || "", client_phone: x.client_phone || (s?.client_wa ? `+${s.client_wa}` : ""), event_label: x.event_label || s?.notes?.split("\n")[0] || "", ...(s && !invoice && s.lang !== x.lang && x.currency === "IDR" ? { lang: s.lang, notes: swapTerms(x.notes, x.lang, s.lang) } : {}) }));
     if (s && s.extra_count > 0 && !v.items.some((it) => /extra/i.test(it.description))) {
       const p = PRESETS.find((x) => /Extra photograph/.test(x.label))!;
       addItem({ description: `Extra photographs chosen in the gallery (${s.extra_count})`, qty: s.extra_count, unit_price: v.currency === "USD" ? p.usd : p.idr });

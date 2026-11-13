@@ -212,6 +212,7 @@ class Business(BaseModel):
     default_terms_id: str = "DP 50% mengunci tanggal. Pelunasan paling lambat 7 hari sebelum acara. Harga sudah termasuk pengiriman lewat galeri privat."
     default_due_days: int = 7
     tax_percent: int = 0
+    default_lang: str = "id"  # language of new documents: en | id
 
 
 class BusinessUpdate(BaseModel):
@@ -226,6 +227,7 @@ class BusinessUpdate(BaseModel):
     default_terms_id: str | None = None
     default_due_days: int | None = Field(None, ge=0, le=365)
     tax_percent: int | None = Field(None, ge=0, le=100)
+    default_lang: str | None = Field(None, pattern=r"^(en|id)$")
 
 
 class PublicInvoice(BaseModel):
@@ -626,6 +628,7 @@ def public_invoice(token: str, db: DbSession = Depends(get_db)):
     biz.pop("prefix", None)
     biz.pop("default_terms", None)
     biz.pop("default_terms_id", None)
+    biz.pop("default_lang", None)
     biz.pop("default_due_days", None)
     biz.pop("tax_percent", None)
     return PublicInvoice(

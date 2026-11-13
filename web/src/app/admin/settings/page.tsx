@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { ApiError, api, type InvoiceBusiness, type SiteSettings } from "@/lib/admin-api";
-import { Btn, Card, Field, Input, PageHeader, Textarea, confirm, focusFirstInvalid, toast, useUnsavedChanges, LoadError, SkeletonForm, type FieldErrors } from "@/components/admin/ui";
+import { Btn, Card, Field, Input, PageHeader, Select, Textarea, confirm, focusFirstInvalid, toast, useUnsavedChanges, LoadError, SkeletonForm, type FieldErrors } from "@/components/admin/ui";
 
 type Branding = { studio_name: string; tagline: string; contact: string; logo_url: string | null };
 
@@ -186,6 +186,7 @@ function InvoiceCard() {
         <Field label="Phone on invoices"><Input value={b.phone} onChange={set("phone")} /></Field>
         <Field label="Number prefix" hint="LW → LW-2026-0001"><Input value={b.prefix} onChange={set("prefix")} maxLength={8} /></Field>
         <Field label="Default due (days)"><Input type="number" min={0} value={b.default_due_days} onChange={set("default_due_days")} /></Field>
+        <Field label="Language of new documents" hint="English or Bahasa Indonesia"><Select value={b.default_lang ?? "id"} onChange={set("default_lang")}><option value="id">Bahasa Indonesia</option><option value="en">English</option></Select></Field>
         <Field label="Default tax %" hint="0 if not PKP"><Input type="number" min={0} max={100} value={b.tax_percent} onChange={set("tax_percent")} /></Field>
       </div>
       <Field label="Address" hint="footer of the document"><Textarea value={b.address} onChange={set("address")} rows={2} className="!min-h-[64px]" /></Field>

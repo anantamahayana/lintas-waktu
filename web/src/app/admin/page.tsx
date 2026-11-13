@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { api, type SessionOut } from "@/lib/admin-api";
 import { SystemStatus } from "@/components/admin/SystemStatus";
+import { DueInvoices } from "@/components/admin/DueInvoices";
 import { Btn, Input, PageHeader, Pill, Stat, daysLeft, fmtDate, Empty, LoadError, SkeletonRows } from "@/components/admin/ui";
 
 type Filter = "all" | "new" | "choosing" | "unopened" | "completed" | "deadline";
@@ -58,6 +59,7 @@ export default function SessionsPage() {
       />
 
       <SystemStatus />
+      <DueInvoices />
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-8">
         {([["new", "Just sent · unread"], ["choosing", "Choosing"], ["unopened", "Not opened yet"], ["completed", "Completed"], ["deadline", "Deadline ≤ 2 days"]] as const).map(([k, l]) => (
           <Stat key={k} n={buckets.counts[k]} label={l} active={filter === k} onClick={() => setFilter(filter === k ? "all" : k)} />
