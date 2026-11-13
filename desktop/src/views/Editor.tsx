@@ -585,7 +585,7 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
         </div>
       </div>
       {guides && <div className="canvas-ovl leg"><span><i style={{ background: "var(--bleed)" }} />Potong</span><span><i style={{ background: "var(--safe)" }} />Area aman</span><span><i style={{ background: "var(--guide)" }} />Snap</span></div>}
-      <div className="canvas-ovl nav"><IconBtn icon="chevron-left" small cmd="e.prev" /><span className="nt">PgUp / PgDn</span><IconBtn icon="chevron-right" small cmd="e.next" /></div>
+      <div className="canvas-ovl nav"><IconBtn icon="chevron-left" small cmd="e.prev" /><span className="nt">← / →</span><IconBtn icon="chevron-right" small cmd="e.next" /></div>
       <div className="canvas-ovl zoom">
         <IconBtn icon="zoom-out" small cmd="e.zoomOut" />
         <button type="button" className="ib s zv" style={{ width: 48 }} data-cmd="e.fit" onClick={() => runCommand("e.fit")}>{Math.round(z * 100)}%</button>

@@ -1,7 +1,10 @@
 # Catatan perubahan
 
 Yang terbaru di atas. Setiap perubahan yang di-push menambah satu entri di sini (aturannya di `CLAUDE.md`).
-Format: `### 2026-11-13 · NantaPakeAI (album 0.4.3)
+Format: `### 2026-11-13 · NantaPakeAI (album 0.4.4)
+- Tata letak: panah ← → pindah spread saat tidak ada foto/teks yang dipilih (saat ada yang dipilih tetap menggeser 0,5 mm).
+
+### 2026-11-13 · NantaPakeAI (album 0.4.3)
 - Revisi: "Buka" pada catatan klien untuk sampul kini membuka modul Sampul.
 - Tata letak: pinch-zoom touchpad (halus, di titik kursor), Ctrl+roda zoom di titik kursor, Ctrl+1 = 100%, klik dua kali area kosong = pas layar, seret klik-tengah = geser kanvas, usap dua jari ke samping (saat pas layar) = ganti spread.
 
