@@ -1,0 +1,26 @@
+# API Lintas Waktu di VPS (IDCloudHost). Dijalankan oleh setup.sh; data di /srv/lintas-waktu/data.
+services:
+  api:
+    build: ../../api
+    restart: unless-stopped
+    env_file: /srv/lintas-waktu/api.env
+    environment:
+      PORT: "8000"
+      DATABASE_URL: sqlite:////data/photo_platform.db
+      UPLOAD_DIR: /data/uploads
+      CACHE_DIR: /data/cache
+    volumes:
+      - /srv/lintas-waktu/data:/data
+    expose: ["8000"]
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      API_DOMAIN: ${API_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    depends_on: [api]
+volumes:
+  caddy_data:
