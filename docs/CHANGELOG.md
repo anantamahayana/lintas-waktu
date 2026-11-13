@@ -1,7 +1,13 @@
 # Catatan perubahan
 
 Yang terbaru di atas. Setiap perubahan yang di-push menambah satu entri di sini (aturannya di `CLAUDE.md`).
-Format: `### 2026-11-13 · NantaPakeAI (invoice)
+Format: `### 2026-11-13 · NantaPakeAI (pembayaran & kuitansi)
+- Invoice: kartu **Payments** — "Receive payment" (jumlah, tanggal, metode; tombol 50% / Full balance). Sisa tagihan berkurang otomatis; lunas → otomatis Paid; hapus pembayaran → kembali Sent. Deposit lama otomatis jadi pembayaran pertama.
+- Kuitansi untuk setiap pembayaran (`KW-2026-0001`), link klien `/r/<token>` dalam bahasa invoice, bisa dicetak; tombol kirim kuitansi lewat WhatsApp.
+- WhatsApp: nomor klien `0812…` dinormalisasi ke `62812…` (tombol "Send via WhatsApp" di invoice sebelumnya bisa gagal).
+- **Manual:** tidak ada (API dideploy ulang ke VPS lewat Actions; tabel baru dibuat otomatis).
+
+### 2026-11-13 · NantaPakeAI (invoice)
 - Invoice: catatan bawaan mengikuti bahasa dokumen (ganti bahasa = catatan ikut berganti, kecuali sudah diketik sendiri). Pengaturan punya catatan bawaan EN dan ID.
 - Invoice: cetak/PDF tidak lagi bisa terpotong di kanan, apa pun kertas, margin, atau skala di dialog cetak.
 - **Manual:** tidak ada (API sudah dideploy ulang ke VPS lewat Actions).

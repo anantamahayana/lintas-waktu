@@ -76,3 +76,27 @@ def test_default_notes_follow_the_document_language(client, admin):
     assert _new(client, admin, lang="id")["notes"].startswith("DP 50%")
     assert _new(client, admin)["notes"].startswith("50% booking fee")
     assert _new(client, admin, lang="id", notes="Tulisan sendiri")["notes"] == "Tulisan sendiri"
+
+
+def test_payments_build_up_to_paid_with_receipts(client, admin):
+    inv = _new(client, admin, items=[{"description": "Video", "qty": 1, "unit_price": 1500000}], deposit_paid=0, client_phone="0812-3456-7890", lang="id")
+    assert inv["client_wa"] == "6281234567890"
+    r = client.post(f"/api/admin/invoices/{inv['id']}/payments", headers=admin, json={"amount": 750000, "method": "transfer"})
+    assert r.status_code == 201, r.text
+    d = r.json()
+    assert d["status"] == "sent" and d["totals"]["balance"] == 750000 and d["payments"][0]["receipt_no"].startswith("KW-")
+    assert client.post(f"/api/admin/invoices/{inv['id']}/payments", headers=admin, json={"amount": 800000}).status_code == 400
+    d = client.post(f"/api/admin/invoices/{inv['id']}/payments", headers=admin, json={"amount": 750000}).json()
+    assert d["status"] == "paid" and d["totals"]["balance"] == 0 and len(d["payments"]) == 2
+    tok = d["payments"][0]["receipt_url"].rsplit("/", 1)[1]
+    rc = client.get(f"/api/public/receipts/{tok}").json()
+    assert rc["amount"] == 750000 and rc["balance_after"] == 750000 and rc["lang"] == "id"
+    d = client.delete(f"/api/admin/invoices/{inv['id']}/payments/{d['payments'][1]['id']}", headers=admin).json()
+    assert d["status"] == "sent" and d["totals"]["balance"] == 750000
+
+
+def test_old_deposit_becomes_first_payment_and_mark_paid_records_rest(client, admin):
+    inv = _new(client, admin)  # deposit_paid 14 000 000 typed by hand
+    client.post(f"/api/admin/invoices/{inv['id']}/status", headers=admin, json={"status": "sent"})
+    d = client.post(f"/api/admin/invoices/{inv['id']}/status", headers=admin, json={"status": "paid"}).json()
+    assert [p["amount"] for p in d["payments"]] == [14000000, 15800000] and d["totals"]["balance"] == 0

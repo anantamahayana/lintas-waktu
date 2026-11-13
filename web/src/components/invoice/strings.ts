@@ -20,6 +20,21 @@ export const STR = {
   },
 } as const;
 
+export const RECEIPT = {
+  en: {
+    title: "Receipt", no: "Receipt no.", received: "Received from", forInv: "For invoice", date: "Date", method: "Method", amount: "Amount received",
+    total: "Invoice total", paidSoFar: "Paid so far", balance: "Balance remaining", settled: "Paid in full — thank you!", view: "View invoice",
+    methods: { transfer: "Bank transfer", qris: "QRIS", cash: "Cash", other: "Payment" } as Record<string, string>,
+    thanks: (b: string) => `Thank you. This receipt was issued by ${b}.`, print: "Print / Save as PDF", locale: "en-GB",
+  },
+  id: {
+    title: "Kuitansi", no: "No. kuitansi", received: "Diterima dari", forInv: "Untuk invoice", date: "Tanggal", method: "Cara bayar", amount: "Jumlah diterima",
+    total: "Total invoice", paidSoFar: "Sudah dibayar", balance: "Sisa tagihan", settled: "Lunas — terima kasih!", view: "Lihat invoice",
+    methods: { transfer: "Transfer bank", qris: "QRIS", cash: "Tunai", other: "Pembayaran" } as Record<string, string>,
+    thanks: (b: string) => `Terima kasih. Kuitansi ini diterbitkan oleh ${b}.`, print: "Cetak / Simpan PDF", locale: "id-ID",
+  },
+} as const;
+
 export const VERIFY = {
   en: {
     title: "Document verification", lead: "Enter the number and the verification code printed at the bottom of the invoice or quotation.", number: "Number", code: "Verification code", check: "Verify", checking: "Checking…",

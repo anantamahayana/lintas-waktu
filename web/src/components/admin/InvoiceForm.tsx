@@ -189,7 +189,7 @@ export function InvoiceForm({ invoice, business }: { invoice?: Invoice; business
               <Field label="Document language" hint="what the client reads">
                 <Select value={v.lang} onChange={(e) => { const lang = e.target.value as "en" | "id"; setV((s) => ({ ...s, lang, notes: swapTerms(s.notes, s.lang, lang) })); }}><option value="en">English</option><option value="id">Bahasa Indonesia</option></Select>
               </Field>
-              <Field label="Deposit received" hint="already paid, deducted from the balance" error={errors.deposit_paid}><Input invalid={!!errors.deposit_paid} type="number" min={0} value={v.deposit_paid} onChange={set("deposit_paid")} /></Field>
+              <Field label="Deposit received" hint={invoice?.payments?.length ? "from the recorded payments above" : "already paid, deducted from the balance"} error={errors.deposit_paid}><Input invalid={!!errors.deposit_paid} type="number" min={0} value={v.deposit_paid} onChange={set("deposit_paid")} disabled={!!invoice?.payments?.length} /></Field>
               <Field label="Discount" hint="amount"><Input type="number" min={0} value={v.discount} onChange={set("discount")} /></Field>
               <Field label="Tax %" hint="0 if not registered"><Input type="number" min={0} max={100} value={v.tax_percent} onChange={set("tax_percent")} /></Field>
               <Field label="Issued"><Input type="date" value={v.issued_at} onChange={set("issued_at")} /></Field>

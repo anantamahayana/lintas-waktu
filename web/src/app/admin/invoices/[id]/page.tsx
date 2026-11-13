@@ -3,9 +3,9 @@
 import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { api, type Invoice, type InvoiceBusiness } from "@/lib/admin-api";
+import { api, type Invoice, type InvoiceBusiness, type InvoicePayment } from "@/lib/admin-api";
 import { Card } from "@/components/admin/ui";
-import { Btn, LoadError, PageHeader, Pill, SkeletonForm, confirm, fmtDate, toast } from "@/components/admin/ui";
+import { Btn, Field, Input, LoadError, PageHeader, Pill, Select, SkeletonForm, confirm, fmtDate, toast } from "@/components/admin/ui";
 import { InvoiceForm } from "@/components/admin/InvoiceForm";
 import { money } from "@/components/invoice/InvoiceDoc";
 
@@ -37,7 +37,7 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
     const text = inv.lang === "id"
       ? `Halo ${first}, berikut ${inv.kind === "quote" ? "penawaran" : "invoice"} ${inv.number} dari ${biz.name}:\n${inv.public_url}${inv.kind !== "quote" && t.balance > 0 ? `\n\nSisa tagihan: ${money(t.balance, inv.currency)}${inv.due_at ? ` sebelum ${fmtDate(inv.due_at)}` : ""}` : ""}\n\nTerima kasih!`
       : `Hi ${first}, here is your ${inv.kind === "quote" ? "quotation" : "invoice"} ${inv.number} from ${biz.name}:\n${inv.public_url}${inv.kind !== "quote" && t.balance > 0 ? `\n\nBalance due: ${money(t.balance, inv.currency)}${inv.due_at ? ` by ${fmtDate(inv.due_at)}` : ""}` : ""}\n\nThank you!`;
-    window.open(`https://wa.me/${(inv.client_phone ?? "").replace(/\D/g, "")}?text=${encodeURIComponent(text)}`, "_blank", "noreferrer");
+    window.open(`https://wa.me/${inv.client_wa}?text=${encodeURIComponent(text)}`, "_blank", "noreferrer");
   };
   const duplicate = async () => {
     try { const r = await api.post<Invoice>(`/api/admin/invoices/${inv.id}/duplicate`); toast(`${r.number} created`); router.push(`/admin/invoices/${r.id}`); }
@@ -74,6 +74,7 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
           </span>
         )}
       </div>
+      {inv.kind === "invoice" && inv.status !== "void" && <Payments inv={inv} biz={biz} onChange={setInv} />}
       <InvoiceForm key={inv.updated_at} invoice={inv} business={biz} />
       <div className="mt-6 max-w-[560px]"><History id={inv.id} stamp={inv.updated_at} /></div>
     </>
@@ -81,7 +82,79 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
 }
 
 type Ev = { at: string; action: string; detail: { fields?: string[]; hash?: string; total?: number; from?: string; after_sent?: boolean } };
-const LABEL: Record<string, string> = { created: "Created", updated: "Edited", sent: "Marked as sent", paid: "Marked paid", void: "Voided", draft: "Back to draft", duplicated: "Duplicated" };
+const LABEL: Record<string, string> = { created: "Created", updated: "Edited", sent: "Marked as sent", paid: "Marked paid", void: "Voided", draft: "Back to draft", duplicated: "Duplicated", payment: "Payment received", payment_removed: "Payment removed" };
+
+const METHOD: Record<InvoicePayment["method"], string> = { transfer: "Bank transfer", qris: "QRIS", cash: "Cash", other: "Other" };
+const today = () => new Date().toISOString().slice(0, 10);
+
+/** Money in: record a booking fee, instalment or settlement; each gets a receipt the client can open. */
+function Payments({ inv, biz, onChange }: { inv: Invoice; biz: InvoiceBusiness; onChange: (i: Invoice) => void }) {
+  const t = inv.totals;
+  const [open, setOpen] = useState(false);
+  const [amount, setAmount] = useState(String(t.balance));
+  const [paidOn, setPaidOn] = useState(today());
+  const [method, setMethod] = useState<InvoicePayment["method"]>("transfer");
+  const [busy, setBusy] = useState(false);
+  const half = Math.round(t.total / 2);
+  const start = () => { setAmount(String(inv.payments.length === 0 && t.balance === t.total ? half : t.balance)); setPaidOn(today()); setOpen(true); };
+  const save = async () => {
+    const n = Number(amount.replace(/\D/g, ""));
+    if (!n || n > t.balance) { toast(`Enter 1 – ${money(t.balance, inv.currency)}`, true); return; }
+    setBusy(true);
+    try { const r = await api.post<Invoice>(`/api/admin/invoices/${inv.id}/payments`, { amount: n, paid_on: paidOn, method }); onChange(r); setOpen(false); toast(r.status === "paid" ? "Paid in full" : "Payment recorded"); }
+    catch (e) { toast(e instanceof Error ? e.message : "Failed", true); }
+    finally { setBusy(false); }
+  };
+  const remove = async (p: InvoicePayment) => {
+    if (!(await confirm({ title: `Remove ${p.receipt_no}?`, body: `${money(p.amount, inv.currency)} on ${fmtDate(p.paid_on)}. The balance goes back up and the receipt link stops working.`, action: "Remove", danger: true }))) return;
+    try { await api.del(`/api/admin/invoices/${inv.id}/payments/${p.id}`); onChange(await api.get<Invoice>(`/api/admin/invoices/${inv.id}`)); toast("Payment removed"); }
+    catch (e) { toast(e instanceof Error ? e.message : "Failed", true); }
+  };
+  const waReceipt = (p: InvoicePayment, i: number) => {
+    const first = inv.client_name.split(" ")[0];
+    const after = inv.payments.slice(0, i + 1).reduce((a, x) => a + x.amount, 0), left = Math.max(0, t.total - after);
+    const text = inv.lang === "id"
+      ? `Halo ${first}, terima kasih — pembayaran ${money(p.amount, inv.currency)} sudah kami terima 🙏\nKuitansi ${p.receipt_no}: ${p.receipt_url}${left > 0 ? `\n\nSisa tagihan: ${money(left, inv.currency)}${inv.due_at ? ` sebelum ${fmtDate(inv.due_at)}` : ""}.` : "\n\nTagihan sudah lunas."}\n\n${biz.name}`
+      : `Hi ${first}, thank you — we've received your payment of ${money(p.amount, inv.currency)} 🙏\nReceipt ${p.receipt_no}: ${p.receipt_url}${left > 0 ? `\n\nBalance due: ${money(left, inv.currency)}${inv.due_at ? ` by ${fmtDate(inv.due_at)}` : ""}.` : "\n\nThe invoice is now paid in full."}\n\n${biz.name}`;
+    window.open(`https://wa.me/${inv.client_wa}?text=${encodeURIComponent(text)}`, "_blank", "noreferrer");
+  };
+  return (
+    <div className="mb-6"><Card title="Payments">
+      <div className="flex flex-col gap-3">
+        {inv.payments.length === 0 && <p className="t-small text-mute">Nothing received yet. Record the booking fee or a transfer here — the client gets a receipt link.</p>}
+        {inv.payments.map((p, i) => (
+          <div key={p.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line pb-3 t-small">
+            <span className="font-mono text-mute">{p.receipt_no}</span>
+            <span className="tabular-nums font-medium">{money(p.amount, inv.currency)}</span>
+            <span className="text-mute">{fmtDate(p.paid_on)} · {METHOD[p.method]}</span>
+            <span className="grow" />
+            <a href={p.receipt_url} target="_blank" rel="noreferrer" className="link">Receipt ↗</a>
+            {inv.client_wa && <button type="button" className="link" onClick={() => waReceipt(p, i)}>Send via WhatsApp</button>}
+            <button type="button" className="link text-error" onClick={() => remove(p)}>Remove</button>
+          </div>
+        ))}
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 t-small tabular-nums">
+          <span>Total {money(t.total, inv.currency)}</span><span>Received {money(t.deposit_paid, inv.currency)}</span>
+          <span className={t.balance > 0 ? "font-medium" : "text-[#5f7a4a] font-medium"}>{t.balance > 0 ? `Balance ${money(t.balance, inv.currency)}` : "Paid in full"}</span>
+        </div>
+        {t.balance > 0 && !open && <div><Btn kind="ink" onClick={start}>Receive payment</Btn></div>}
+        {open && (
+          <div className="grid sm:grid-cols-3 gap-4 items-end">
+            <Field label="Amount" hint={`balance ${money(t.balance, inv.currency)}`}><Input inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus /></Field>
+            <Field label="Received on"><Input type="date" value={paidOn} onChange={(e) => setPaidOn(e.target.value)} /></Field>
+            <Field label="Method"><Select value={method} onChange={(e) => setMethod(e.target.value as InvoicePayment["method"])}>{Object.entries(METHOD).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select></Field>
+            <div className="sm:col-span-3 flex gap-3">
+              <Btn kind="ink" onClick={save} disabled={busy}>{busy ? "Saving…" : "Record payment"}</Btn>
+              <Btn onClick={() => setAmount(String(half > t.balance ? t.balance : half))}>50%</Btn>
+              <Btn onClick={() => setAmount(String(t.balance))}>Full balance</Btn>
+              <Btn onClick={() => setOpen(false)}>Cancel</Btn>
+            </div>
+          </div>
+        )}
+      </div>
+    </Card></div>
+  );
+}
 
 /** Audit trail — who did what to this document, and when. */
 function History({ id, stamp }: { id: string; stamp: string }) {

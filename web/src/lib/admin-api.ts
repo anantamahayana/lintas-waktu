@@ -181,7 +181,9 @@ export type Invoice = {
   items: InvoiceItem[]; discount: number; tax_percent: number; deposit_paid: number; notes: string | null; session_id: string | null; session_client: string | null;
   paid_at: string | null; sent_at: string | null; created_at: string; updated_at: string; totals: InvoiceTotals; public_url: string;
   verify_code: string; verify_url: string; sent_hash: string | null; current_hash: string;
+  payments: InvoicePayment[]; client_wa: string;
 };
+export type InvoicePayment = { id: number; amount: number; paid_on: string; method: "transfer" | "cash" | "qris" | "other"; note: string | null; receipt_no: string; receipt_url: string };
 export type InvoiceBusiness = {
   name: string; tagline: string; address: string; email: string; phone: string; bank_details: string; prefix: string;
   default_terms: string; default_terms_id: string; default_due_days: number; tax_percent: number;
