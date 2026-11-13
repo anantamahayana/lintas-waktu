@@ -564,3 +564,8 @@ dialog.dlg .row-label { width: 128px; }
 .clipnote { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; margin-left: 8px; border-radius: 11px; background: rgba(47,111,228,.18); color: #8db5ff; font-size: 11px; white-space: nowrap; }
 .zone.movable { cursor: grab; touch-action: none; }
 .zone.movable:active { cursor: grabbing; }
+.sheetwrap { position: relative; }
+.pins { position: absolute; pointer-events: none; z-index: 5; }
+.pin { position: absolute; transform: translate(-50%, -50%); pointer-events: auto; width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid #1a1a1a; background: #fff; color: #1a1a1a; font: 600 12px/1 var(--font, inherit); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,.35); cursor: pointer; padding: 0; }
+.pin:hover { background: #1a1a1a; color: #fff; border-color: #fff; }
+.pin.done { opacity: .45; }

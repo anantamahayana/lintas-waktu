@@ -127,6 +127,13 @@ export function ProofSendDialog({ projectKey, name, cover, spreads, byId, place,
 }
 
 /** Editor › Revisi tab: status of the online proof and the client's notes. */
+/** The numbers the client sees on the pins: per spread, in order, current version only (as on the web). */
+export function pinNumbers(info: ProofInfo): Map<number, number> {
+  const pins = new Map<number, number>();
+  for (const s of new Set(info.notes.map((n) => n.spread))) info.notes.filter((n) => n.spread === s && n.version === info.version && n.x !== null && n.y !== null).forEach((n, k) => pins.set(n.id, k + 1));
+  return pins;
+}
+
 export function RevisionPanel({ info, loading, error, onRefresh, onSend, onOpen, onMark, labelOf }: {
   info: ProofInfo | null; loading: boolean; error: string; onRefresh: () => void; onSend: () => void;
   onOpen: (n: ProofNote) => void; onMark: (n: ProofNote, done: boolean) => void; labelOf: (spread: number) => string;
@@ -143,8 +150,7 @@ export function RevisionPanel({ info, loading, error, onRefresh, onSend, onOpen,
     );
   }
   const open = info.notes.filter((n) => !n.done);
-  const pins = new Map<number, number>();
-  for (const s of new Set(info.notes.map((n) => n.spread))) info.notes.filter((n) => n.spread === s && n.version === info.version && n.x !== null).forEach((n, k) => pins.set(n.id, k + 1));
+  const pins = pinNumbers(info);
   return (
     <div className="fs" style={{ gap: 12, padding: 12 }}>
       <div className="rev-card">
@@ -157,7 +163,7 @@ export function RevisionPanel({ info, loading, error, onRefresh, onSend, onOpen,
       <span className="overline">Catatan klien · {open.length} belum selesai</span>
       {info.notes.length === 0 && <p className="caption">Belum ada catatan.</p>}
       {[...info.notes].sort((a, b) => Number(a.done) - Number(b.done) || b.id - a.id).map((n) => (
-        <div key={n.id} className={`rev-note ${n.done ? "done" : ""}`}>
+        <div key={n.id} id={`rev-note-${n.id}`} className={`rev-note ${n.done ? "done" : ""}`}>
           <div className="hrow" style={{ gap: 8 }}>
             {pins.has(n.id) && <span className="rev-no">{pins.get(n.id)}</span>}
             <b>{labelOf(n.spread)}</b><span className="grow" /><span className="caption">{n.author} · {when(n.created_at)}</span>

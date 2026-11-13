@@ -88,6 +88,7 @@ export const CATALOG = {
   "e.zoomOut": E("Perkecil", ["Ctrl+-"], "editor", "Tampilan", true),
   "e.fit": E("Pas layar (atau klik dua kali area kosong)", ["Ctrl+0"], "editor", "Tampilan"),
   "e.zoom100": E("Zoom 100%", ["Ctrl+1"], "editor", "Tampilan"),
+  "e.pins": E("Tampilkan pin catatan klien", ["N"], "editor", "Tampilan"),
   "e.actual": E("Ukuran 100%", ["Ctrl+1"], "editor", "Tampilan"),
   "e.selectAll": E("Pilih semua bingkai di spread", ["Ctrl+A"], "editor", "Tata letak"),
   "e.alignLeft": E("Rata kiri", ["Alt+Shift+A"], "editor", "Tata letak"),

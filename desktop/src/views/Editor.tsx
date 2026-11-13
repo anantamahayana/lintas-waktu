@@ -11,7 +11,7 @@ import type { Photo } from "../lib/photos";
 import { CENTER, effectiveDpi, pageBoxMm, spreadMm, type Placement, type Preset, type Rect } from "../lib/print";
 import { MiniSheet, Overview } from "./Overview";
 import { Btn, IconBtn, NumField, Row, Section, Seg, StatusBar } from "./Shell";
-import { proofHasCover, RevisionPanel } from "./Proof";
+import { pinNumbers, proofHasCover, RevisionPanel } from "./Proof";
 import { proofs, signedIn, type ProofInfo, type ProofNote } from "../lib/proofs";
 import { Sheet, type TextSel } from "./Sheet";
 
@@ -65,6 +65,7 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
   const [tab, setTab] = useState<"props" | "album" | "revisi">("props");
   // ---- online proof (tab Revisi) ----
   const [proof, setProof] = useState<ProofInfo | null>(null);
+  const [showPins, setShowPins] = useState(true);
   const [proofBusy, setProofBusy] = useState(false);
   const [proofErr, setProofErr] = useState("");
   const [tool, setTool] = useState<Tool>("select");
@@ -229,6 +230,12 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
   const zoomTo = (next: number | "fit") => setZoom(next === "fit" ? "fit" : Math.min(4, Math.max(0.1, next)));
   const stepZoom = (d: 1 | -1) => { const i = d > 0 ? STEPS.findIndex((x) => x > z + 0.001) : STEPS.length - 1 - [...STEPS].reverse().findIndex((x) => x < z - 0.001); zoomTo(STEPS[Math.max(0, Math.min(STEPS.length - 1, i))] ?? z); };
   const hand = tool === "hand" || spaceHand;
+  // Client pins of the current proof version on this spread (Revisi tab), positioned on the trimmed spread like on the web.
+  const proofPins = useMemo(() => {
+    if (!proof || !showPins) return [];
+    const nums = pinNumbers(proof), k = s + (proofHasCover(proof.id) ? 1 : 0);
+    return proof.notes.filter((n) => n.spread === k && nums.has(n.id)).map((n) => ({ n, no: nums.get(n.id)! }));
+  }, [proof, s, showPins]);
   // Zoom kept under the pointer: remember the sheet point, restore the scroll after the new size is laid out.
   const anchor = useRef<{ cx: number; cy: number; px: number; py: number; z: number } | null>(null);
   const zoomAt = (next: number, cx: number, cy: number) => {
@@ -468,6 +475,7 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
     "e.zoomOut": { run: () => stepZoom(-1), enabled: !overview },
     "e.fit": { run: () => zoomTo("fit"), enabled: !overview },
     "e.zoom100": { run: () => zoomTo(1), enabled: !overview },
+    "e.pins": { run: () => setShowPins((v) => !v), checked: showPins, enabled: !!proof },
     "e.actual": { run: () => zoomTo(1), enabled: !overview },
     "e.selectAll": { run: () => selectMany([...onSheet]), enabled: !overview && onSheet.size > 0 },
     "e.alignLeft": { run: () => doAlign("left"), enabled: canAlign },
@@ -570,7 +578,7 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
         <div className="canvas-in" style={{ minWidth: "100%", minHeight: "100%", width: sheetW + 96, height: sheetW * (sheetMm.h / sheetMm.w) + 112 }}>
           <div className="sheetbox" style={{ width: sheetW }}>
             <div className="pagenos"><span>Halaman {s * 2 + 1}</span>{spread.left?.side === "both" && <span>panorama dua halaman</span>}<span>Spread {s + 1} dari {spreads.length} · halaman {s * 2 + 2}</span></div>
-            <Sheet spread={spread} preset={preset} byId={byId} place={place} sel={sel} selText={selText} guides={guides} lowres={lowres} passive={hand}
+            <div className="sheetwrap"><Sheet spread={spread} preset={preset} byId={byId} place={place} sel={sel} selText={selText} guides={guides} lowres={lowres} passive={hand}
               crop={crop} onCrop={setCropId}
               hiSide={blankPick ? pickOn!.side : pickPage && !sel && !selText ? (pickPage.side as 0 | 1 | "both") : null}
               onSelectPage={(side) => { setSel(""); setSelText(null); setPick({ spread: s, side }); setTab("props"); }}
@@ -581,6 +589,14 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
               onDrop={drop}
               onFrames={(page, boxes, replace) => setPage(page, { free: boxes }, replace)}
               onText={(page, id, patch, replace) => setText(page, id, patch, replace)} />
+            {proofPins.length > 0 && (
+              <div className="pins" style={{ inset: `${(preset.bleedMm / sheetMm.h) * 100}% ${(preset.bleedMm / sheetMm.w) * 100}%` }} aria-label="Catatan klien">
+                {proofPins.map(({ n, no }) => (
+                  <button key={n.id} type="button" className={`pin ${n.done ? "done" : ""}`} style={{ left: `${n.x! * 100}%`, top: `${n.y! * 100}%` }} title={n.text}
+                    onClick={(e) => { e.stopPropagation(); setTab("revisi"); setTimeout(() => document.getElementById(`rev-note-${n.id}`)?.scrollIntoView({ block: "center", behavior: "smooth" }), 30); }}>{no}</button>
+                ))}
+              </div>
+            )}</div>
           </div>
         </div>
       </div>
