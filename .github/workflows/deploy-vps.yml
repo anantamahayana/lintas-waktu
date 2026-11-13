@@ -1,0 +1,41 @@
+# Pasang / perbarui API di VPS (IDCloudHost). Jalankan dari tab Actions → "Deploy API ke VPS" → Run workflow.
+# Rahasia diambil dari GitHub Secrets (lihat docs/DEPLOYMENT.md); tidak pernah ditulis di repo.
+name: Deploy API ke VPS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      HOST: 103.217.144.86
+      SSHPASS: ${{ secrets.VPS_PASSWORD }}
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+      REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
+      GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+    steps:
+      - name: Cek rahasia
+        run: |
+          for v in SSHPASS SECRET_KEY ADMIN_PASSWORD GOOGLE_SERVICE_ACCOUNT_JSON; do
+            [ -n "${!v}" ] || { echo "::error::Secret untuk $v belum diisi"; exit 1; }
+          done
+      - name: Kirim pengaturan dan pasang
+        run: |
+          sudo apt-get install -y -qq sshpass >/dev/null
+          umask 077
+          GJ=$(printf '%s' "$GOOGLE_SERVICE_ACCOUNT_JSON" | tr -d '\n\r')
+          printf 'SECRET_KEY=%s\nADMIN_PASSWORD=%s\nREVALIDATE_SECRET=%s\nGOOGLE_SERVICE_ACCOUNT_JSON=%s\nFRONTEND_URL=https://www.lintaswaktuvisual.com\nAPP_ENV=production\n' \
+            "$SECRET_KEY" "$ADMIN_PASSWORD" "$REVALIDATE_SECRET" "$GJ" > api.env
+          O="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
+          sshpass -e scp $O api.env lw@$HOST:/tmp/api.env
+          rm api.env
+          printf '%s\n' "$SSHPASS" | sshpass -e ssh $O lw@$HOST 'read -r P; printf "%s\n" "$P" | sudo -S -p "" bash -c "
+            mkdir -p /srv/lintas-waktu && install -m 600 /tmp/api.env /srv/lintas-waktu/api.env && rm -f /tmp/api.env
+            curl -fsSL https://raw.githubusercontent.com/anantamahayana/lintas-waktu/main/deploy/vps/setup.sh | bash
+          "'
+      - name: Cek API
+        run: |
+          sleep 10
+          curl -fsS -H "Host: api.lintaswaktuvisual.com" http://$HOST/api/health -o /dev/null -w "HTTP %{http_code}\n" || echo "::warning::Belum menjawab lewat HTTP; cek DNS/HTTPS."
