@@ -1,7 +1,11 @@
 # Catatan perubahan
 
 Yang terbaru di atas. Setiap perubahan yang di-push menambah satu entri di sini (aturannya di `CLAUDE.md`).
-Format: `### 2026-11-13 · NantaPakeAI (aktivitas klien)
+Format: `### 2026-11-13 · NantaPakeAI (halaman klien)
+- Admin: menu **Clients** — daftar klien (dikelompokkan otomatis dari nomor WA, email, nama, dan tautan sesi/invoice/booking) dengan sisa tagihan; halaman klien berisi semua galeri, proof, invoice, booking, inquiry, dan pembayaran.
+- **Manual:** tidak ada.
+
+### 2026-11-13 · NantaPakeAI (aktivitas klien)
 - Admin: menu **Activity** dengan angka belum dibaca — klien membuka/mengirim galeri, membuka proof, menulis catatan, menyetujui album, membuka invoice/kuitansi, inquiry baru. Buka halaman = semua terbaca.
 - API: tabel `activity`, `GET /api/admin/activity`, `POST /api/admin/activity/read`; kunjungan berulang dicatat paling sering tiap 6 jam.
 - **Manual:** tidak ada.
