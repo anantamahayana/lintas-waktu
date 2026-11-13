@@ -27,7 +27,7 @@ export function DueInvoices() {
   };
   return (
     <div className="mb-8 border border-line">
-      <div className="px-4 py-3 border-b border-line t-mono text-faint">Payments due · {rows.length}</div>
+      <div className="px-4 py-3 border-b border-line t-mono text-faint">Tagihan jatuh tempo · {rows.length}</div>
       {rows.map((i) => {
         const d = dayDiff(i.due_at!);
         return (
@@ -35,9 +35,9 @@ export function DueInvoices() {
             <Link href={`/admin/invoices/${i.id}`} className="link font-mono">{i.number}</Link>
             <span className="font-medium">{i.client_name}</span>
             <span className="tabular-nums">{money(i.totals.balance, i.currency)}</span>
-            <span className={d < 0 ? "text-error" : d <= 2 ? "text-[#a8741a]" : "text-mute"}>{d < 0 ? `${-d} d late` : d === 0 ? "due today" : `due in ${d} d`} · {fmtDate(i.due_at)}</span>
+            <span className={d < 0 ? "text-error" : d <= 2 ? "text-[#a8741a]" : "text-mute"}>{d < 0 ? `telat ${-d} hari` : d === 0 ? "jatuh tempo hari ini" : `${d} hari lagi`} · {fmtDate(i.due_at)}</span>
             <span className="grow" />
-            {i.client_wa ? <button type="button" className="link" onClick={() => nudge(i)}>Remind via WhatsApp</button> : <span className="text-faint">no WhatsApp number</span>}
+            {i.client_wa ? <button type="button" className="link" onClick={() => nudge(i)}>Ingatkan via WhatsApp</button> : <span className="text-faint">tanpa nomor WhatsApp</span>}
           </div>
         );
       })}

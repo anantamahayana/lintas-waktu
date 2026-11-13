@@ -14,12 +14,12 @@ type Path = (string | number)[];
 
 /** Tabs follow the site's pages; each shows the text blocks that page reads. */
 const TABS: { key: string; label: string; roots: string[][]; skip?: string[] }[] = [
-  { key: "home", label: "Home", roots: [["home"]], skip: ["packages"] },
-  { key: "packages", label: "Packages", roots: [["home", "packages"]] },
-  { key: "services", label: "Services", roots: [["services"]] },
-  { key: "about", label: "About", roots: [["about"]] },
-  { key: "contact", label: "Contact", roots: [["contact"]] },
-  { key: "work", label: "Work", roots: [["work"], ["project"], ["categories"]] },
+  { key: "home", label: "Beranda", roots: [["home"]], skip: ["packages"] },
+  { key: "packages", label: "Paket", roots: [["home", "packages"]] },
+  { key: "services", label: "Layanan", roots: [["services"]] },
+  { key: "about", label: "Tentang", roots: [["about"]] },
+  { key: "contact", label: "Kontak", roots: [["contact"]] },
+  { key: "work", label: "Pekerjaan", roots: [["work"], ["project"], ["categories"]] },
   { key: "global", label: "Menu & footer", roots: [["brand"], ["nav"], ["cta"], ["footer"], ["notFound"]] },
   { key: "seo", label: "SEO", roots: [["meta"]] },
 ];
@@ -79,7 +79,7 @@ export default function SiteTextPage() {
     try {
       await api.put("/api/admin/copy", { en: diffCopy(val.en, DEFAULTS.en) ?? {}, id: diffCopy(val.id, DEFAULTS.id) ?? {} });
       setSaved(JSON.stringify(val));
-      toast("Site text saved — the website updates within a minute");
+      toast("Teks situs tersimpan — website diperbarui dalam semenit");
     } catch (e) {
       toast(e instanceof Error ? e.message : "Failed", true);
     } finally {
@@ -87,7 +87,7 @@ export default function SiteTextPage() {
     }
   }
   async function resetAll() {
-    if (!(await confirm({ title: "Reset all site text?", body: "Every text goes back to the original wording, in both languages. Nothing is saved until you press Save.", action: "Reset all", danger: true }))) return;
+    if (!(await confirm({ title: "Atur ulang semua teks situs?", body: "Semua teks kembali ke kata-kata aslinya, dalam dua bahasa. Belum tersimpan sampai kamu menekan Simpan.", action: "Atur ulang semua", danger: true }))) return;
     setVal({ en: DEFAULTS.en, id: DEFAULTS.id });
   }
 
@@ -105,15 +105,15 @@ export default function SiteTextPage() {
     const long = sample.length > 70 || sample.includes("\n") || label.toLowerCase().includes("includes");
     const vars = [...new Set(sample.match(/\{\w+\}/g) ?? [])];
     const hints = [
-      vars.length ? `keep ${vars.join(" ")} — filled in automatically` : "",
-      /<\w+>/.test(sample) ? "text inside <em>…</em> shows in italics" : "",
+      vars.length ? `biarkan ${vars.join(" ")} — diisi otomatis` : "",
+      /<\w+>/.test(sample) ? "teks di dalam <em>…</em> tampil miring" : "",
       label.toLowerCase().includes("includes") ? "one item per line" : "",
     ].filter(Boolean);
     return (
       <div key={p.join(".")} className={clsx("flex flex-col gap-2 py-3 border-b border-line last:border-0", isChanged && "bg-[#faf6ea] -mx-3 px-3")}>
         <div className="flex items-baseline justify-between gap-3">
           <span className="t-mono text-mute">{label}{hints.length > 0 && <span className="text-faint normal-case tracking-normal"> · {hints.join(" · ")}</span>}</span>
-          {isChanged && <button type="button" onClick={() => reset(p)} className="link t-mono text-faint hover:text-ink shrink-0">Reset</button>}
+          {isChanged && <button type="button" onClick={() => reset(p)} className="link t-mono text-faint hover:text-ink shrink-0">Atur ulang</button>}
         </div>
         <div className="grid md:grid-cols-2 gap-2">
           {(["en", "id"] as const).map((loc) => (
@@ -139,7 +139,7 @@ export default function SiteTextPage() {
       <div key={p.join(".")} className="flex flex-col gap-3 py-3">
         <div className="flex items-center justify-between gap-3">
           <span className="t-mono text-ink">{label} <span className="text-faint">· {list.length}</span></span>
-          {listChanged && <button type="button" onClick={() => reset(p)} className="link t-mono text-faint hover:text-ink">Reset list</button>}
+          {listChanged && <button type="button" onClick={() => reset(p)} className="link t-mono text-faint hover:text-ink">Atur ulang daftar</button>}
         </div>
         {list.map((item, i) => {
           const title = item && typeof item === "object" ? String(Object.values(item as object).find((x) => typeof x === "string" && x) ?? "") : "";
@@ -148,9 +148,9 @@ export default function SiteTextPage() {
               <div className="flex items-center justify-between gap-2 pb-1">
                 <span className="t-small truncate"><span className="t-mono text-faint mr-2">{i + 1}</span>{title.slice(0, 60)}</span>
                 <span className="flex gap-1 shrink-0">
-                  <button type="button" disabled={i === 0} onClick={() => editList(p, (l) => { [l[i - 1], l[i]] = [l[i], l[i - 1]]; return l; })} aria-label="Move up" className="h-9 w-9 border border-line disabled:opacity-30">↑</button>
-                  <button type="button" disabled={i === list.length - 1} onClick={() => editList(p, (l) => { [l[i + 1], l[i]] = [l[i], l[i + 1]]; return l; })} aria-label="Move down" className="h-9 w-9 border border-line disabled:opacity-30">↓</button>
-                  <button type="button" disabled={list.length <= 1} onClick={async () => { if (await confirm({ title: `Remove “${title.slice(0, 40) || `item ${i + 1}`}”?`, body: "Removed in both languages. Nothing is saved until you press Save.", action: "Remove", danger: true })) editList(p, (l) => l.filter((_, j) => j !== i)); }} aria-label="Remove" className="h-9 w-9 border border-line text-mute hover:text-error disabled:opacity-30">✕</button>
+                  <button type="button" disabled={i === 0} onClick={() => editList(p, (l) => { [l[i - 1], l[i]] = [l[i], l[i - 1]]; return l; })} aria-label="Naikkan" className="h-9 w-9 border border-line disabled:opacity-30">↑</button>
+                  <button type="button" disabled={i === list.length - 1} onClick={() => editList(p, (l) => { [l[i + 1], l[i]] = [l[i], l[i + 1]]; return l; })} aria-label="Turunkan" className="h-9 w-9 border border-line disabled:opacity-30">↓</button>
+                  <button type="button" disabled={list.length <= 1} onClick={async () => { if (await confirm({ title: `Hapus “${title.slice(0, 40) || `item ${i + 1}`}”?`, body: "Dihapus dari dua bahasa. Belum tersimpan sampai kamu menekan Simpan.", action: "Hapus", danger: true })) editList(p, (l) => l.filter((_, j) => j !== i)); }} aria-label="Hapus" className="h-9 w-9 border border-line text-mute hover:text-error disabled:opacity-30">✕</button>
                 </span>
               </div>
               {renderNode([...p, i])}
@@ -193,11 +193,11 @@ export default function SiteTextPage() {
     <>
       <PageHeader
         eyebrow="Website"
-        title="Site text"
+        title="Teks situs"
         actions={
           <>
-            <a className="action !py-2.5 !px-4" href="/" target="_blank" rel="noreferrer">View site ↗</a>
-            <Btn kind="ink" disabled={!dirty || busy} onClick={save}>{busy ? "Saving…" : dirty ? "Save" : "Saved"}</Btn>
+            <a className="action !py-2.5 !px-4" href="/" target="_blank" rel="noreferrer">Lihat website ↗</a>
+            <Btn kind="ink" disabled={!dirty || busy} onClick={save}>{busy ? "Menyimpan…" : dirty ? "Simpan" : "Tersimpan"}</Btn>
           </>
         }
       />
@@ -212,7 +212,7 @@ export default function SiteTextPage() {
             <button key={x.key} type="button" role="tab" aria-selected={tab === x.key} onClick={() => setTab(x.key)} className={clsx("t-mono px-3 py-2 border", tab === x.key ? "border-ink text-ink" : "border-transparent text-mute hover:text-ink")}>{x.label}</button>
           ))}
         </div>
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find text…" className="field !h-10 sm:ml-auto sm:w-56" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari teks…" className="field !h-10 sm:ml-auto sm:w-56" />
       </div>
 
       <div className="border border-line bg-white p-4 sm:p-6 flex flex-col gap-2">
@@ -225,8 +225,8 @@ export default function SiteTextPage() {
       </div>
 
       <div className="flex justify-between items-center pt-5">
-        <button type="button" onClick={resetAll} className="link t-mono text-faint hover:text-error">Reset all text to the original</button>
-        <Btn kind="ink" disabled={!dirty || busy} onClick={save}>{busy ? "Saving…" : dirty ? "Save" : "Saved"}</Btn>
+        <button type="button" onClick={resetAll} className="link t-mono text-faint hover:text-error">Kembalikan semua teks ke aslinya</button>
+        <Btn kind="ink" disabled={!dirty || busy} onClick={save}>{busy ? "Menyimpan…" : dirty ? "Simpan" : "Tersimpan"}</Btn>
       </div>
     </>
   );

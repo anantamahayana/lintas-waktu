@@ -36,28 +36,28 @@ export default function InvoicesPage() {
   }, [all, filter, q, is]);
 
   const pill = (i: Invoice) => {
-    if (i.status === "paid") return <Pill tone="ok">Paid</Pill>;
-    if (i.status === "void") return <Pill tone="mute">Void</Pill>;
-    if (is.overdue(i)) return <Pill tone="new">Overdue</Pill>;
-    if (i.status === "sent") return <Pill tone="warn">{i.kind === "quote" ? "Quote sent" : "Sent"}</Pill>;
-    return <Pill tone="mute">Draft</Pill>;
+    if (i.status === "paid") return <Pill tone="ok">Lunas</Pill>;
+    if (i.status === "void") return <Pill tone="mute">Batal (void)</Pill>;
+    if (is.overdue(i)) return <Pill tone="new">Telat</Pill>;
+    if (i.status === "sent") return <Pill tone="warn">{i.kind === "quote" ? "Penawaran terkirim" : "Terkirim"}</Pill>;
+    return <Pill tone="mute">Draf</Pill>;
   };
 
   return (
     <>
       <PageHeader
-        eyebrow="Business"
-        title="Invoices"
+        eyebrow="Bisnis"
+        title="Invoice"
         actions={
           <>
-            <Input placeholder="Search client or number…" value={q} onChange={(e) => setQ(e.target.value)} className="!w-[240px]" />
-            <Link href="/admin/invoices/new" className="ink-btn !py-2.5 !px-4">+ New invoice</Link>
+            <Input placeholder="Cari klien atau nomor…" value={q} onChange={(e) => setQ(e.target.value)} className="!w-[240px]" />
+            <Link href="/admin/invoices/new" className="ink-btn !py-2.5 !px-4">+ Invoice baru</Link>
           </>
         }
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
-        {([["sent", "Awaiting payment", counts.sent], ["overdue", "Overdue", counts.overdue], ["draft", "Drafts", counts.draft], ["paid", "Paid", counts.paid]] as const).map(([k, l, n]) => (
+        {([["sent", "Menunggu pembayaran", counts.sent], ["overdue", "Overdue", counts.overdue], ["draft", "Drafts", counts.draft], ["paid", "Paid", counts.paid]] as const).map(([k, l, n]) => (
           <Stat key={k} n={n} label={l} active={filter === k} onClick={() => setFilter(filter === k ? "all" : k)} />
         ))}
       </div>
@@ -67,18 +67,18 @@ export default function InvoicesPage() {
 
       {err ? <LoadError error={err} retry={() => { setErr(null); load(); }} /> : rows === null ? <SkeletonRows n={5} /> : shown.length === 0 ? (
         all.length === 0
-          ? <Empty title="No invoices yet." body="Write an invoice or a quotation in a minute: client, lines, deposit — then share a link the client can open and print. Business details and bank account live in Site settings." action={<Link href="/admin/invoices/new" className="ink-btn !py-2.5 !px-4">Write the first invoice</Link>} />
-          : <Empty title="Nothing matches." body="Try another filter or search." />
+          ? <Empty title="Belum ada invoice." body="Buat invoice atau penawaran dalam semenit: klien, rincian, DP — lalu bagikan link yang bisa dibuka dan dicetak klien. Data bisnis dan rekening ada di Pengaturan situs." action={<Link href="/admin/invoices/new" className="ink-btn !py-2.5 !px-4">Buat invoice pertama</Link>} />
+          : <Empty title="Tidak ada yang cocok." body="Coba filter atau kata kunci lain." />
       ) : (
         <table className="w-full border-t border-line">
           <thead>
             <tr className="t-mono text-faint text-left">
-              <th className="py-3 pr-4 font-normal">Number</th>
-              <th className="py-3 pr-4 font-normal">Client</th>
+              <th className="py-3 pr-4 font-normal">Nomor</th>
+              <th className="py-3 pr-4 font-normal">Klien</th>
               <th className="py-3 pr-4 font-normal">Status</th>
               <th className="py-3 pr-4 font-normal text-right hidden md:table-cell">Total</th>
-              <th className="py-3 pr-4 font-normal text-right hidden md:table-cell">Balance</th>
-              <th className="py-3 font-normal hidden lg:table-cell">Due</th>
+              <th className="py-3 pr-4 font-normal text-right hidden md:table-cell">Sisa</th>
+              <th className="py-3 font-normal hidden lg:table-cell">Jatuh tempo</th>
             </tr>
           </thead>
           <tbody>

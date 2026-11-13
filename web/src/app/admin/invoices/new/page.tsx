@@ -13,7 +13,7 @@ export default function NewInvoicePage() {
   useEffect(() => { load(); }, []);
   return (
     <>
-      <PageHeader eyebrow={<><Link href="/admin/invoices" className="link">Invoices</Link> · new</> as unknown as string} title="New invoice" />
+      <PageHeader eyebrow={<><Link href="/admin/invoices" className="link">Invoice</Link> · baru</> as unknown as string} title="Invoice baru" />
       {err ? <LoadError error={err} retry={() => { setErr(null); load(); }} /> : biz ? <InvoiceForm business={biz} /> : <SkeletonForm fields={8} />}
     </>
   );

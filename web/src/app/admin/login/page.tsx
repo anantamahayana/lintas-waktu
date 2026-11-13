@@ -21,7 +21,7 @@ export default function LoginPage() {
       token.set(r.access_token);
       router.replace("/admin");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? err.message : "Gagal masuk");
     } finally {
       setBusy(false);
     }
@@ -32,13 +32,13 @@ export default function LoginPage() {
       <form onSubmit={onSubmit} className="w-full max-w-[400px] bg-white border border-line p-8 flex flex-col gap-6">
         <div className="flex flex-col items-start gap-3">
           <Logo size={28} />
-          <span className="t-mono text-mute">Admin sign in</span>
+          <span className="t-mono text-mute">Masuk admin</span>
         </div>
-        <Field label="Password" error={error ?? undefined}>
+        <Field label="Kata sandi" error={error ?? undefined}>
           <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoFocus autoComplete="current-password" />
         </Field>
-        <Btn kind="ink" type="submit" disabled={busy || !password}>{busy ? "Signing in…" : "Sign in"}</Btn>
-        <p className="t-small text-faint">5 failed attempts per address, 20 total, per 15 minutes.</p>
+        <Btn kind="ink" type="submit" disabled={busy || !password}>{busy ? "Masuk…" : "Masuk"}</Btn>
+        <p className="t-small text-faint">Maksimal 5 kali gagal per alamat, 20 total, per 15 menit.</p>
       </form>
     </div>
   );

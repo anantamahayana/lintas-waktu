@@ -44,13 +44,13 @@ export function FrameEditor({ src, title, value, previews, allowWhole, onSave, o
     <div className="fixed inset-0 z-50 bg-ink/40 backdrop-blur-[2px] flex items-end sm:items-center justify-center p-3 sm:p-4 admin-fade" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div role="dialog" aria-modal="true" className="admin-pop w-full max-w-[1100px] max-h-[94vh] overflow-y-auto bg-white border border-line flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-line">
-          <div className="flex flex-col"><span className="t-mono text-mute">Framing</span><span className="font-serif text-[22px] leading-tight">{title}</span></div>
-          <button type="button" onClick={onClose} aria-label="Close" className="h-10 w-10 text-mute hover:text-ink text-[18px]">✕</button>
+          <div className="flex flex-col"><span className="t-mono text-mute">Komposisi</span><span className="font-serif text-[22px] leading-tight">{title}</span></div>
+          <button type="button" onClick={onClose} aria-label="Tutup" className="h-10 w-10 text-mute hover:text-ink text-[18px]">✕</button>
         </div>
 
         <div className="grid lg:grid-cols-[minmax(0,1fr)_340px] gap-6 p-5">
           <div className="flex flex-col gap-3">
-            <p className="t-small text-mute">{whole ? "The whole photograph is shown; the box takes the photo’s own shape." : "Tap or drag on the photo to choose what must stay in view — a face, the couple, the horizon."}</p>
+            <p className="t-small text-mute">{whole ? "Seluruh foto ditampilkan; kotaknya mengikuti bentuk foto." : "Ketuk atau seret di foto untuk memilih bagian yang harus terlihat — wajah, pasangan, cakrawala."}</p>
             <div ref={area} className={clsx("relative bg-[#f0eee8] flex items-center justify-center select-none touch-none", !whole && "cursor-crosshair")}
               onPointerDown={(e) => { if (whole) return; dragging.current = true; (e.target as HTMLElement).setPointerCapture?.(e.pointerId); pointAt(e.clientX, e.clientY); }}
               onPointerMove={(e) => { if (dragging.current) pointAt(e.clientX, e.clientY); }}
@@ -69,7 +69,7 @@ export function FrameEditor({ src, title, value, previews, allowWhole, onSave, o
           <div className="flex flex-col gap-5">
             {allowWhole && (
               <div role="radiogroup" className="grid grid-cols-2 gap-2">
-                {([["cover", "Fill the frame"], ["whole", "Show whole photo"]] as const).map(([k, l]) => (
+                {([["cover", "Penuhi bingkai"], ["whole", "Tampilkan seluruh foto"]] as const).map(([k, l]) => (
                   <button key={k} type="button" role="radio" aria-checked={(f.fit ?? "cover") === k} onClick={() => setF((v) => ({ ...v, fit: k }))}
                     className={clsx("h-11 px-3 border t-small", (f.fit ?? "cover") === k ? "border-ink text-ink" : "border-line text-mute hover:border-ink")}>{l}</button>
                 ))}
@@ -83,9 +83,9 @@ export function FrameEditor({ src, title, value, previews, allowWhole, onSave, o
             )}
 
             <div className="flex flex-col gap-3">
-              <span className="t-mono text-mute">How it looks on the site</span>
+              <span className="t-mono text-mute">Tampilan di website</span>
               <div className="flex flex-wrap items-end gap-3">
-                {(whole ? [{ label: "Everywhere", ratio: natural ?? 1 }] : previews).map((p) => (
+                {(whole ? [{ label: "Semua tempat", ratio: natural ?? 1 }] : previews).map((p) => (
                   <figure key={p.label} className="flex flex-col gap-1.5">
                     <div className="relative overflow-hidden bg-line" style={{ aspectRatio: String(p.ratio), width: p.ratio >= 1 ? 300 : Math.round(200 * p.ratio) }}>
                       <div className="absolute inset-0" style={!whole && f.zoom > 1 ? { transform: `scale(${f.zoom})`, transformOrigin: `${f.x}% ${f.y}%` } : undefined}>
@@ -99,9 +99,9 @@ export function FrameEditor({ src, title, value, previews, allowWhole, onSave, o
             </div>
 
             <div className="flex flex-wrap gap-2 pt-2 border-t border-line">
-              <button type="button" onClick={() => setF(FRAME0)} className="link t-mono text-mute mr-auto self-center">Reset to centre</button>
-              <button type="button" onClick={onClose} className="t-mono px-4 py-2.5 border border-line">Cancel</button>
-              <button type="button" disabled={busy} onClick={save} className="t-mono px-4 py-2.5 bg-ink text-white disabled:opacity-40">{busy ? "Saving…" : "Save framing"}</button>
+              <button type="button" onClick={() => setF(FRAME0)} className="link t-mono text-mute mr-auto self-center">Kembali ke tengah</button>
+              <button type="button" onClick={onClose} className="t-mono px-4 py-2.5 border border-line">Batal</button>
+              <button type="button" disabled={busy} onClick={save} className="t-mono px-4 py-2.5 bg-ink text-white disabled:opacity-40">{busy ? "Menyimpan…" : "Simpan komposisi"}</button>
             </div>
           </div>
         </div>

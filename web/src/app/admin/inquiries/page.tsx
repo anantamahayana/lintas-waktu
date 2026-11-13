@@ -7,8 +7,8 @@ import { Btn, Card, Field, PageHeader, Pill, Stat, Textarea, confirm, fmtDate, t
 
 const STATUSES: InquiryStatus[] = ["new", "replied", "booked", "closed"];
 const TONE: Record<InquiryStatus, "new" | "warn" | "ok" | "mute"> = { new: "new", replied: "warn", booked: "ok", closed: "mute" };
-const KIND: Record<string, string> = { wedding: "Wedding", prewedding: "Pre-wedding", editorial: "Editorial / Model", event: "Event", personal: "Personal", other: "Not sure yet" };
-const BUDGET: Record<string, string> = { b1: "< IDR 5M / USD 300", b2: "IDR 5–15M / USD 300–950", b3: "IDR 15–30M / USD 950–1.9k", b4: "> IDR 30M / USD 1.9k", b5: "Let’s talk",
+const KIND: Record<string, string> = { wedding: "Wedding", prewedding: "Pre-wedding", editorial: "Editorial / Model", event: "Event", personal: "Personal", other: "Belum pasti" };
+const BUDGET: Record<string, string> = { b1: "< IDR 5M / USD 300", b2: "IDR 5–15M / USD 300–950", b3: "IDR 15–30M / USD 950–1.9k", b4: "> IDR 30M / USD 1.9k", b5: "Diskusi dulu",
   r1: "< IDR 1M / USD 65", r2: "IDR 1–3M / USD 65–190", r3: "IDR 3–5M / USD 190–310", r4: "> IDR 5M / USD 310" }; // b1–b4: ranges before the Sep 2026 prices
 
 export default function InquiriesPage() {
@@ -25,15 +25,15 @@ export default function InquiriesPage() {
   const counts = Object.fromEntries(STATUSES.map((s) => [s, (rows ?? []).filter((i) => i.status === s).length])) as Record<InquiryStatus, number>;
 
   async function setStatus(i: Inquiry, status: InquiryStatus) {
-    try { await api.patch(`/api/admin/inquiries/${i.id}`, { status }); toast(`Marked ${status}`); load(); } catch (e) { toast(e instanceof Error ? e.message : "Failed", true); }
+    try { await api.patch(`/api/admin/inquiries/${i.id}`, { status }); toast(`Ditandai ${status}`); load(); } catch (e) { toast(e instanceof Error ? e.message : "Failed", true); }
   }
   async function saveNote(i: Inquiry, note: string) {
-    try { await api.patch(`/api/admin/inquiries/${i.id}`, { internal_note: note }); toast("Note saved"); load(); } catch (e) { toast(e instanceof Error ? e.message : "Failed", true); }
+    try { await api.patch(`/api/admin/inquiries/${i.id}`, { internal_note: note }); toast("Catatan tersimpan"); load(); } catch (e) { toast(e instanceof Error ? e.message : "Failed", true); }
   }
   async function remove(i: Inquiry) {
-    const ok = await confirm({ title: `Delete the message from ${i.name}?`, body: "The inquiry, its status and your note are removed for good. Export the CSV first if you want a record.", action: "Delete", danger: true });
+    const ok = await confirm({ title: `Hapus pesan dari ${i.name}?`, body: "Pesan, statusnya, dan catatanmu terhapus permanen. Ekspor CSV dulu kalau ingin menyimpan arsipnya.", action: "Hapus", danger: true });
     if (!ok) return;
-    try { await api.del(`/api/admin/inquiries/${i.id}`); setSel(null); toast(`Message from ${i.name} deleted`); load(); } catch (e) { toast(e instanceof Error ? e.message : "Failed", true); }
+    try { await api.del(`/api/admin/inquiries/${i.id}`); setSel(null); toast(`Pesan dari ${i.name} dihapus`); load(); } catch (e) { toast(e instanceof Error ? e.message : "Failed", true); }
   }
 
   const csv = () => {
@@ -48,13 +48,13 @@ export default function InquiriesPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Website" title="Inquiries" actions={<Btn onClick={csv}>Export CSV</Btn>} />
+      <PageHeader eyebrow="Website" title="Pesan masuk" actions={<Btn onClick={csv}>Ekspor CSV</Btn>} />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
         {STATUSES.map((s) => <Stat key={s} n={counts[s]} label={s[0].toUpperCase() + s.slice(1)} active={filter === s} onClick={() => setFilter(filter === s ? "all" : s)} />)}
       </div>
 
       {err ? <LoadError error={err} retry={() => { setErr(null); load(); }} /> : rows === null ? <SkeletonRows n={5} /> : rows.length === 0 ? (
-        <Empty title="No inquiries yet." body="Messages sent through the website’s contact form land here, with the couple’s date, location and budget. You can reply on WhatsApp in one tap." action={<a href="/contact" target="_blank" rel="noreferrer" className="link t-mono">Open the contact page ↗</a>} />
+        <Empty title="Belum ada pesan masuk." body="Pesan dari formulir kontak website masuk ke sini, lengkap dengan tanggal, lokasi, dan budget. Kamu bisa membalas lewat WhatsApp sekali ketuk." action={<a href="/contact" target="_blank" rel="noreferrer" className="link t-mono">Buka halaman kontak ↗</a>} />
       ) : (
         <div className="grid lg:grid-cols-[400px_1fr] gap-6 items-start">
           <ul className="flex flex-col border-t border-line">
@@ -69,7 +69,7 @@ export default function InquiriesPage() {
                 </button>
               </li>
             ))}
-            {shown.length === 0 && <li className="p-8 text-center t-small text-mute">No {filter} messages. <button type="button" className="link" onClick={() => setFilter("all")}>Show all</button></li>}
+            {shown.length === 0 && <li className="p-8 text-center t-small text-mute">No {filter} messages. <button type="button" className="link" onClick={() => setFilter("all")}>Tampilkan semua</button></li>}
           </ul>
 
           {cur && (
@@ -80,16 +80,16 @@ export default function InquiriesPage() {
                   <span className="t-small text-mute"><a className="link" href={`mailto:${cur.email}`}>{cur.email}</a> · via contact form ({cur.locale.toUpperCase()}) · {fmtDate(cur.created_at, true)}</span>
                 </div>
                 <div className="flex gap-2">
-                  <a className="t-mono inline-flex items-center px-4 py-2.5 border border-line hover:border-ink" href={`mailto:${cur.email}?subject=${encodeURIComponent("Re: your inquiry — Lintas Waktu")}`}>Reply by email</a>
-                  <a className="ink-btn !py-2.5 !px-4" href={wa(cur)} target="_blank" rel="noreferrer">Open WhatsApp</a>
+                  <a className="t-mono inline-flex items-center px-4 py-2.5 border border-line hover:border-ink" href={`mailto:${cur.email}?subject=${encodeURIComponent("Re: your inquiry — Lintas Waktu")}`}>Balas lewat email</a>
+                  <a className="ink-btn !py-2.5 !px-4" href={wa(cur)} target="_blank" rel="noreferrer">Buka WhatsApp</a>
                 </div>
               </div>
               <dl className="flex flex-wrap gap-x-8 gap-y-3">
-                {[["Kind", KIND[cur.kind] ?? cur.kind], ["Date", cur.date], ["Location", cur.location], ["Based in", cur.based], ["Budget", cur.budget ? BUDGET[cur.budget] ?? cur.budget : null]].filter(([, v]) => v).map(([k, v]) => (
+                {[["Kind", KIND[cur.kind] ?? cur.kind], ["Date", cur.date], ["Location", cur.location], ["Domisili", cur.based], ["Budget", cur.budget ? BUDGET[cur.budget] ?? cur.budget : null]].filter(([, v]) => v).map(([k, v]) => (
                   <div key={String(k)} className="flex flex-col gap-0.5"><dt className="t-mono text-faint">{k}</dt><dd className="t-small">{v}</dd></div>
                 ))}
               </dl>
-              <div className="bg-[#f6f5f1] p-4 flex flex-col gap-2"><span className="t-mono text-mute">Message</span><p className="t-small whitespace-pre-wrap">{cur.message}</p></div>
+              <div className="bg-[#f6f5f1] p-4 flex flex-col gap-2"><span className="t-mono text-mute">Pesan</span><p className="t-small whitespace-pre-wrap">{cur.message}</p></div>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="t-mono text-mute mr-2">Status</span>
                 {STATUSES.map((s) => (
@@ -110,10 +110,10 @@ function NoteEditor({ initial, onSave, onDelete }: { initial: string; onSave: (n
   const [note, setNote] = useState(initial);
   return (
     <>
-      <Field label="Internal note"><Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} placeholder="Replied 18 Sep — waiting on date. Follow up 25 Sep." /></Field>
+      <Field label="Catatan internal"><Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} placeholder="Dibalas 18 Sep — menunggu tanggal. Follow up 25 Sep." /></Field>
       <div className="flex justify-between">
-        <Btn kind="ink" onClick={() => onSave(note)}>Save note</Btn>
-        <Btn kind="danger" onClick={onDelete}>Delete</Btn>
+        <Btn kind="ink" onClick={() => onSave(note)}>Simpan catatan</Btn>
+        <Btn kind="danger" onClick={onDelete}>Hapus</Btn>
       </div>
     </>
   );

@@ -32,13 +32,13 @@ export default function SettingsPage() {
   function validate(): FieldErrors {
     const e: FieldErrors = {};
     if (!s) return e;
-    if (!s.studio_name.trim()) e.studio_name = "The studio name appears on every page.";
-    if (s.whatsapp_number && !/^\d{8,15}$/.test(s.whatsapp_number)) e.whatsapp_number = "Digits only, with country code — e.g. 6281234567890.";
-    if (s.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.email)) e.email = "That doesn’t look like an email address.";
-    if (s.instagram && /[@\s/]/.test(s.instagram)) e.instagram = "Just the handle, without @ or a link.";
-    if (!(s.usd_rate > 0)) e.usd_rate = "Enter the IDR value of 1 USD.";
-    if (!(s.default_package_size >= 1)) e.default_package_size = "At least 1.";
-    if (!(s.default_validity_days >= 1)) e.default_validity_days = "At least 1 day.";
+    if (!s.studio_name.trim()) e.studio_name = "Nama studio tampil di setiap halaman.";
+    if (s.whatsapp_number && !/^\d{8,15}$/.test(s.whatsapp_number)) e.whatsapp_number = "Hanya angka, dengan kode negara — mis. 6281234567890.";
+    if (s.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.email)) e.email = "Sepertinya bukan alamat email.";
+    if (s.instagram && /[@\s/]/.test(s.instagram)) e.instagram = "Cukup nama akun, tanpa @ atau link.";
+    if (!(s.usd_rate > 0)) e.usd_rate = "Isi nilai rupiah untuk 1 USD.";
+    if (!(s.default_package_size >= 1)) e.default_package_size = "Minimal 1.";
+    if (!(s.default_validity_days >= 1)) e.default_validity_days = "Minimal 1 hari.";
     return e;
   }
 
@@ -54,7 +54,7 @@ export default function SettingsPage() {
       // keep the proofing gallery's branding in step (studio name + tagline + contact)
       await api.put("/api/admin/branding", { studio_name: s.studio_name, tagline: s.descriptor_en, contact: s.whatsapp_display || s.email }).catch(() => {});
       setSaved(s);
-      toast("Settings saved");
+      toast("Pengaturan tersimpan");
     } catch (err) {
       if (err instanceof ApiError && Object.keys(err.fields).length) { setErrors(err.fields); focusFirstInvalid(); }
       toast(err instanceof Error ? err.message : "Failed", true);
@@ -63,20 +63,20 @@ export default function SettingsPage() {
 
   async function uploadLogo(file: File) {
     const fd = new FormData(); fd.append("file", file);
-    try { const r = await api.upload<Branding>("/api/admin/branding/logo", fd); setB(r); toast("Logo uploaded"); } catch (err) { toast(err instanceof Error ? err.message : "Failed", true); }
+    try { const r = await api.upload<Branding>("/api/admin/branding/logo", fd); setB(r); toast("Logo diunggah"); } catch (err) { toast(err instanceof Error ? err.message : "Failed", true); }
   }
   async function removeLogo() {
-    if (!(await confirm({ title: "Remove the logo?", body: "Client galleries show the studio name as text instead. You can upload a logo again any time.", action: "Remove logo", danger: true }))) return;
-    try { await api.del("/api/admin/branding/logo"); setB((x) => (x ? { ...x, logo_url: null } : x)); toast("Logo removed"); } catch (err) { toast(err instanceof Error ? err.message : "Failed", true); }
+    if (!(await confirm({ title: "Hapus logo?", body: "Galeri klien akan menampilkan nama studio sebagai teks. Logo bisa diunggah lagi kapan saja.", action: "Hapus logo", danger: true }))) return;
+    try { await api.del("/api/admin/branding/logo"); setB((x) => (x ? { ...x, logo_url: null } : x)); toast("Logo dihapus"); } catch (err) { toast(err instanceof Error ? err.message : "Failed", true); }
   }
 
   return (
     <>
-      <PageHeader eyebrow="Website" title="Site settings" actions={<Btn kind="ink" onClick={(e) => save(e as unknown as FormEvent)} disabled={busy || !dirty}>{busy ? "Saving…" : dirty ? "Save changes" : "Saved"}</Btn>} />
+      <PageHeader eyebrow="Website" title="Pengaturan situs" actions={<Btn kind="ink" onClick={(e) => save(e as unknown as FormEvent)} disabled={busy || !dirty}>{busy ? "Menyimpan…" : dirty ? "Simpan perubahan" : "Tersimpan"}</Btn>} />
       <form onSubmit={save} noValidate className="grid lg:grid-cols-2 gap-6 items-start">
         <div className="flex flex-col gap-6">
           <Card title="Studio">
-            <Field label="Studio name" error={errors.studio_name}><Input invalid={!!errors.studio_name} value={s.studio_name} onChange={set("studio_name")} /></Field>
+            <Field label="Nama studio" error={errors.studio_name}><Input invalid={!!errors.studio_name} value={s.studio_name} onChange={set("studio_name")} /></Field>
             <Field label="Descriptor (EN)"><Input value={s.descriptor_en} onChange={set("descriptor_en")} /></Field>
             <Field label="Descriptor (ID)"><Input value={s.descriptor_id} onChange={set("descriptor_id")} /></Field>
             <div className="flex items-center gap-4">
@@ -84,37 +84,37 @@ export default function SettingsPage() {
                 {b?.logo_url ? <img src={api.img(b.logo_url)} alt="logo" className="max-h-full max-w-full object-contain" /> : <span className="font-serif italic text-[18px] text-faint">LW</span>}
               </div>
               <div className="flex flex-col gap-2">
-                <p className="t-small text-mute">Logo for the client gallery intro. PNG with transparency, ≥ 600px wide. Until a logo exists the wordmark is shown.</p>
+                <p className="t-small text-mute">Logo untuk pembuka galeri klien. PNG transparan, lebar ≥ 600px. Selama belum ada logo, nama studio yang ditampilkan.</p>
                 <div className="flex gap-2">
-                  <label className="t-mono inline-flex items-center px-4 py-2.5 border border-line hover:border-ink cursor-pointer">Upload logo<input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" className="hidden" onChange={(e) => e.target.files?.[0] && uploadLogo(e.target.files[0])} /></label>
-                  {b?.logo_url && <Btn type="button" kind="danger" onClick={removeLogo}>Remove</Btn>}
+                  <label className="t-mono inline-flex items-center px-4 py-2.5 border border-line hover:border-ink cursor-pointer">Unggah logo<input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" className="hidden" onChange={(e) => e.target.files?.[0] && uploadLogo(e.target.files[0])} /></label>
+                  {b?.logo_url && <Btn type="button" kind="danger" onClick={removeLogo}>Hapus</Btn>}
                 </div>
               </div>
             </div>
           </Card>
-          <Card title="Contact & social">
+          <Card title="Kontak & media sosial">
             <div className="grid sm:grid-cols-2 gap-4">
-              <Field label="WhatsApp number" hint="digits, with country code" error={errors.whatsapp_number}><Input invalid={!!errors.whatsapp_number} value={s.whatsapp_number} onChange={set("whatsapp_number")} placeholder="6281234567890" /></Field>
-              <Field label="WhatsApp (as shown)"><Input value={s.whatsapp_display} onChange={set("whatsapp_display")} placeholder="+62 812 3456 7890" /></Field>
+              <Field label="Nomor WhatsApp" hint="angka, dengan kode negara" error={errors.whatsapp_number}><Input invalid={!!errors.whatsapp_number} value={s.whatsapp_number} onChange={set("whatsapp_number")} placeholder="6281234567890" /></Field>
+              <Field label="WhatsApp (seperti ditampilkan)"><Input value={s.whatsapp_display} onChange={set("whatsapp_display")} placeholder="+62 812 3456 7890" /></Field>
               <Field label="Email" error={errors.email}><Input invalid={!!errors.email} type="email" value={s.email} onChange={set("email")} placeholder="hello@lintaswaktu.com" /></Field>
-              <Field label="Instagram" hint="without @" error={errors.instagram}><Input invalid={!!errors.instagram} value={s.instagram} onChange={set("instagram")} placeholder="lintaswaktu" /></Field>
-              <Field label="YouTube" hint="channel link or @handle · optional"><Input value={s.youtube ?? ""} onChange={set("youtube")} placeholder="https://youtube.com/@lintaswaktu" /></Field>
+              <Field label="Instagram" hint="tanpa @" error={errors.instagram}><Input invalid={!!errors.instagram} value={s.instagram} onChange={set("instagram")} placeholder="lintaswaktu" /></Field>
+              <Field label="YouTube" hint="link channel atau @akun · opsional"><Input value={s.youtube ?? ""} onChange={set("youtube")} placeholder="https://youtube.com/@lintaswaktu" /></Field>
             </div>
-            <Field label="Service area"><Input value={s.service_area} onChange={set("service_area")} placeholder="Bali · beyond on request" /></Field>
+            <Field label="Area layanan"><Input value={s.service_area} onChange={set("service_area")} placeholder="Bali · luar Bali sesuai permintaan" /></Field>
           </Card>
         </div>
         <div className="flex flex-col gap-6">
-          <Card title="Languages & currency">
-            <p className="t-small text-mute">English is the primary language; Indonesian is served at /id. Prices are entered in IDR; the USD figure uses this rate.</p>
-            <Field label="USD rate" hint="IDR per 1 USD" error={errors.usd_rate}><Input invalid={!!errors.usd_rate} type="number" min={1000} value={s.usd_rate} onChange={set("usd_rate")} /></Field>
+          <Card title="Bahasa & mata uang">
+            <p className="t-small text-mute">Bahasa utama website adalah Inggris; versi Indonesia di /id. Harga diisi dalam IDR; angka USD memakai kurs ini.</p>
+            <Field label="Kurs USD" hint="IDR per 1 USD" error={errors.usd_rate}><Input invalid={!!errors.usd_rate} type="number" min={1000} value={s.usd_rate} onChange={set("usd_rate")} /></Field>
           </Card>
-          <Card title="Client gallery defaults">
+          <Card title="Bawaan galeri klien">
             <div className="grid sm:grid-cols-2 gap-4">
-              <Field label="Default package size" error={errors.default_package_size}><Input invalid={!!errors.default_package_size} type="number" min={1} value={s.default_package_size} onChange={set("default_package_size")} /></Field>
-              <Field label="Default validity (days)" error={errors.default_validity_days}><Input invalid={!!errors.default_validity_days} type="number" min={1} value={s.default_validity_days} onChange={set("default_validity_days")} /></Field>
+              <Field label="Ukuran paket bawaan" error={errors.default_package_size}><Input invalid={!!errors.default_package_size} type="number" min={1} value={s.default_package_size} onChange={set("default_package_size")} /></Field>
+              <Field label="Masa berlaku bawaan (hari)" error={errors.default_validity_days}><Input invalid={!!errors.default_validity_days} type="number" min={1} value={s.default_validity_days} onChange={set("default_validity_days")} /></Field>
             </div>
-            <Field label="WhatsApp message · English" hint="{name} {link} {pin} {package} {extras} {deadline} {studio} — lines whose value is empty are dropped"><Textarea value={s.whatsapp_template} onChange={set("whatsapp_template")} rows={6} /></Field>
-            <Field label="WhatsApp message · Bahasa Indonesia" hint="same placeholders — used for sessions whose client language is Indonesian"><Textarea value={s.whatsapp_template_id} onChange={set("whatsapp_template_id")} rows={6} /></Field>
+            <Field label="Pesan WhatsApp · English" hint="{name} {link} {pin} {package} {extras} {deadline} {studio} — baris yang nilainya kosong dilewati"><Textarea value={s.whatsapp_template} onChange={set("whatsapp_template")} rows={6} /></Field>
+            <Field label="Pesan WhatsApp · Bahasa Indonesia" hint="penanda yang sama — dipakai untuk sesi dengan klien berbahasa Indonesia"><Textarea value={s.whatsapp_template_id} onChange={set("whatsapp_template_id")} rows={6} /></Field>
           </Card>
           <InvoiceCard />
           <PasswordCard />
@@ -132,31 +132,31 @@ function PasswordCard() {
   const set = (k: keyof typeof v) => (e: { target: { value: string } }) => { setV((x) => ({ ...x, [k]: e.target.value })); if (errors[k]) setErrors((x) => ({ ...x, [k]: undefined })); };
   async function change() {
     const e: FieldErrors = {};
-    if (!v.current) e.current = "Enter your current password.";
-    if (v.next.length < 8) e.next = "At least 8 characters.";
-    if (v.again !== v.next) e.again = "Doesn’t match the new password.";
+    if (!v.current) e.current = "Isi kata sandi saat ini.";
+    if (v.next.length < 8) e.next = "Minimal 8 karakter.";
+    if (v.again !== v.next) e.again = "Tidak sama dengan kata sandi baru.";
     setErrors(e);
     if (Object.values(e).some(Boolean)) { focusFirstInvalid(); return; }
-    if (!(await confirm({ title: "Change the admin password?", body: "You stay signed in here; any other device will need the new password next time.", action: "Change password" }))) return;
+    if (!(await confirm({ title: "Ganti kata sandi admin?", body: "Kamu tetap masuk di sini; perangkat lain perlu kata sandi baru saat masuk berikutnya.", action: "Ganti kata sandi" }))) return;
     setBusy(true);
     try {
       await api.post("/api/admin/password", { current: v.current, new: v.next });
       setV({ current: "", next: "", again: "" });
-      toast("Password changed");
+      toast("Kata sandi diganti");
     } catch (err) {
-      if (err instanceof ApiError && err.status === 400) { setErrors({ current: "That isn’t the current password." }); focusFirstInvalid(); }
+      if (err instanceof ApiError && err.status === 400) { setErrors({ current: "Itu bukan kata sandi saat ini." }); focusFirstInvalid(); }
       else toast(err instanceof Error ? err.message : "Failed", true);
     } finally { setBusy(false); }
   }
   return (
-    <Card title="Admin password">
-      <p className="t-small text-mute">Set from here, the password replaces the one in the server’s .env file.</p>
-      <Field label="Current password" error={errors.current}><Input invalid={!!errors.current} type="password" autoComplete="current-password" value={v.current} onChange={set("current")} /></Field>
+    <Card title="Kata sandi admin">
+      <p className="t-small text-mute">Kata sandi yang diatur di sini menggantikan yang ada di file .env server.</p>
+      <Field label="Kata sandi saat ini" error={errors.current}><Input invalid={!!errors.current} type="password" autoComplete="current-password" value={v.current} onChange={set("current")} /></Field>
       <div className="grid sm:grid-cols-2 gap-4">
-        <Field label="New password" hint="8+ characters" error={errors.next}><Input invalid={!!errors.next} type="password" autoComplete="new-password" value={v.next} onChange={set("next")} /></Field>
-        <Field label="Repeat new password" error={errors.again}><Input invalid={!!errors.again} type="password" autoComplete="new-password" value={v.again} onChange={set("again")} /></Field>
+        <Field label="Kata sandi baru" hint="minimal 8 karakter" error={errors.next}><Input invalid={!!errors.next} type="password" autoComplete="new-password" value={v.next} onChange={set("next")} /></Field>
+        <Field label="Ulangi kata sandi baru" error={errors.again}><Input invalid={!!errors.again} type="password" autoComplete="new-password" value={v.again} onChange={set("again")} /></Field>
       </div>
-      <div><Btn type="button" onClick={change} disabled={busy}>{busy ? "Changing…" : "Change password"}</Btn></div>
+      <div><Btn type="button" onClick={change} disabled={busy}>{busy ? "Mengganti…" : "Ganti kata sandi"}</Btn></div>
     </Card>
   );
 }
@@ -174,26 +174,26 @@ function InvoiceCard() {
   async function save() {
     if (!b) return;
     setBusy(true);
-    try { const r = await api.put<InvoiceBusiness>("/api/admin/invoice-settings", b); setB(r); setSaved(r); toast("Invoice details saved"); }
+    try { const r = await api.put<InvoiceBusiness>("/api/admin/invoice-settings", b); setB(r); setSaved(r); toast("Data invoice tersimpan"); }
     catch (err) { toast(err instanceof Error ? err.message : "Failed", true); } finally { setBusy(false); }
   }
   return (
-    <Card title="Invoices · letterhead & payment">
+    <Card title="Invoice · kop & pembayaran">
       <div className="grid sm:grid-cols-2 gap-4">
-        <Field label="Business name"><Input value={b.name} onChange={set("name")} /></Field>
+        <Field label="Nama usaha"><Input value={b.name} onChange={set("name")} /></Field>
         <Field label="Tagline"><Input value={b.tagline} onChange={set("tagline")} /></Field>
-        <Field label="Email on invoices"><Input value={b.email} onChange={set("email")} /></Field>
-        <Field label="Phone on invoices"><Input value={b.phone} onChange={set("phone")} /></Field>
-        <Field label="Number prefix" hint="LW → LW-2026-0001"><Input value={b.prefix} onChange={set("prefix")} maxLength={8} /></Field>
-        <Field label="Default due (days)"><Input type="number" min={0} value={b.default_due_days} onChange={set("default_due_days")} /></Field>
-        <Field label="Language of new documents" hint="English or Bahasa Indonesia"><Select value={b.default_lang ?? "id"} onChange={set("default_lang")}><option value="id">Bahasa Indonesia</option><option value="en">English</option></Select></Field>
-        <Field label="Default tax %" hint="0 if not PKP"><Input type="number" min={0} max={100} value={b.tax_percent} onChange={set("tax_percent")} /></Field>
+        <Field label="Email di invoice"><Input value={b.email} onChange={set("email")} /></Field>
+        <Field label="Telepon di invoice"><Input value={b.phone} onChange={set("phone")} /></Field>
+        <Field label="Awalan nomor" hint="LW → LW-2026-0001"><Input value={b.prefix} onChange={set("prefix")} maxLength={8} /></Field>
+        <Field label="Jatuh tempo bawaan (hari)"><Input type="number" min={0} value={b.default_due_days} onChange={set("default_due_days")} /></Field>
+        <Field label="Bahasa dokumen baru" hint="English atau Bahasa Indonesia"><Select value={b.default_lang ?? "id"} onChange={set("default_lang")}><option value="id">Bahasa Indonesia</option><option value="en">English</option></Select></Field>
+        <Field label="Pajak bawaan %" hint="0 kalau bukan PKP"><Input type="number" min={0} max={100} value={b.tax_percent} onChange={set("tax_percent")} /></Field>
       </div>
-      <Field label="Address" hint="footer of the document"><Textarea value={b.address} onChange={set("address")} rows={2} className="!min-h-[64px]" /></Field>
-      <Field label="Bank / payment details" hint="printed on invoices that still have a balance"><Textarea value={b.bank_details} onChange={set("bank_details")} rows={3} placeholder={"BCA 123 456 7890 · a.n. I Komang Ananta Mahayana"} /></Field>
-      <Field label="Default notes / terms · English"><Textarea value={b.default_terms} onChange={set("default_terms")} rows={3} /></Field>
-      <Field label="Default notes / terms · Bahasa Indonesia"><Textarea value={b.default_terms_id ?? ""} onChange={set("default_terms_id")} rows={3} /></Field>
-      <div><Btn type="button" kind="ink" onClick={save} disabled={busy || !dirty}>{busy ? "Saving…" : dirty ? "Save invoice details" : "Saved"}</Btn></div>
+      <Field label="Alamat" hint="di bagian bawah dokumen"><Textarea value={b.address} onChange={set("address")} rows={2} className="!min-h-[64px]" /></Field>
+      <Field label="Rekening / cara bayar" hint="dicetak di invoice yang belum lunas"><Textarea value={b.bank_details} onChange={set("bank_details")} rows={3} placeholder={"BCA 123 456 7890 · a.n. I Komang Ananta Mahayana"} /></Field>
+      <Field label="Catatan bawaan · English"><Textarea value={b.default_terms} onChange={set("default_terms")} rows={3} /></Field>
+      <Field label="Catatan bawaan · Bahasa Indonesia"><Textarea value={b.default_terms_id ?? ""} onChange={set("default_terms_id")} rows={3} /></Field>
+      <div><Btn type="button" kind="ink" onClick={save} disabled={busy || !dirty}>{busy ? "Menyimpan…" : dirty ? "Simpan data invoice" : "Tersimpan"}</Btn></div>
     </Card>
   );
 }

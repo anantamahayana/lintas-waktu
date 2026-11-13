@@ -19,14 +19,14 @@ export default function ClientsPage() {
   }, [rows, q]);
   return (
     <>
-      <PageHeader eyebrow="Business" title="Clients" actions={<Input placeholder="Search name, number, email…" value={q} onChange={(e) => setQ(e.target.value)} className="!w-[260px]" />} />
-      <p className="t-small text-mute mb-6 max-w-[640px]">Grouped automatically: records with the same WhatsApp number, email or name are one client. Add the client’s number to invoices and galleries to keep them together.</p>
+      <PageHeader eyebrow="Bisnis" title="Klien" actions={<Input placeholder="Cari nama, nomor, email…" value={q} onChange={(e) => setQ(e.target.value)} className="!w-[260px]" />} />
+      <p className="t-small text-mute mb-6 max-w-[640px]">Dikelompokkan otomatis: data dengan nomor WhatsApp, email, atau nama yang sama dianggap satu klien. Isi nomor klien di invoice dan galeri supaya tetap terkumpul.</p>
       {err ? <LoadError error={err} retry={() => location.reload()} />
         : rows === null ? <SkeletonRows n={8} />
-        : shown.length === 0 ? <Empty title={rows.length ? "Nothing matches." : "No clients yet."} body={rows.length ? "Try another search." : "Clients appear here as soon as you create a gallery, invoice or booking."} />
+        : shown.length === 0 ? <Empty title={rows.length ? "Tidak ada yang cocok." : "Belum ada klien."} body={rows.length ? "Coba kata kunci lain." : "Klien muncul di sini begitu kamu membuat galeri, invoice, atau booking."} />
         : (
           <table className="w-full border-t border-line">
-            <thead><tr className="t-mono text-faint text-left"><th className="py-3 pr-4 font-normal">Client</th><th className="py-3 pr-4 font-normal hidden md:table-cell">Work</th><th className="py-3 pr-4 font-normal text-right">Open balance</th><th className="py-3 font-normal text-right hidden sm:table-cell">Last</th></tr></thead>
+            <thead><tr className="t-mono text-faint text-left"><th className="py-3 pr-4 font-normal">Klien</th><th className="py-3 pr-4 font-normal hidden md:table-cell">Pekerjaan</th><th className="py-3 pr-4 font-normal text-right">Sisa tagihan</th><th className="py-3 font-normal text-right hidden sm:table-cell">Terakhir</th></tr></thead>
             <tbody>
               {shown.map((c) => (
                 <tr key={c.id} className="border-t border-line hover:bg-[#f6f5f1]">

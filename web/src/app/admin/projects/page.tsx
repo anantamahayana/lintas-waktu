@@ -34,7 +34,7 @@ export default function ProjectsPage() {
   };
   const saveOrder = async () => {
     if (!rows) return;
-    try { await api.post("/api/admin/projects/reorder", rows.map((p) => p.id)); toast("Order saved"); setReorder(false); load(); }
+    try { await api.post("/api/admin/projects/reorder", rows.map((p) => p.id)); toast("Urutan tersimpan"); setReorder(false); load(); }
     catch (e) { toast(e instanceof Error ? e.message : "Failed", true); }
   };
 
@@ -42,11 +42,11 @@ export default function ProjectsPage() {
     <>
       <PageHeader
         eyebrow="Website"
-        title="Projects"
+        title="Proyek"
         actions={
           <>
-            {reorder ? <Btn kind="ink" onClick={saveOrder}>Save order</Btn> : <Btn onClick={() => { setCat("all"); setReorder(true); }}>Reorder</Btn>}
-            <Link href="/admin/projects/new" className="ink-btn !py-2.5 !px-4">+ New project</Link>
+            {reorder ? <Btn kind="ink" onClick={saveOrder}>Simpan urutan</Btn> : <Btn onClick={() => { setCat("all"); setReorder(true); }}>Ubah urutan</Btn>}
+            <Link href="/admin/projects/new" className="ink-btn !py-2.5 !px-4">+ Proyek baru</Link>
           </>
         }
       />
@@ -61,8 +61,8 @@ export default function ProjectsPage() {
 
       {err ? <LoadError error={err} retry={() => { setErr(null); load(); }} /> : rows === null ? <SkeletonCards /> : shown.length === 0 ? (
         rows.length === 0
-          ? <Empty title="No portfolio projects yet." body="Each project is a Google Drive folder of web-size JPEGs plus a short story in English and Indonesian. Published projects appear on the website within seconds." action={<Link href="/admin/projects/new" className="ink-btn !py-2.5 !px-4">Add the first project</Link>} />
-          : <Empty title="Nothing matches this filter." body="Change the category or publish state above." />
+          ? <Empty title="Belum ada proyek portofolio." body="Setiap proyek adalah folder Google Drive berisi JPEG ukuran web plus cerita singkat dalam bahasa Inggris dan Indonesia. Proyek yang terbit muncul di website dalam hitungan detik." action={<Link href="/admin/projects/new" className="ink-btn !py-2.5 !px-4">Tambah proyek pertama</Link>} />
+          : <Empty title="Tidak ada yang cocok dengan filter ini." body="Ubah kategori atau status terbit di atas." />
       ) : (
         <ul className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {shown.map((p, i) => (
@@ -75,21 +75,21 @@ export default function ProjectsPage() {
                 <span className="t-small text-mute">{LABEL[p.category]} · {p.location} · {p.date_label}</span>
               </div>
               <div className="flex items-center justify-between">
-                <Pill tone={p.published ? "ok" : "mute"}>{p.published ? (p.featured ? "Published · featured" : "Published") : "Draft"}</Pill>
+                <Pill tone={p.published ? "ok" : "mute"}>{p.published ? (p.featured ? "Terbit · unggulan" : "Terbit") : "Draft"}</Pill>
                 {reorder ? (
                   <span className="flex gap-1">
                     <Btn className="!px-2 !py-1" onClick={() => move(i, -1)}>↑</Btn>
                     <Btn className="!px-2 !py-1" onClick={() => move(i, 1)}>↓</Btn>
                   </span>
                 ) : (
-                  <Link href={`/admin/projects/${p.id}`} className="link t-small text-mute">Edit</Link>
+                  <Link href={`/admin/projects/${p.id}`} className="link t-small text-mute">Ubah</Link>
                 )}
               </div>
             </li>
           ))}
         </ul>
       )}
-      <p className="mt-8 t-small text-faint max-w-[70ch]">Galleries are read from a Google Drive folder per project — the same way proofing sessions work. Cover, title, story and order are edited here; photographs are managed in Drive.</p>
+      <p className="mt-8 t-small text-faint max-w-[70ch]">Galeri dibaca dari satu folder Google Drive per proyek — sama seperti sesi galeri klien. Sampul, judul, cerita, dan urutan diatur di sini; foto dikelola di Drive.</p>
     </>
   );
 }

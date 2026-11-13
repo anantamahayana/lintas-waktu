@@ -16,7 +16,7 @@ export default function EditProjectPage({ params }: { params: Promise<{ id: stri
   if (!p) return <SkeletonForm fields={10} />;
   return (
     <>
-      <PageHeader eyebrow={<Link href="/admin/projects" className="link">Projects</Link>} title={p.title} />
+      <PageHeader eyebrow={<Link href="/admin/projects" className="link">Proyek</Link>} title={p.title} />
       <ProjectForm project={p} />
     </>
   );

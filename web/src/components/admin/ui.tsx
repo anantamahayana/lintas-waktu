@@ -121,7 +121,7 @@ export function Toaster() {
         <div key={t.id} role={t.err ? "alert" : "status"} className="admin-toast pointer-events-auto bg-ink text-white t-small px-4 py-3 flex items-center gap-3 shadow-lg max-w-[min(92vw,480px)]">
           <span className={clsx("h-2 w-2 shrink-0 rounded-full", t.err ? "bg-error" : "bg-[#c9a84c]")} />
           <span>{t.m}</span>
-          {t.err && <button type="button" onClick={() => setItems((xs) => xs.filter((x) => x.id !== t.id))} className="ml-1 text-white/60 hover:text-white" aria-label="Dismiss">×</button>}
+          {t.err && <button type="button" onClick={() => setItems((xs) => xs.filter((x) => x.id !== t.id))} className="ml-1 text-white/60 hover:text-white" aria-label="Tutup">×</button>}
         </div>
       ))}
     </div>
@@ -164,7 +164,7 @@ export function ConfirmHost() {
         <h2 id="confirm-title" className="font-serif text-[24px] leading-tight">{p.title}</h2>
         {p.body && <div className="t-small text-mute leading-relaxed">{p.body}</div>}
         <div className="flex justify-end gap-2 pt-2">
-          <Btn type="button" onClick={() => close(false)}>{p.cancel ?? "Cancel"}</Btn>
+          <Btn type="button" onClick={() => close(false)}>{p.cancel ?? "Batal"}</Btn>
           <Btn ref={okRef} type="button" kind={p.danger ? "danger-solid" : "ink"} onClick={() => close(true)}>{p.action ?? "Continue"}</Btn>
         </div>
       </div>
@@ -194,7 +194,7 @@ export function hasUnsavedChanges() { return dirtyForms.size > 0; }
 /** Ask before leaving a dirty form; resolves true when navigation may proceed. */
 export async function confirmLeave() {
   if (!hasUnsavedChanges()) return true;
-  const ok = await confirm({ title: "Leave without saving?", body: "The changes on this page have not been saved and will be lost.", action: "Leave", danger: true, cancel: "Stay" });
+  const ok = await confirm({ title: "Keluar tanpa menyimpan?", body: "Perubahan di halaman ini belum disimpan dan akan hilang.", action: "Tinggalkan", danger: true, cancel: "Tetap di sini" });
   if (ok) dirtyForms.clear();
   return ok;
 }
@@ -207,7 +207,7 @@ export function Skeleton({ className }: { className?: string }) {
 }
 export function SkeletonRows({ n = 5 }: { n?: number }) {
   return (
-    <div aria-busy="true" aria-label="Loading" className="border-t border-line">
+    <div aria-busy="true" aria-label="Memuat" className="border-t border-line">
       {Array.from({ length: n }, (_, i) => (
         <div key={i} className="flex items-center gap-6 py-4 border-b border-line">
           <Skeleton className="h-4 w-[26%]" />
@@ -221,7 +221,7 @@ export function SkeletonRows({ n = 5 }: { n?: number }) {
 }
 export function SkeletonCards({ n = 8 }: { n?: number }) {
   return (
-    <ul aria-busy="true" aria-label="Loading" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <ul aria-busy="true" aria-label="Memuat" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
       {Array.from({ length: n }, (_, i) => (
         <li key={i} className="border border-line bg-white p-3 flex flex-col gap-3">
           <Skeleton className="aspect-[4/5]" />
@@ -234,7 +234,7 @@ export function SkeletonCards({ n = 8 }: { n?: number }) {
 }
 export function SkeletonForm({ fields = 6 }: { fields?: number }) {
   return (
-    <div aria-busy="true" aria-label="Loading" className="grid lg:grid-cols-2 gap-6 items-start">
+    <div aria-busy="true" aria-label="Memuat" className="grid lg:grid-cols-2 gap-6 items-start">
       {Array.from({ length: 2 }, (_, c) => (
         <div key={c} className="border border-line bg-white p-5 lg:p-6 flex flex-col gap-5">
           <Skeleton className="h-3 w-24" />
@@ -261,9 +261,9 @@ export function Empty({ title, body, action }: { title: string; body?: ReactNode
 export function LoadError({ error, retry }: { error: string; retry: () => void }) {
   return (
     <div role="alert" className="border border-line p-10 text-center flex flex-col items-center gap-3">
-      <p className="font-serif text-[24px] leading-tight">Could not load this page.</p>
+      <p className="font-serif text-[24px] leading-tight">Halaman ini gagal dimuat.</p>
       <p className="t-small text-mute max-w-[48ch]">{error}. Check that the API is running, then try again.</p>
-      <div className="pt-2"><Btn onClick={retry}>Try again</Btn></div>
+      <div className="pt-2"><Btn onClick={retry}>Coba lagi</Btn></div>
     </div>
   );
 }
@@ -272,7 +272,7 @@ export function fmtDate(iso: string | null | undefined, withTime = false) {
   if (!iso) return "—";
   // The API stores UTC without a zone marker; read it as UTC, not as local time
   const d = new Date(/[zZ]|[+-]\d\d:\d\d$/.test(iso) || iso.length <= 10 ? iso : iso + "Z");
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {}) });
+  return d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric", ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {}) });
 }
 export function daysLeft(iso: string | null) {
   if (!iso) return null;

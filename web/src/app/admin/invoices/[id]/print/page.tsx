@@ -21,7 +21,7 @@ export default function InvoicePrintPage({ params }: { params: Promise<{ id: str
   return (
     <div className="print-page">
       <div className="max-w-[820px] mx-auto flex items-center justify-between pb-5 print:hidden">
-        <span className="t-mono text-mute">{data.inv.number}{data.inv.status === "draft" && " · draft — for your eyes; mark as sent to share"}</span>
+        <span className="t-mono text-mute">{data.inv.number}{data.inv.status === "draft" && " · draf — hanya untukmu; tandai terkirim untuk membagikan"}</span>
         <PrintButton />
       </div>
       <InvoiceDoc doc={data.inv} business={data.biz} />

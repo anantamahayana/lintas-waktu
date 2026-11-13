@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 /** /admin lives outside the locale tree: English only, no site nav/footer. */
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${cormorant.variable} ${inter.variable}`}>
+    <html lang="id" className={`${cormorant.variable} ${inter.variable}`}>
       <body className="min-h-dvh bg-white text-ink">
         <BrandSprite />
         <AdminShell>{children}</AdminShell>

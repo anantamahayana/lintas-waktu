@@ -15,13 +15,13 @@ const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const long = (s: string) => parse(s).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
 
 const STATUS: Record<BookingStatus, { label: string; chip: string; dot: string }> = {
-  tentative: { label: "Tentative", chip: "border border-dashed border-ink/50 text-ink bg-white", dot: "bg-white border border-ink" },
-  booked: { label: "Booked", chip: "bg-ink text-white", dot: "bg-ink" },
-  blocked: { label: "Blocked", chip: "bg-line text-mute", dot: "bg-faint" },
-  done: { label: "Done", chip: "bg-[#5f7a4a] text-white", dot: "bg-[#5f7a4a]" },
-  cancelled: { label: "Cancelled", chip: "line-through text-faint border border-line", dot: "bg-white border border-line" },
+  tentative: { label: "Sementara", chip: "border border-dashed border-ink/50 text-ink bg-white", dot: "bg-white border border-ink" },
+  booked: { label: "Dipesan", chip: "bg-ink text-white", dot: "bg-ink" },
+  blocked: { label: "Diblokir", chip: "bg-line text-mute", dot: "bg-faint" },
+  done: { label: "Selesai", chip: "bg-[#5f7a4a] text-white", dot: "bg-[#5f7a4a]" },
+  cancelled: { label: "Batal", chip: "line-through text-faint border border-line", dot: "bg-white border border-line" },
 };
-const KINDS = [["wedding", "Wedding"], ["prewedding", "Pre-wedding"], ["editorial", "Editorial"], ["event", "Event"], ["personal", "Personal"], ["block", "Block (personal / travel)"]] as const;
+const KINDS = [["wedding", "Wedding"], ["prewedding", "Pre-wedding"], ["editorial", "Editorial"], ["event", "Event"], ["personal", "Personal"], ["block", "Blokir (pribadi / perjalanan)"]] as const;
 
 export default function CalendarPage() {
   const today = iso(new Date());
@@ -63,16 +63,16 @@ export default function CalendarPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Business"
-        title="Calendar"
+        eyebrow="Bisnis"
+        title="Kalender"
         actions={
           <>
             <div className="flex items-center gap-1">
-              <Btn onClick={() => shift(-1)} aria-label="Previous month">←</Btn>
+              <Btn onClick={() => shift(-1)} aria-label="Bulan sebelumnya">←</Btn>
               <button type="button" onClick={() => setYm(today.slice(0, 7))} className="t-mono px-3 min-w-[150px] text-center">{MONTHS[Number(ym.slice(5)) - 1]} {ym.slice(0, 4)}</button>
-              <Btn onClick={() => shift(1)} aria-label="Next month">→</Btn>
+              <Btn onClick={() => shift(1)} aria-label="Bulan berikutnya">→</Btn>
             </div>
-            <Btn kind="ink" onClick={() => setEditing({ start_date: today })}>+ Add booking</Btn>
+            <Btn kind="ink" onClick={() => setEditing({ start_date: today })}>+ Tambah booking</Btn>
           </>
         }
       />
@@ -91,7 +91,7 @@ export default function CalendarPage() {
               const taken = list.some((b) => b.status === "booked" || b.status === "blocked" || b.status === "done");
               return (
                 <div key={d} className={clsx("min-h-[96px] lg:min-h-[112px] border-line p-1.5 flex flex-col gap-1 relative group", i % 7 !== 6 && "border-r", i < 35 && "border-b", !inMonth && "bg-[#f6f5f1] text-faint", taken && inMonth && "bg-[#fbfaf7]")}>
-                  <button type="button" onClick={() => setEditing({ start_date: d })} className="flex items-center justify-between" aria-label={`Add booking on ${long(d)}`}>
+                  <button type="button" onClick={() => setEditing({ start_date: d })} className="flex items-center justify-between" aria-label={`Tambah booking pada ${long(d)}`}>
                     <span className={clsx("t-small tabular-nums h-6 w-6 flex items-center justify-center rounded-full", d === today && "bg-ink text-white")}>{Number(d.slice(8))}</span>
                     <span className="t-mono text-faint opacity-0 group-hover:opacity-100 transition-opacity">+</span>
                   </button>
@@ -110,7 +110,7 @@ export default function CalendarPage() {
 
       {upcoming.length > 0 && (
         <div className="mt-8">
-          <h2 className="t-mono text-mute mb-3">Coming up</h2>
+          <h2 className="t-mono text-mute mb-3">Akan datang</h2>
           <ul className="border-t border-line">
             {upcoming.map((b) => (
               <li key={b.id} className="border-b border-line py-3 flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -169,10 +169,10 @@ function BookingSheet({ initial, onClose, onSaved }: { initial: Booking | { star
 
   function validate(): FieldErrors {
     const e: FieldErrors = {};
-    if (!v.title.trim()) e.title = isBlock ? "Say what the block is for (e.g. Holiday, Editing week)." : "Give it a name — usually the couple or the event.";
-    if (!v.start_date) e.start_date = "Pick a date.";
-    if (v.end_date && v.end_date < v.start_date) e.end_date = "Ends before it starts.";
-    if (v.start_time && !/^\d{2}:\d{2}$/.test(v.start_time)) e.start_time = "Use HH:MM.";
+    if (!v.title.trim()) e.title = isBlock ? "Tulis untuk apa blokirnya (mis. Libur, Minggu editing)." : "Beri nama — biasanya nama pasangan atau acaranya.";
+    if (!v.start_date) e.start_date = "Pilih tanggal.";
+    if (v.end_date && v.end_date < v.start_date) e.end_date = "Selesai sebelum mulai.";
+    if (v.start_time && !/^\d{2}:\d{2}$/.test(v.start_time)) e.start_time = "Pakai format JJ:MM.";
     return e;
   }
 
@@ -184,40 +184,40 @@ function BookingSheet({ initial, onClose, onSaved }: { initial: Booking | { star
     try {
       const body = { ...v, status: isBlock && v.status === "tentative" ? "blocked" : v.status, end_date: v.end_date || v.start_date, start_time: v.start_time || null, location: v.location || null, client_name: v.client_name || null, client_wa: v.client_wa || null, notes: v.notes || null, invoice_id: v.invoice_id || null };
       const r = existing ? await api.patch<Booking>(`/api/admin/bookings/${existing.id}`, body) : await api.post<Booking>("/api/admin/bookings", body);
-      toast(existing ? "Saved" : "Added to the calendar");
-      if (r.conflicts.length) toast(`Heads up: overlaps ${r.conflicts.join(", ")}`, true);
+      toast(existing ? "Tersimpan" : "Ditambahkan ke kalender");
+      if (r.conflicts.length) toast(`Perhatian: bentrok dengan ${r.conflicts.join(", ")}`, true);
       onSaved();
     } catch (err) {
       if (err instanceof ApiError && Object.keys(err.fields).length) { setErrors(err.fields); focusFirstInvalid(); }
-      toast(err instanceof Error ? err.message : "Could not save", true);
+      toast(err instanceof Error ? err.message : "Gagal menyimpan", true);
     } finally { setBusy(false); }
   }
   async function remove() {
     if (!existing) return;
-    if (!(await confirm({ title: `Remove “${existing.title}” from the calendar?`, body: "Prefer marking it Cancelled if the client backed out — that keeps the record. Delete only mistakes.", action: "Delete", danger: true }))) return;
-    try { await api.del(`/api/admin/bookings/${existing.id}`); toast("Removed"); onSaved(); } catch (err) { toast(err instanceof Error ? err.message : "Failed", true); }
+    if (!(await confirm({ title: `Hapus “${existing.title}” dari kalender?`, body: "Kalau klien batal, lebih baik tandai Batal supaya catatannya tetap ada. Hapus hanya untuk entri yang salah.", action: "Hapus", danger: true }))) return;
+    try { await api.del(`/api/admin/bookings/${existing.id}`); toast("Dihapus"); onSaved(); } catch (err) { toast(err instanceof Error ? err.message : "Failed", true); }
   }
-  const close = async () => { if (!dirty || (await confirm({ title: "Discard changes?", action: "Discard", danger: true, cancel: "Keep editing" }))) onClose(); };
+  const close = async () => { if (!dirty || (await confirm({ title: "Buang perubahan?", action: "Buang", danger: true, cancel: "Lanjut mengubah" }))) onClose(); };
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-ink/30 admin-fade" onMouseDown={(e) => { if (e.target === e.currentTarget) close(); }}>
-      <aside role="dialog" aria-modal="true" aria-label={existing ? "Edit booking" : "New booking"} className="admin-pop w-full max-w-[460px] h-full overflow-y-auto bg-white border-l border-line p-6 flex flex-col gap-5">
+      <aside role="dialog" aria-modal="true" aria-label={existing ? "Ubah booking" : "Booking baru"} className="admin-pop w-full max-w-[460px] h-full overflow-y-auto bg-white border-l border-line p-6 flex flex-col gap-5">
         <div className="flex items-start justify-between gap-4">
           <div className="flex flex-col gap-1">
-            <span className="t-mono text-mute">{existing ? "Booking" : "New booking"}</span>
+            <span className="t-mono text-mute">{existing ? "Booking" : "Booking baru"}</span>
             <span className="font-serif text-[26px] leading-tight">{v.title || long(v.start_date)}</span>
           </div>
-          <button type="button" onClick={close} aria-label="Close" className="text-mute hover:text-ink text-[18px]">✕</button>
+          <button type="button" onClick={close} aria-label="Tutup" className="text-mute hover:text-ink text-[18px]">✕</button>
         </div>
         {existing && existing.conflicts.length > 0 && <p className="t-small text-error border border-error/40 p-3">Overlaps: {existing.conflicts.join(", ")}</p>}
 
-        <Field label="Kind">
+        <Field label="Jenis">
           <Select value={v.kind} onChange={set("kind")}>{KINDS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</Select>
         </Field>
-        <Field label={isBlock ? "What for" : "Title"} error={errors.title}><Input invalid={!!errors.title} value={v.title} onChange={set("title")} placeholder={isBlock ? "Holiday · Editing week" : "Ayu & Marco"} /></Field>
+        <Field label={isBlock ? "Untuk apa" : "Judul"} error={errors.title}><Input invalid={!!errors.title} value={v.title} onChange={set("title")} placeholder={isBlock ? "Libur · Minggu editing" : "Ayu & Marco"} /></Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="From" error={errors.start_date}><Input invalid={!!errors.start_date} type="date" value={v.start_date} onChange={(e) => setV((s) => ({ ...s, start_date: e.target.value, end_date: s.end_date < e.target.value ? e.target.value : s.end_date }))} /></Field>
-          <Field label="To" hint="same day if blank" error={errors.end_date}><Input invalid={!!errors.end_date} type="date" value={v.end_date} min={v.start_date} onChange={set("end_date")} /></Field>
+          <Field label="Dari" error={errors.start_date}><Input invalid={!!errors.start_date} type="date" value={v.start_date} onChange={(e) => setV((s) => ({ ...s, start_date: e.target.value, end_date: s.end_date < e.target.value ? e.target.value : s.end_date }))} /></Field>
+          <Field label="Sampai" hint="hari yang sama kalau kosong" error={errors.end_date}><Input invalid={!!errors.end_date} type="date" value={v.end_date} min={v.start_date} onChange={set("end_date")} /></Field>
         </div>
         {!isBlock && (
           <>
@@ -225,26 +225,26 @@ function BookingSheet({ initial, onClose, onSaved }: { initial: Booking | { star
               <Field label="Status">
                 <Select value={v.status} onChange={set("status")}>{(["tentative", "booked", "done", "cancelled"] as const).map((s) => <option key={s} value={s}>{STATUS[s].label}</option>)}</Select>
               </Field>
-              <Field label="Start time" hint="optional" error={errors.start_time}><Input invalid={!!errors.start_time} value={v.start_time} onChange={set("start_time")} placeholder="14:00" /></Field>
+              <Field label="Jam mulai" hint="opsional" error={errors.start_time}><Input invalid={!!errors.start_time} value={v.start_time} onChange={set("start_time")} placeholder="14:00" /></Field>
             </div>
-            <Field label="Location" hint="optional"><Input value={v.location} onChange={set("location")} placeholder="Uluwatu" /></Field>
-            <Field label="Invoice / quotation" hint="optional — money on it confirms the booking">
+            <Field label="Lokasi" hint="opsional"><Input value={v.location} onChange={set("location")} placeholder="Uluwatu" /></Field>
+            <Field label="Invoice / penawaran" hint="opsional — pembayaran di invoice ini mengonfirmasi booking">
               <Select value={v.invoice_id} onChange={(e) => pickInvoice(e.target.value)}>
                 <option value="">—</option>
                 {invoices.map((i) => <option key={i.id} value={i.id}>{i.number} · {i.client_name}{i.event_label ? ` · ${i.event_label}` : ""}</option>)}
               </Select>
             </Field>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Client" hint="optional"><Input value={v.client_name} onChange={set("client_name")} /></Field>
-              <Field label="WhatsApp" hint="optional"><Input value={v.client_wa} onChange={set("client_wa")} placeholder="+62 812…" /></Field>
+              <Field label="Klien" hint="opsional"><Input value={v.client_name} onChange={set("client_name")} /></Field>
+              <Field label="WhatsApp" hint="opsional"><Input value={v.client_wa} onChange={set("client_wa")} placeholder="+62 812…" /></Field>
             </div>
           </>
         )}
-        <Field label="Notes" hint="optional"><Textarea value={v.notes} onChange={set("notes")} rows={3} /></Field>
+        <Field label="Catatan" hint="opsional"><Textarea value={v.notes} onChange={set("notes")} rows={3} /></Field>
         <div className="mt-auto pt-4 flex flex-wrap gap-2">
-          <Btn kind="ink" type="button" onClick={save} disabled={busy || (!!existing && !dirty)}>{busy ? "Saving…" : existing ? (dirty ? "Save changes" : "Saved") : "Add to calendar"}</Btn>
-          <Btn type="button" onClick={close}>Close</Btn>
-          {existing && <Btn type="button" kind="danger" className="ml-auto" onClick={remove}>Delete</Btn>}
+          <Btn kind="ink" type="button" onClick={save} disabled={busy || (!!existing && !dirty)}>{busy ? "Menyimpan…" : existing ? (dirty ? "Simpan perubahan" : "Tersimpan") : "Tambah ke kalender"}</Btn>
+          <Btn type="button" onClick={close}>Tutup</Btn>
+          {existing && <Btn type="button" kind="danger" className="ml-auto" onClick={remove}>Hapus</Btn>}
         </div>
       </aside>
     </div>

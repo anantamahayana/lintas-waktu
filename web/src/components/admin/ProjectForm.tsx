@@ -35,14 +35,14 @@ export function ProjectForm({ project }: { project?: Project }) {
 
   function validate(): FieldErrors {
     const e: FieldErrors = {};
-    if (!v.title.trim()) e.title = "Give the project a title.";
-    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(v.slug)) e.slug = "Lowercase letters, numbers and hyphens only, e.g. ayu-marco.";
-    if (v.month && !/^\d{4}-\d{2}$/.test(v.month)) e.month = "Use YYYY-MM, e.g. 2026-06.";
+    if (!v.title.trim()) e.title = "Beri judul proyek.";
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(v.slug)) e.slug = "Hanya huruf kecil, angka, dan tanda hubung, mis. ayu-marco.";
+    if (v.month && !/^\d{4}-\d{2}$/.test(v.month)) e.month = "Pakai YYYY-MM, mis. 2026-06.";
     const isFilm = v.kind === "film";
-    if (!isFilm && !v.drive_folder_id.trim() && v.placeholder_urls.length === 0) e.drive_folder_id = "Paste the Google Drive folder link or ID.";
+    if (!isFilm && !v.drive_folder_id.trim() && v.placeholder_urls.length === 0) e.drive_folder_id = "Tempel link atau ID folder Google Drive.";
     const isVideoLink = (u: string) => /(youtu\.be\/|youtube\.com\/|vimeo\.com\/)/.test(u);
-    if (v.kind !== "photo" && !v.film_url) e.film_url = "A film project needs its YouTube or Vimeo link.";
-    else if (v.film_url && !isVideoLink(v.film_url)) e.film_url = "Only YouTube and Vimeo links can be embedded.";
+    if (v.kind !== "photo" && !v.film_url) e.film_url = "Proyek film perlu link YouTube atau Vimeo.";
+    else if (v.film_url && !isVideoLink(v.film_url)) e.film_url = "Hanya link YouTube dan Vimeo yang bisa ditampilkan.";
     return e;
   }
 
@@ -57,11 +57,11 @@ export function ProjectForm({ project }: { project?: Project }) {
     // Going live (or off the site) is the one change visitors notice — say so.
     if (project && v.published !== saved.published) {
       const ok = await confirm(v.published
-        ? { title: "Publish this project?", body: <>“{v.title}” will appear on the website within a minute, with its cover and every photo in the folder.</>, action: "Publish" }
-        : { title: "Take this project off the website?", body: <>“{v.title}” and its page will disappear from the site within a minute. Nothing is deleted; you can publish it again later.</>, action: "Unpublish", danger: true });
+        ? { title: "Terbitkan proyek ini?", body: <>“{v.title}” will appear on the website within a minute, with its cover and every photo in the folder.</>, action: "Terbitkan" }
+        : { title: "Tarik proyek ini dari website?", body: <>“{v.title}” and its page will disappear from the site within a minute. Nothing is deleted; you can publish it again later.</>, action: "Tarik dari website", danger: true });
       if (!ok) return;
     } else if (!project && v.published) {
-      const ok = await confirm({ title: "Create and publish?", body: <>“{v.title}” will go live on the website right away. Untick “Published” to save it as a draft first.</>, action: "Create & publish" });
+      const ok = await confirm({ title: "Buat dan terbitkan?", body: <>“{v.title}” will go live on the website right away. Untick “Published” to save it as a draft first.</>, action: "Buat & terbitkan" });
       if (!ok) return;
     }
     setBusy(true);
@@ -70,7 +70,7 @@ export function ProjectForm({ project }: { project?: Project }) {
       const result = project
         ? await api.patch<Project>(`/api/admin/projects/${project.id}`, body)
         : await api.post<Project>("/api/admin/projects", body);
-      toast(project ? "Saved" : "Project created");
+      toast(project ? "Tersimpan" : "Proyek dibuat");
       setPhotos(result.photos ?? []);
       const next = { ...v, cover_file_id: result.cover_file_id };
       setV(next);
@@ -79,7 +79,7 @@ export function ProjectForm({ project }: { project?: Project }) {
     } catch (err) {
       if (err instanceof ApiError && Object.keys(err.fields).length) { setErrors(err.fields); focusFirstInvalid(); }
       else if (err instanceof ApiError && err.status === 409) { setErrors({ slug: err.message }); focusFirstInvalid(); }
-      toast(err instanceof Error ? err.message : "Could not save", true);
+      toast(err instanceof Error ? err.message : "Gagal menyimpan", true);
     } finally {
       setBusy(false);
     }
@@ -87,40 +87,40 @@ export function ProjectForm({ project }: { project?: Project }) {
 
   async function sync() {
     if (!project) return;
-    try { const r = await api.post<Project>(`/api/admin/projects/${project.id}/sync`); setPhotos(r.photos ?? []); toast(`Folder re-read · ${r.photo_count} photos`); }
+    try { const r = await api.post<Project>(`/api/admin/projects/${project.id}/sync`); setPhotos(r.photos ?? []); toast(`Folder dibaca ulang · ${r.photo_count} foto`); }
     catch (err) { toast(err instanceof Error ? err.message : "Failed", true); }
   }
 
   async function remove() {
     if (!project) return;
-    const ok = await confirm({ title: `Delete “${project.title}”?`, body: "The project and its copy are removed from the admin and the website. Photographs in Google Drive are not touched. This cannot be undone.", action: "Delete project", danger: true });
+    const ok = await confirm({ title: `Hapus “${project.title}”?`, body: "Proyek dan teksnya dihapus dari admin dan website. Foto di Google Drive tidak disentuh. Tidak bisa dibatalkan.", action: "Delete project", danger: true });
     if (!ok) return;
-    try { await api.del(`/api/admin/projects/${project.id}`); setSaved(v); toast(`“${project.title}” deleted`); router.push("/admin/projects"); }
+    try { await api.del(`/api/admin/projects/${project.id}`); setSaved(v); toast(`“${project.title}” dihapus`); router.push("/admin/projects"); }
     catch (err) { toast(err instanceof Error ? err.message : "Failed", true); }
   }
 
   return (
     <form onSubmit={save} noValidate className="grid lg:grid-cols-[minmax(0,1fr)_360px] gap-6 items-start">
       <div className="flex flex-col gap-4">
-        <Card title="Basics">
+        <Card title="Dasar">
           <div className="grid sm:grid-cols-2 gap-4">
-            <Field label="Title" error={errors.title}><Input invalid={!!errors.title} value={v.title} onChange={(e) => setV((s) => ({ ...s, title: e.target.value, slug: project ? s.slug : slugify(e.target.value) }))} placeholder="Ayu & Marco" /></Field>
+            <Field label="Judul" error={errors.title}><Input invalid={!!errors.title} value={v.title} onChange={(e) => setV((s) => ({ ...s, title: e.target.value, slug: project ? s.slug : slugify(e.target.value) }))} placeholder="Ayu & Marco" /></Field>
             <Field label="Slug" hint="/work/…" error={errors.slug}><Input invalid={!!errors.slug} value={v.slug} onChange={set("slug")} /></Field>
-            <Field label="Category">
+            <Field label="Kategori">
               <Select value={v.category} onChange={set("category")}>
-                <option value="wedding">Wedding</option><option value="prewedding">Pre-wedding</option><option value="editorial">Editorial / Model</option><option value="event">Event</option><option value="personal">Personal</option>
+                <option value="wedding">Pernikahan</option><option value="prewedding">Prewedding</option><option value="editorial">Editorial / Model</option><option value="event">Acara</option><option value="personal">Personal</option>
               </Select>
             </Field>
-            <Field label="Kind" hint="what this project is made of">
+            <Field label="Jenis" hint="isi proyek ini">
               <Select value={v.kind} onChange={set("kind")}>
-                <option value="photo">Photographs</option><option value="both">Photographs + film</option><option value="film">Film only</option>
+                <option value="photo">Foto</option><option value="both">Foto + film</option><option value="film">Film saja</option>
               </Select>
             </Field>
-            <Field label="Location"><Input value={v.location} onChange={set("location")} placeholder="Uluwatu" /></Field>
-            <Field label="Date label" hint="shown on the site"><Input value={v.date_label} onChange={set("date_label")} placeholder="June 2026" /></Field>
-            <Field label="Month" hint="YYYY-MM, for ordering" error={errors.month}><Input invalid={!!errors.month} value={v.month ?? ""} onChange={set("month")} placeholder="2026-06" /></Field>
+            <Field label="Lokasi"><Input value={v.location} onChange={set("location")} placeholder="Uluwatu" /></Field>
+            <Field label="Label tanggal" hint="tampil di website"><Input value={v.date_label} onChange={set("date_label")} placeholder="Juni 2026" /></Field>
+            <Field label="Bulan" hint="YYYY-MM, untuk urutan" error={errors.month}><Input invalid={!!errors.month} value={v.month ?? ""} onChange={set("month")} placeholder="2026-06" /></Field>
           </div>
-          <Field label={v.kind === "film" ? "Google Drive folder with stills" : "Google Drive folder"} hint={v.kind === "film" ? "optional — a few frames; the first one becomes the poster" : "link or ID — web-size JPEGs"} error={errors.drive_folder_id}>
+          <Field label={v.kind === "film" ? "Folder Google Drive berisi foto" : "Folder Google Drive"} hint={v.kind === "film" ? "opsional — beberapa frame; yang pertama jadi poster" : "link atau ID — JPEG ukuran web"} error={errors.drive_folder_id}>
             <Input invalid={!!errors.drive_folder_id} value={v.drive_folder_id} onChange={set("drive_folder_id")} placeholder="https://drive.google.com/drive/folders/…" />
           </Field>
           {v.placeholder_urls.length > 0 && !v.drive_folder_id && (
@@ -130,7 +130,7 @@ export function ProjectForm({ project }: { project?: Project }) {
           )}
         </Card>
 
-        <Card title="Story">
+        <Card title="Cerita">
           <div className="flex gap-2">
             {(["en", "id"] as const).map((l) => (
               <button key={l} type="button" onClick={() => setTab(l)} className={clsx("t-mono px-3 py-1.5 border", tab === l ? "bg-ink text-white border-ink" : "border-line")}>{l.toUpperCase()}</button>
@@ -149,52 +149,52 @@ export function ProjectForm({ project }: { project?: Project }) {
           )}
         </Card>
 
-        <Card title="Facts">
+        <Card title="Fakta">
           <div className="flex flex-col gap-2">
             {facts.map((f, i) => (
               <div key={i} className="grid grid-cols-[1fr_2fr_auto] gap-2">
-                <Input value={f.label} onChange={(e) => setFact(i, { label: e.target.value })} placeholder="Location" />
+                <Input value={f.label} onChange={(e) => setFact(i, { label: e.target.value })} placeholder="Lokasi" />
                 <Input value={f.value} onChange={(e) => setFact(i, { value: e.target.value })} placeholder="Uluwatu, Bali" />
                 <Btn type="button" onClick={() => setV((s) => ({ ...s, facts: s.facts.filter((_, j) => j !== i) }))}>×</Btn>
               </div>
             ))}
-            <Btn type="button" className="self-start" onClick={() => setV((s) => ({ ...s, facts: [...s.facts, { label: "", value: "" }] }))}>+ Add fact</Btn>
+            <Btn type="button" className="self-start" onClick={() => setV((s) => ({ ...s, facts: [...s.facts, { label: "", value: "" }] }))}>+ Tambah fakta</Btn>
           </div>
         </Card>
 
         {v.kind !== "photo" && (
-          <Card title={v.kind === "film" ? "Film" : "Film · shown after the pull quote, before the photographs"}>
+          <Card title={v.kind === "film" ? "Film" : "Film · tampil setelah kutipan, sebelum foto"}>
             <div className="grid sm:grid-cols-3 gap-4">
-              <Field label="Title"><Input value={v.film_title ?? ""} onChange={set("film_title")} placeholder="Highlight film" /></Field>
-              <Field label="Duration"><Input value={v.film_duration ?? ""} onChange={set("film_duration")} placeholder="5:12" /></Field>
-              <Field label="Link" hint="YouTube or Vimeo" error={errors.film_url}><Input invalid={!!errors.film_url} value={v.film_url ?? ""} onChange={set("film_url")} placeholder="https://vimeo.com/…" /></Field>
+              <Field label="Judul"><Input value={v.film_title ?? ""} onChange={set("film_title")} placeholder="Film highlight" /></Field>
+              <Field label="Durasi"><Input value={v.film_duration ?? ""} onChange={set("film_duration")} placeholder="5:12" /></Field>
+              <Field label="Link" hint="YouTube atau Vimeo" error={errors.film_url}><Input invalid={!!errors.film_url} value={v.film_url ?? ""} onChange={set("film_url")} placeholder="https://vimeo.com/…" /></Field>
             </div>
             <p className="t-small text-mute">
-              Nothing loads from YouTube/Vimeo until a visitor presses play. {v.kind === "film" && "Without a stills folder, the poster is taken from the video link (press Sync if Vimeo was unreachable when saving)."}
+              Nothing loads from YouTube/Vimeo until a visitor presses play. {v.kind === "film" && "Tanpa folder foto, poster diambil dari link video (tekan Sinkronkan kalau Vimeo tidak terjangkau saat menyimpan)."}
             </p>
           </Card>
         )}
       </div>
 
       <div className="flex flex-col gap-4 lg:sticky lg:top-8">
-        <Card title="Publish">
-          <label className="flex items-center gap-3 t-small"><input type="checkbox" checked={v.published} onChange={(e) => setV((s) => ({ ...s, published: e.target.checked }))} /> Published on the website</label>
-          <label className="flex items-center gap-3 t-small"><input type="checkbox" checked={v.featured} onChange={(e) => setV((s) => ({ ...s, featured: e.target.checked }))} /> Featured on the home page</label>
+        <Card title="Terbitkan">
+          <label className="flex items-center gap-3 t-small"><input type="checkbox" checked={v.published} onChange={(e) => setV((s) => ({ ...s, published: e.target.checked }))} /> Terbit di website</label>
+          <label className="flex items-center gap-3 t-small"><input type="checkbox" checked={v.featured} onChange={(e) => setV((s) => ({ ...s, featured: e.target.checked }))} /> Tampil di beranda</label>
           <div className="flex flex-wrap gap-2 pt-2">
-            <Btn kind="ink" type="submit" disabled={busy || (!!project && !dirty)}>{busy ? "Saving…" : project ? (dirty ? "Save changes" : "Saved") : "Create project"}</Btn>
-            {project && <Btn type="button" onClick={sync}>Sync folder</Btn>}
-            {project && v.published && <a className="link t-mono self-center" href={`/work/${v.slug}`} target="_blank" rel="noreferrer">View ↗</a>}
+            <Btn kind="ink" type="submit" disabled={busy || (!!project && !dirty)}>{busy ? "Menyimpan…" : project ? (dirty ? "Simpan perubahan" : "Tersimpan") : "Buat proyek"}</Btn>
+            {project && <Btn type="button" onClick={sync}>Sinkronkan folder</Btn>}
+            {project && v.published && <a className="link t-mono self-center" href={`/work/${v.slug}`} target="_blank" rel="noreferrer">Lihat ↗</a>}
           </div>
-          {project && <Btn type="button" kind="danger" className="self-start" onClick={remove}>Delete project</Btn>}
+          {project && <Btn type="button" kind="danger" className="self-start" onClick={remove}>Hapus proyek</Btn>}
         </Card>
 
-        <Card title={`Cover · ${photos.length} ${v.drive_folder_id ? "photos in folder" : v.placeholder_urls.length ? "placeholder photos" : "stills"}`}>
+        <Card title={`Sampul · ${photos.length} ${v.drive_folder_id ? "foto di folder" : v.placeholder_urls.length ? "foto contoh" : "frame"}`}>
           {photos.length === 0 && v.kind === "film" ? (
             project?.film_poster_url
-              ? <div className="flex flex-col gap-2"><div className="aspect-video bg-line overflow-hidden"><img src={project.film_poster_url} alt="" className="w-full h-full object-cover" /></div><p className="t-small text-mute">Poster from the video link. Add a stills folder to use your own frame.</p></div>
-              : <p className="t-small text-faint">{project ? "No poster yet — the site shows a dark title slate. Press Sync to retry the video thumbnail, or add a stills folder." : "Save the project; the poster is taken from the video link."}</p>
+              ? <div className="flex flex-col gap-2"><div className="aspect-video bg-line overflow-hidden"><img src={project.film_poster_url} alt="" className="w-full h-full object-cover" /></div><p className="t-small text-mute">Poster dari link video. Tambahkan folder foto untuk memakai frame sendiri.</p></div>
+              : <p className="t-small text-faint">{project ? "Belum ada poster — website menampilkan latar gelap dengan judul. Tekan Sinkronkan untuk mencoba thumbnail video lagi, atau tambahkan folder foto." : "Simpan proyek; poster diambil dari link video."}</p>
           ) : photos.length === 0 ? (
-            <p className="t-small text-faint">{project ? "No photos found — check the folder and press Sync." : "Save the project to read the folder, then choose a cover."}</p>
+            <p className="t-small text-faint">{project ? "Tidak ada foto — periksa folder lalu tekan Sinkronkan." : "Simpan proyek untuk membaca folder, lalu pilih sampul."}</p>
           ) : (
             <ul className="grid grid-cols-4 gap-1.5 max-h-[420px] overflow-y-auto">
               {photos.map((p) => (
@@ -217,16 +217,16 @@ export function ProjectForm({ project }: { project?: Project }) {
             return (
               <>
                 <div className="flex items-center justify-between gap-3 border-t border-line pt-3">
-                  <span className="t-small text-mute">{v.cover_frame ? `Framing set · focus ${Math.round(v.cover_frame.x)}% / ${Math.round(v.cover_frame.y)}%${v.cover_frame.zoom > 1 ? ` · ${Math.round(v.cover_frame.zoom * 100)}%` : ""}` : "Cover is centred in its frame"}</span>
-                  <Btn type="button" onClick={() => setFraming(true)}>Adjust framing</Btn>
+                  <span className="t-small text-mute">{v.cover_frame ? `Komposisi diatur · fokus ${Math.round(v.cover_frame.x)}% / ${Math.round(v.cover_frame.y)}%${v.cover_frame.zoom > 1 ? ` · ${Math.round(v.cover_frame.zoom * 100)}%` : ""}` : "Sampul di tengah bingkai"}</span>
+                  <Btn type="button" onClick={() => setFraming(true)}>Atur komposisi</Btn>
                 </div>
                 {framing && (
                   <FrameEditor
                     src={api.img(cover.full_url)}
-                    title={`${v.title || "Project"} · cover`}
+                    title={`${v.title || "Proyek"} · sampul`}
                     value={v.cover_frame}
-                    previews={[{ label: "Work grid", ratio: 4 / 5 }, { label: "Project page · computer", ratio: 1.9 }, { label: "Project page · phone", ratio: 0.66 }]}
-                    onSave={(f) => { setV((s) => ({ ...s, cover_frame: f })); setFraming(false); toast("Framing set — press Save to publish it"); }}
+                    previews={[{ label: "Grid portofolio", ratio: 4 / 5 }, { label: "Halaman proyek · komputer", ratio: 1.9 }, { label: "Halaman proyek · HP", ratio: 0.66 }]}
+                    onSave={(f) => { setV((s) => ({ ...s, cover_frame: f })); setFraming(false); toast("Komposisi diatur — tekan Simpan untuk menerbitkan"); }}
                     onClose={() => setFraming(false)}
                   />
                 )}

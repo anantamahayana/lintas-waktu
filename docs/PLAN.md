@@ -157,7 +157,7 @@ CreativeWork (/work/[slug]). Meta EN/ID diperbarui, judul Layanan "Layanan & Har
 dengan teks dan foto sendiri; Google Business Profile (paling berpengaruh untuk pencarian lokal, dibuat pemilik di Google).
 **Selesai:** `faint` #75736D dan `mute` #66645F (keduanya ≥ 4,5:1), aksesibilitas 100. Halaman per layanan: tidak dikerjakan (keputusan pemilik).
 
-## QOL web & admin (13 Nov 2026) — rencana, menunggu pilihan pemilik
+## QOL web & admin (13 Nov 2026) — ✅ selesai kecuali 7 (unduh PDF langsung, ditunda pemilik)
 Dari pemakaian nyata minggu ini (invoice YUNITA, pindah ke VPS, proof online). Urut dari dampak terbesar.
 
 **A. Cepat (± 1 jam masing-masing)**

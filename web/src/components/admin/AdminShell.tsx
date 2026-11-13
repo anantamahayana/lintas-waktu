@@ -9,11 +9,11 @@ import { api, token } from "@/lib/admin-api";
 import { confirm, confirmLeave, hasUnsavedChanges } from "@/components/admin/ui";
 
 const groups: { label: string; items: { href: string; label: string; exact?: boolean }[] }[] = [
-  { label: "", items: [{ href: "/admin/activity", label: "Activity" }] },
-  { label: "Proofing", items: [{ href: "/admin", label: "Sessions", exact: true }, { href: "/admin/sessions/new", label: "New session" }] },
-  { label: "Business", items: [{ href: "/admin/clients", label: "Clients" }, { href: "/admin/calendar", label: "Calendar" }, { href: "/admin/invoices", label: "Invoices" }] },
-  { label: "Website", items: [{ href: "/admin/projects", label: "Projects" }, { href: "/admin/content", label: "Site text" }, { href: "/admin/site-images", label: "Site images" }, { href: "/admin/inquiries", label: "Inquiries" }] },
-  { label: "", items: [{ href: "/admin/settings", label: "Site settings" }] },
+  { label: "", items: [{ href: "/admin/activity", label: "Aktivitas" }] },
+  { label: "Galeri klien", items: [{ href: "/admin", label: "Sesi galeri", exact: true }, { href: "/admin/sessions/new", label: "Sesi baru" }] },
+  { label: "Bisnis", items: [{ href: "/admin/clients", label: "Klien" }, { href: "/admin/calendar", label: "Kalender" }, { href: "/admin/invoices", label: "Invoice" }] },
+  { label: "Website", items: [{ href: "/admin/projects", label: "Proyek" }, { href: "/admin/content", label: "Teks situs" }, { href: "/admin/site-images", label: "Foto situs" }, { href: "/admin/inquiries", label: "Pesan masuk" }] },
+  { label: "", items: [{ href: "/admin/settings", label: "Pengaturan situs" }] },
 ];
 
 function subscribeStorage(cb: () => void) {
@@ -65,7 +65,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
   async function logout() {
     if (!(await confirmLeave())) return;
-    const ok = await confirm({ title: "Log out?", body: "You will need the admin password to get back in. Client galleries stay open.", action: "Log out" });
+    const ok = await confirm({ title: "Keluar?", body: "Kamu perlu kata sandi admin untuk masuk lagi. Galeri klien tetap terbuka.", action: "Keluar" });
     if (!ok) return;
     token.clear();
     router.replace("/admin/login");
@@ -85,7 +85,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             <Logo size={22} />
             <span className="t-mono text-faint">Admin</span>
           </Link>
-          <button type="button" onClick={() => setOpen((v) => !v)} className="lg:hidden t-mono text-mute">{open ? "Close" : "Menu"}</button>
+          <button type="button" onClick={() => setOpen((v) => !v)} className="lg:hidden t-mono text-mute">{open ? "Tutup" : "Menu"}</button>
         </div>
         <nav className={clsx("px-3 pb-5 flex flex-col gap-4", open ? "block" : "hidden lg:flex")}>
           {groups.map((g, i) => (
@@ -105,8 +105,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
             </div>
           ))}
           <div className="mt-auto pt-6 flex flex-col gap-2 px-2 t-small text-mute">
-            <a href="/" target="_blank" rel="noreferrer" className="link self-start">View website ↗</a>
-            <button type="button" onClick={logout} className="link self-start">Log out</button>
+            <a href="/" target="_blank" rel="noreferrer" className="link self-start">Lihat website ↗</a>
+            <button type="button" onClick={logout} className="link self-start">Keluar</button>
           </div>
         </nav>
       </aside>

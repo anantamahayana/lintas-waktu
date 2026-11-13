@@ -11,24 +11,24 @@ type Slot = { slot: string; page: string; description: string; file_id: string |
 
 /** The real shapes each slot is shown in (computer / phone), and whether its layout can show a whole photo. */
 const SHAPES: Record<string, { previews: FramePreview[]; whole?: boolean }> = {
-  hero: { previews: [{ label: "Computer", ratio: 1.9 }, { label: "Phone", ratio: 0.6 }] },
-  "card-wedding": { previews: [{ label: "Card", ratio: 3 / 4 }], whole: true },
-  "card-prewedding": { previews: [{ label: "Card", ratio: 3 / 4 }], whole: true },
-  "card-personal": { previews: [{ label: "Card", ratio: 3 / 4 }], whole: true },
-  "behind-main": { previews: [{ label: "Computer", ratio: 1.1 }, { label: "Phone", ratio: 0.93 }], whole: true },
-  cta: { previews: [{ label: "Wide", ratio: 21 / 9 }], whole: true },
-  "about-portrait": { previews: [{ label: "Portrait", ratio: 4 / 5 }], whole: true },
+  hero: { previews: [{ label: "Komputer", ratio: 1.9 }, { label: "HP", ratio: 0.6 }] },
+  "card-wedding": { previews: [{ label: "Kartu", ratio: 3 / 4 }], whole: true },
+  "card-prewedding": { previews: [{ label: "Kartu", ratio: 3 / 4 }], whole: true },
+  "card-personal": { previews: [{ label: "Kartu", ratio: 3 / 4 }], whole: true },
+  "behind-main": { previews: [{ label: "Komputer", ratio: 1.1 }, { label: "HP", ratio: 0.93 }], whole: true },
+  cta: { previews: [{ label: "Lebar", ratio: 21 / 9 }], whole: true },
+  "about-portrait": { previews: [{ label: "Potret", ratio: 4 / 5 }], whole: true },
   "about-1": { previews: [{ label: "Strip", ratio: 3 / 4 }], whole: true },
   "about-2": { previews: [{ label: "Strip", ratio: 3 / 4 }], whole: true },
   "about-3": { previews: [{ label: "Strip", ratio: 3 / 4 }], whole: true },
   "about-4": { previews: [{ label: "Strip", ratio: 3 / 4 }], whole: true },
-  "service-banner": { previews: [{ label: "Computer", ratio: 3.5 }, { label: "Phone", ratio: 1 }] },
-  "service-wedding": { previews: [{ label: "Computer", ratio: 5 / 6 }, { label: "Phone", ratio: 4 / 5 }], whole: true },
-  "service-editorial": { previews: [{ label: "Computer", ratio: 5 / 6 }, { label: "Phone", ratio: 4 / 5 }], whole: true },
-  "service-prewedding": { previews: [{ label: "Computer", ratio: 5 / 6 }, { label: "Phone", ratio: 4 / 5 }], whole: true },
-  "service-event": { previews: [{ label: "Computer", ratio: 5 / 6 }, { label: "Phone", ratio: 4 / 5 }], whole: true },
-  "service-personal": { previews: [{ label: "Computer", ratio: 5 / 6 }, { label: "Phone", ratio: 4 / 5 }], whole: true },
-  "contact-1": { previews: [{ label: "Computer", ratio: 4 / 5 }], whole: true },
+  "service-banner": { previews: [{ label: "Komputer", ratio: 3.5 }, { label: "HP", ratio: 1 }] },
+  "service-wedding": { previews: [{ label: "Komputer", ratio: 5 / 6 }, { label: "HP", ratio: 4 / 5 }], whole: true },
+  "service-editorial": { previews: [{ label: "Komputer", ratio: 5 / 6 }, { label: "HP", ratio: 4 / 5 }], whole: true },
+  "service-prewedding": { previews: [{ label: "Komputer", ratio: 5 / 6 }, { label: "HP", ratio: 4 / 5 }], whole: true },
+  "service-event": { previews: [{ label: "Komputer", ratio: 5 / 6 }, { label: "HP", ratio: 4 / 5 }], whole: true },
+  "service-personal": { previews: [{ label: "Komputer", ratio: 5 / 6 }, { label: "HP", ratio: 4 / 5 }], whole: true },
+  "contact-1": { previews: [{ label: "Komputer", ratio: 4 / 5 }], whole: true },
 };
 type Data = { folder_id: string; photos: ProjectPhoto[]; slots: Slot[]; folder_error: string | null };
 
@@ -53,39 +53,39 @@ export default function SiteImagesPage() {
 
   async function saveFolder() {
     if (data?.folder_id && folder.trim() !== data.folder_id && setCount > 0) {
-      if (!(await confirm({ title: "Switch the folder?", body: `The ${setCount} photographs already chosen belong to the current folder and will be cleared. The site shows placeholders until you choose again.`, action: "Switch folder", danger: true }))) return;
+      if (!(await confirm({ title: "Ganti folder?", body: `${setCount} foto yang sudah dipilih berasal dari folder sekarang dan akan dikosongkan. Website menampilkan foto contoh sampai kamu memilih lagi.`, action: "Ganti folder", danger: true }))) return;
     }
     setBusy(true);
-    try { const d = await api.put<Data>("/api/admin/site-images", { folder_id: folder.trim() }); setData(d); setFolder(d.folder_id); toast(d.folder_id ? `Folder read · ${d.photos.length} photographs` : "Folder cleared"); }
+    try { const d = await api.put<Data>("/api/admin/site-images", { folder_id: folder.trim() }); setData(d); setFolder(d.folder_id); toast(d.folder_id ? `Folder dibaca · ${d.photos.length} foto` : "Folder dikosongkan"); }
     catch (e) { toast(e instanceof Error ? e.message : "Failed", true); } finally { setBusy(false); }
   }
   async function assign(slot: string, file_id: string | null) {
-    try { const d = await api.put<Data>("/api/admin/site-images", { slots: { [slot]: file_id } }); setData(d); setPicking(null); toast(file_id ? "Photo set — live on the site in a moment" : "Back to placeholder"); }
+    try { const d = await api.put<Data>("/api/admin/site-images", { slots: { [slot]: file_id } }); setData(d); setPicking(null); toast(file_id ? "Foto dipasang — tampil di website sebentar lagi" : "Kembali ke foto contoh"); }
     catch (e) { toast(e instanceof Error ? e.message : "Failed", true); }
   }
   async function saveFrame(slot: string, frame: Frame | null) {
-    try { const d = await api.put<Data>("/api/admin/site-images", { frames: { [slot]: frame } }); setData(d); setFraming(null); toast("Framing saved — live on the site in a moment"); }
+    try { const d = await api.put<Data>("/api/admin/site-images", { frames: { [slot]: frame } }); setData(d); setFraming(null); toast("Komposisi tersimpan — tampil di website sebentar lagi"); }
     catch (e) { toast(e instanceof Error ? e.message : "Failed", true); }
   }
   async function sync() {
-    try { const d = await api.post<Data>("/api/admin/site-images/sync"); setData(d); toast(`Folder re-read · ${d.photos.length} photographs`); }
+    try { const d = await api.post<Data>("/api/admin/site-images/sync"); setData(d); toast(`Folder dibaca ulang · ${d.photos.length} foto`); }
     catch (e) { toast(e instanceof Error ? e.message : "Failed", true); }
   }
 
   return (
     <>
-      <PageHeader eyebrow="Website" title="Site images" actions={data?.folder_id ? <Btn onClick={sync}>Sync folder</Btn> : undefined} />
+      <PageHeader eyebrow="Website" title="Foto situs" actions={data?.folder_id ? <Btn onClick={sync}>Sinkronkan folder</Btn> : undefined} />
 
       {err ? <LoadError error={err} retry={() => { setErr(null); load(); }} /> : !data ? <SkeletonCards n={4} /> : (
         <div className="flex flex-col gap-6">
-          <Card title="Google Drive folder">
-            <p className="t-small text-mute">One folder with the photographs you want on the pages (web-size JPEGs). Then choose a photo for each slot below. Portfolio projects have their own folders.</p>
+          <Card title="Folder Google Drive">
+            <p className="t-small text-mute">Satu folder berisi foto untuk halaman website (JPEG ukuran web). Lalu pilih foto untuk tiap slot di bawah. Proyek portofolio punya foldernya sendiri.</p>
             <div className="flex flex-col sm:flex-row gap-2">
               <Input value={folder} onChange={(e) => setFolder(e.target.value)} placeholder="https://drive.google.com/drive/folders/…" />
-              <Btn kind="ink" onClick={saveFolder} disabled={busy || folder.trim() === data.folder_id}>{busy ? "Reading…" : data.folder_id ? "Change folder" : "Use this folder"}</Btn>
+              <Btn kind="ink" onClick={saveFolder} disabled={busy || folder.trim() === data.folder_id}>{busy ? "Membaca…" : data.folder_id ? "Ganti folder" : "Pakai folder ini"}</Btn>
             </div>
             {data.folder_error && <p className="t-small text-error">{data.folder_error}</p>}
-            {data.folder_id && !data.folder_error && <p className="t-small text-mute">{data.photos.length} photographs · {setCount} of {data.slots.length} slots set{setCount < data.slots.length && " — the rest still show placeholder photos"}</p>}
+            {data.folder_id && !data.folder_error && <p className="t-small text-mute">{data.photos.length} photographs · {setCount} of {data.slots.length} slots set{setCount < data.slots.length && " — sisanya masih foto contoh"}</p>}
           </Card>
 
           {pages.map((page) => (
@@ -95,7 +95,7 @@ export default function SiteImagesPage() {
                   const p = s.file_id ? byId[s.file_id] : null;
                   return (
                     <li key={s.slot} className="flex flex-col gap-2">
-                      <button type="button" disabled={!data.folder_id} onClick={() => setPicking(s)} className={clsx("relative aspect-[4/3] overflow-hidden border transition-colors text-left", p ? "border-line hover:border-ink" : "border-dashed border-line hover:border-ink bg-[#f6f5f1]")} title={data.folder_id ? "Choose a photograph" : "Set the folder first"}>
+                      <button type="button" disabled={!data.folder_id} onClick={() => setPicking(s)} className={clsx("relative aspect-[4/3] overflow-hidden border transition-colors text-left", p ? "border-line hover:border-ink" : "border-dashed border-line hover:border-ink bg-[#f6f5f1]")} title={data.folder_id ? "Pilih foto" : "Atur folder dulu"}>
                         {p ? <img src={api.img(p.thumb_url)} alt="" className="w-full h-full object-cover" loading="lazy" style={s.frame ? { objectPosition: `${s.frame.x}% ${s.frame.y}%` } : undefined} /> : <span className="absolute inset-0 flex items-center justify-center t-mono text-faint">placeholder</span>}
                       </button>
                       <div className="flex items-start justify-between gap-2">
@@ -103,7 +103,7 @@ export default function SiteImagesPage() {
                         {p && (
                           <span className="flex gap-3 shrink-0">
                             <button type="button" onClick={() => setFraming(s)} className="link t-mono text-ink">framing{s.frame ? " ✓" : ""}</button>
-                            <button type="button" onClick={() => assign(s.slot, null)} className="link t-mono text-mute">clear</button>
+                            <button type="button" onClick={() => assign(s.slot, null)} className="link t-mono text-mute">kosongkan</button>
                           </span>
                         )}
                       </div>
@@ -121,7 +121,7 @@ export default function SiteImagesPage() {
           src={api.img(byId[framing.file_id].full_url)}
           title={`${framing.page} · ${framing.description}`}
           value={framing.frame}
-          previews={SHAPES[framing.slot]?.previews ?? [{ label: "Frame", ratio: 4 / 5 }]}
+          previews={SHAPES[framing.slot]?.previews ?? [{ label: "Bingkai", ratio: 4 / 5 }]}
           allowWhole={SHAPES[framing.slot]?.whole}
           onSave={(f) => saveFrame(framing.slot, f)}
           onClose={() => setFraming(null)}
@@ -133,7 +133,7 @@ export default function SiteImagesPage() {
           <div role="dialog" aria-modal="true" className="admin-pop w-full max-w-[880px] max-h-[86vh] bg-white border border-line flex flex-col">
             <div className="flex items-center justify-between px-5 py-4 border-b border-line">
               <div className="flex flex-col"><span className="t-mono text-mute">{picking.page}</span><span className="font-serif text-[22px] leading-tight">{picking.description}</span></div>
-              <button type="button" onClick={() => setPicking(null)} aria-label="Close" className="text-mute hover:text-ink text-[18px]">✕</button>
+              <button type="button" onClick={() => setPicking(null)} aria-label="Tutup" className="text-mute hover:text-ink text-[18px]">✕</button>
             </div>
             <ul className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-1.5 p-4 overflow-y-auto">
               {data.photos.map((p) => (

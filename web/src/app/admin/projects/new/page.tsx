@@ -7,7 +7,7 @@ import { ProjectForm } from "@/components/admin/ProjectForm";
 export default function NewProjectPage() {
   return (
     <>
-      <PageHeader eyebrow={<Link href="/admin/projects" className="link">Projects</Link>} title="New project" />
+      <PageHeader eyebrow={<Link href="/admin/projects" className="link">Proyek</Link>} title="Proyek baru" />
       <ProjectForm />
     </>
   );
