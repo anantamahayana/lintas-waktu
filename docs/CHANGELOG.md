@@ -5,6 +5,7 @@ Format: `### 2026-11-13 · NantaPakeAI (proof album di HP)
 - Proof klien di HP tegak: satu halaman besar per layar (geser = halaman berikutnya), pilihan Halaman/Spread, strip thumbnail dengan jumlah catatan dan spread yang belum dilihat, tombol "Tulis catatan" utama dengan saran cepat (Ganti foto, Lebih terang, …), "Setujui" aktif setelah semua spread dilihat.
 - Proof klien: di halaman terakhir (dan pertama) geser tidak lagi berpindah halaman; label "Halaman terakhir".
 - Proof klien (tampilan Halaman): sampul tampil sebagai **Sampul depan** satu halaman, pilihan Halaman/Spread selalu terlihat, thumbnail di strip selalu dimuat.
+- Proof klien: laci catatan di HP bisa ditutup dengan menyeret pegangannya ke bawah atau tombol ✕; selama laci terbuka, halaman di belakang tidak ikut tergulir/refresh (Safari).
 - Proof klien di HP miring: layar penuh gelap tanpa header, spread memenuhi layar, catatan sebagai laci dari kanan (sebelumnya spread tertutup header dan panel).
 - Desain: kanvas "Proof album mobile" (artifact), akan disalin ke Figma saat konektor pulih.
 - **Manual:** tidak ada.

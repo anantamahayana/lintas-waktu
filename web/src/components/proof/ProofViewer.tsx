@@ -402,14 +402,7 @@ function Viewer({ slug, data, setData, lang, setLang }: { slug: string; data: Pr
 
   const overlays = (
     <>
-      {mode === "portrait" && sheet && (
-        <div className="fixed inset-0 z-30 flex items-end bg-ink/25 admin-fade" onMouseDown={(e) => { if (e.target === e.currentTarget) setSheet(false); }}>
-          <div className="admin-pop w-full max-h-[78dvh] bg-white rounded-t-2xl px-5 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] flex flex-col">
-            <span className="mx-auto mb-3 h-1 w-9 rounded-full bg-line" />
-            {notesPanel}
-          </div>
-        </div>
-      )}
+      {mode === "portrait" && sheet && <Sheet onClose={() => setSheet(false)} closeLabel={t.close}>{notesPanel}</Sheet>}
       {ask && (
         <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center p-4 bg-ink/45 admin-fade" onMouseDown={(e) => { if (e.target === e.currentTarget) setAsk(false); }}>
           <div role="alertdialog" aria-modal="true" aria-labelledby="ap-t" className="admin-pop w-full max-w-[520px] max-h-[96dvh] overflow-y-auto bg-white p-8 flex flex-col gap-4">
@@ -599,6 +592,40 @@ function Viewer({ slug, data, setData, lang, setLang }: { slug: string; data: Pr
       </div>
 
       {overlays}
+    </div>
+  );
+}
+
+/** Bottom sheet: drag the handle down (or tap outside, or ✕) to close. While open, the page behind
+ * cannot scroll or pull-to-refresh, so a downward swipe means "close", not "reload". */
+function Sheet({ children, onClose, closeLabel }: { children: ReactNode; onClose: () => void; closeLabel: string }) {
+  const [dy, setDy] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const start = useRef<number | null>(null);
+  useEffect(() => {
+    const html = document.documentElement, prev = [html.style.overscrollBehaviorY, document.body.style.overflow];
+    html.style.overscrollBehaviorY = "none"; document.body.style.overflow = "hidden";
+    return () => { html.style.overscrollBehaviorY = prev[0]; document.body.style.overflow = prev[1]; };
+  }, []);
+  const grab = {
+    onPointerDown: (e: React.PointerEvent) => { start.current = e.clientY; setDragging(true); (e.currentTarget as Element).setPointerCapture(e.pointerId); },
+    onPointerMove: (e: React.PointerEvent) => { if (start.current !== null) setDy(Math.max(0, e.clientY - start.current)); },
+    onPointerUp: () => { start.current = null; setDragging(false); if (dy > 90) onClose(); else setDy(0); },
+    onPointerCancel: () => { start.current = null; setDragging(false); setDy(0); },
+  };
+  return (
+    <div className="fixed inset-0 z-30 flex items-end bg-ink/25 admin-fade overscroll-contain" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onTouchMove={(e) => { if (e.target === e.currentTarget) e.preventDefault(); }}>
+      <div className="admin-pop w-full max-h-[78dvh] bg-white rounded-t-2xl px-5 pb-[max(20px,env(safe-area-inset-bottom))] flex flex-col overscroll-contain"
+        style={{ transform: dy ? `translateY(${dy}px)` : undefined, transition: dragging ? "none" : "transform 200ms ease-out" }}>
+        <div className="relative -mx-5 h-8 shrink-0 flex items-center justify-center touch-none cursor-grab" {...grab}>
+          <span className="h-1 w-10 rounded-full bg-line" />
+          <button type="button" aria-label={closeLabel} onPointerDown={(e) => e.stopPropagation()} onClick={onClose} className="absolute right-2 top-1 h-10 w-10 rounded-full flex items-center justify-center text-mute">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M18 6 6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+        {children}
+      </div>
     </div>
   );
 }
