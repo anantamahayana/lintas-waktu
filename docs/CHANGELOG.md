@@ -1,7 +1,13 @@
 # Catatan perubahan
 
 Yang terbaru di atas. Setiap perubahan yang di-push menambah satu entri di sini (aturannya di `CLAUDE.md`).
-Format: `### 2026-11-13 · NantaPakeAI (admin berbahasa Indonesia)
+Format: `### 2026-11-13 · NantaPakeAI (proof album di HP)
+- Proof klien di HP tegak: satu halaman besar per layar (geser = halaman berikutnya), pilihan Halaman/Spread, strip thumbnail dengan jumlah catatan dan spread yang belum dilihat, tombol "Tulis catatan" utama dengan saran cepat (Ganti foto, Lebih terang, …), "Setujui" aktif setelah semua spread dilihat.
+- Proof klien di HP miring: layar penuh gelap tanpa header, spread memenuhi layar, catatan sebagai laci dari kanan (sebelumnya spread tertutup header dan panel).
+- Desain: kanvas "Proof album mobile" (artifact), akan disalin ke Figma saat konektor pulih.
+- **Manual:** tidak ada.
+
+### 2026-11-13 · NantaPakeAI (admin berbahasa Indonesia)
 - Seluruh antarmuka admin kini berbahasa Indonesia (menu, tombol, formulir, konfirmasi, pesan, tanggal `id-ID`). Dokumen dan pesan untuk klien tetap EN/ID sesuai bahasa klien. Pesan galat dari server masih berbahasa Inggris.
 - **Manual:** tidak ada.
 

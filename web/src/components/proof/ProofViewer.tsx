@@ -28,6 +28,11 @@ const T = {
     view: "View the album", notes: "Notes", preview: "Photographer preview: notes and approval are turned off.", remove: "Remove", done: "Done",
     older: (v: number) => `Version ${v}`, rotate: "Turn your phone for a bigger view", swipe: "Swipe for the next spread", help: "How it works",
     noteFail: "The note could not be saved. Check your connection and try again.", saving: "Saving…",
+    viewPage: "Page", viewSpread: "Spread", seen: (a: number, b: number) => `Viewed ${a} of ${b}`, allSeen: "All spreads viewed",
+    writeNote: "Write a note", approveAfter: (a: number, b: number) => `Approve · ${a}/${b}`, page: (p: string) => `Page ${p}`, nextPage: (p: string) => `swipe for page ${p} →`,
+    summary: (n: number) => (n ? `${n} note${n > 1 ? "s" : ""} for us to look at. Approve when the album feels right.` : "No notes so far. Approve when the album feels right."),
+    chips: ["Swap this photo", "Brighter", "Move it", "Remove this photo"], noteHere: (l: string) => (/\d/.test(l) ? `Note for pages ${l}` : `Note for the ${l.toLowerCase()}`),
+    pinch: "Pinch to zoom", close: "Close",
     tour: {
       welcome: (n: string) => `Welcome, ${n}`, intro: "This is your album before it goes to print. Look through every page, leave notes where you'd like changes, and approve when it feels right.",
       tiles: ["Flip through", "Point & note", "Approve"], tilesSub: ["Every page, as it will be printed.", "Tell us what you'd like changed.", "When everything feels right."],
@@ -55,6 +60,11 @@ const T = {
     view: "Lihat album", notes: "Catatan", preview: "Pratinjau fotografer: catatan dan persetujuan dimatikan.", remove: "Hapus", done: "Selesai",
     older: (v: number) => `Versi ${v}`, rotate: "Putar HP untuk tampilan lebih besar", swipe: "Geser untuk spread berikutnya", help: "Cara memakai",
     noteFail: "Catatan belum tersimpan. Periksa koneksi lalu coba lagi.", saving: "Menyimpan…",
+    viewPage: "Halaman", viewSpread: "Spread", seen: (a: number, b: number) => `Dilihat ${a} dari ${b}`, allSeen: "Semua spread sudah dilihat",
+    writeNote: "Tulis catatan", approveAfter: (a: number, b: number) => `Setujui · ${a}/${b}`, page: (p: string) => `Halaman ${p}`, nextPage: (p: string) => `geser untuk halaman ${p} →`,
+    summary: (n: number) => (n ? `${n} catatan akan kami periksa. Setujui kalau album sudah pas.` : "Belum ada catatan. Setujui kalau album sudah pas."),
+    chips: ["Ganti foto ini", "Lebih terang", "Geser posisi", "Hapus foto ini"], noteHere: (l: string) => (/\d/.test(l) ? `Catatan halaman ${l}` : `Catatan ${l.toLowerCase()}`),
+    pinch: "Cubit untuk memperbesar", close: "Tutup",
     tour: {
       welcome: (n: string) => `Selamat datang, ${n}`, intro: "Ini album Anda sebelum dicetak. Lihat setiap halaman, tulis catatan di bagian yang ingin diubah, lalu setujui kalau sudah pas.",
       tiles: ["Lihat halaman", "Tunjuk & catat", "Setujui"], tilesSub: ["Setiap halaman, seperti nanti dicetak.", "Ceritakan apa yang ingin diubah.", "Kalau semuanya sudah pas."],
@@ -73,13 +83,15 @@ type Dict = (typeof T)[Lang];
 
 const fmtDate = (s: string | null, lang: Lang) => (s ? new Date(s).toLocaleDateString(lang === "id" ? "id-ID" : "en-GB", { day: "numeric", month: "short", year: "numeric" }) : "");
 
-function useMobile() {
-  const [m, setM] = useState(false);
+/** desk: computer/tablet · portrait: phone upright · land: phone on its side (short and wide). */
+type Mode = "desk" | "portrait" | "land";
+function useMode(): Mode {
+  const [m, setM] = useState<Mode>("desk");
   useEffect(() => {
-    const q = matchMedia("(max-width: 767px)");
-    const on = () => setM(q.matches);
-    on(); q.addEventListener("change", on);
-    return () => q.removeEventListener("change", on);
+    const land = matchMedia("(max-height: 500px) and (orientation: landscape)"), narrow = matchMedia("(max-width: 767px)");
+    const on = () => setM(land.matches ? "land" : narrow.matches ? "portrait" : "desk");
+    on(); land.addEventListener("change", on); narrow.addEventListener("change", on);
+    return () => { land.removeEventListener("change", on); narrow.removeEventListener("change", on); };
   }, []);
   return m;
 }
@@ -170,9 +182,20 @@ type Point = { x: number; y: number } | null;
 
 function Viewer({ slug, data, setData, lang, setLang }: { slug: string; data: ProofData; setData: (d: ProofData) => void; lang: Lang; setLang: (l: Lang) => void }) {
   const t = T[lang];
-  const mobile = useMobile();
+  const mode = useMode();
+  const mobile = mode !== "desk";
   const n = data.spreads.length;
   const [i, setI] = useState(0);
+  const [half, setHalf] = useState<0 | 1>(0);
+  const [pageView, setPageView] = useState(true);
+  const [drawer, setDrawer] = useState(false);
+  // Spreads seen on this device, per version: Approve waits until every one has been looked at.
+  const seenKey = `lw_p_seen_${slug}_${data.version}`;
+  const [seen, setSeen] = useState<Set<number>>(() => {
+    const set = new Set((store.get(seenKey) ?? "").split(",").filter(Boolean).map(Number));
+    if (data.spreads[0]) set.add(data.spreads[0].index);
+    return set;
+  });
   const sp = data.spreads[Math.min(i, n - 1)];
   const label = sp?.label || String(i + 1);
   const approved = data.status === "approved";
@@ -196,7 +219,23 @@ function Viewer({ slug, data, setData, lang, setLang }: { slug: string; data: Pr
   const counts = useMemo(() => { const m = new Map<number, number>(); for (const x of data.notes) if (!x.done) m.set(x.spread, (m.get(x.spread) ?? 0) + 1); return m; }, [data.notes]);
   const open = data.notes.filter((x) => !x.done).length;
 
-  const go = useCallback((k: number) => { setI(Math.max(0, Math.min(n - 1, k))); setPoint(null); setActive(null); }, [n]);
+  const go = useCallback((k: number, h: 0 | 1 = 0) => {
+    const j = Math.max(0, Math.min(n - 1, k)), idx = data.spreads[j]?.index;
+    setI(j); setHalf(h); setPoint(null); setActive(null);
+    if (idx !== undefined) setSeen((old) => { if (old.has(idx)) return old; const next = new Set(old).add(idx); store.set(seenKey, [...next].join(",")); return next; });
+  }, [n, data.spreads, seenKey]);
+  const seenAll = data.spreads.every((x) => seen.has(x.index));
+  const nums = label.match(/(\d+)\D+(\d+)/);
+  // Upright phone: one page at a time, large; the cover and odd shapes stay whole.
+  const single = mode === "portrait" && pageView && !!nums && !!sp && sp.w / sp.h > 1.6;
+  const step = useCallback((d: 1 | -1) => {
+    if (single) {
+      if (d > 0 && half === 0) { setHalf(1); setPoint(null); return; }
+      if (d < 0 && half === 1) { setHalf(0); setPoint(null); return; }
+      if (d < 0) { if (i > 0) go(i - 1, 1); return; }
+    }
+    go(i + d);
+  }, [single, half, i, go]);
 
   const endTour = () => { setTour(null); store.set(`lw_p_tour_${slug}`, "1"); };
 
@@ -206,12 +245,12 @@ function Viewer({ slug, data, setData, lang, setLang }: { slug: string; data: Pr
       if (tour !== null || ask) return;
       const el = e.target as HTMLElement;
       if (el.closest("textarea, input")) return;
-      if (e.key === "ArrowRight") go(i + 1);
-      else if (e.key === "ArrowLeft") go(i - 1);
+      if (e.key === "ArrowRight") step(1);
+      else if (e.key === "ArrowLeft") step(-1);
     };
     window.addEventListener("keydown", on);
     return () => window.removeEventListener("keydown", on);
-  }, [i, go, tour, ask]);
+  }, [step, tour, ask]);
 
   // Preload the neighbouring spreads only.
   useEffect(() => {
@@ -222,9 +261,11 @@ function Viewer({ slug, data, setData, lang, setLang }: { slug: string; data: Pr
   const tapPhoto = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!canNote) return;
     const r = e.currentTarget.getBoundingClientRect();
-    setPoint({ x: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), y: Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)) });
+    const lx = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    setPoint({ x: single ? half * 0.5 + lx / 2 : lx, y: Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)) });
     setActive(null);
-    if (mobile) setSheet(true);
+    if (mode === "portrait") setSheet(true);
+    if (mode === "land") setDrawer(true);
     setTimeout(() => textRef.current?.focus(), 60);
   };
 
@@ -290,6 +331,7 @@ function Viewer({ slug, data, setData, lang, setLang }: { slug: string; data: Pr
       {canNote && (
         <div className="mt-auto border border-line p-3.5 flex flex-col gap-2.5 focus-within:border-ink transition-colors">
           {!store.get("lw_p_name") && <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t.name} maxLength={60} className="text-[14px] outline-none border-b border-line pb-1.5 bg-transparent" />}
+          {mobile && !text && <div className="flex flex-wrap gap-1.5">{t.chips.map((c) => <button type="button" key={c} onClick={() => { setText(c + " "); textRef.current?.focus(); }} className="rounded-full border border-line bg-[#fbfaf7] px-3 py-1.5 text-[13px]">{c}</button>)}</div>}
           <textarea ref={textRef} value={text} onChange={(e) => setText(e.target.value)} placeholder={t.writePh(label)} maxLength={600} rows={2}
             className="resize-none text-[15px] leading-[1.5] outline-none bg-transparent" onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) void add(); }} />
           <div className="flex items-center gap-2">
@@ -303,6 +345,188 @@ function Viewer({ slug, data, setData, lang, setLang }: { slug: string; data: Pr
       )}
     </div>
   );
+
+  // The spread (or, upright on a phone, one page of it) with its pins; shared by every layout.
+  const half0 = half * 0.5;
+  const pinsShown = single ? pins.filter((x) => x.x! >= half0 && x.x! <= half0 + 0.5) : pins;
+  const xOf = (x: number) => (single ? (x - half0) * 2 : x);
+  const ratio = sp ? (single ? sp.w / 2 / sp.h : sp.w / sp.h) : 1;
+  const figure = (style: CSSProperties) => sp && (
+    <div data-tour="spread" className="relative bg-white shadow-[0_18px_40px_rgba(31,26,20,.18)] overflow-hidden" style={{ aspectRatio: String(ratio), ...style }}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- signed private image, not for the optimiser */}
+      <img key={sp.url} src={papi.img(sp.url)} alt={t.pages(label)} className="absolute top-0 h-full max-w-none object-cover select-none" draggable={false}
+        style={single ? { width: "200%", left: half ? "-100%" : 0 } : { width: "100%", left: 0 }} />
+      <div data-tour="photo" className={clsx("absolute inset-0", canNote && "cursor-crosshair")} onClick={tapPhoto} />
+      {pinsShown.map((x) => {
+        const k = pins.indexOf(x);
+        return (
+          <button type="button" key={x.id} onClick={() => { setActive(x.id); if (mode === "portrait") setSheet(true); if (mode === "land") setDrawer(true); }} aria-label={`${t.notes} ${k + 1}`}
+            className={clsx("absolute -translate-x-1/2 -translate-y-1/2 h-[28px] w-[28px] rounded-full border-[1.5px] text-[12px] font-medium flex items-center justify-center shadow-md",
+              active === x.id ? "bg-ink text-white border-white ring-4 ring-[rgba(200,131,47,.45)]" : "bg-white text-ink border-ink")} style={{ left: `${xOf(x.x!) * 100}%`, top: `${x.y! * 100}%` }}>{k + 1}</button>
+        );
+      })}
+      {point && (!single || (point.x >= half0 && point.x <= half0 + 0.5)) && <span className="absolute -translate-x-1/2 -translate-y-1/2 h-[30px] w-[30px] rounded-full border-2 border-white bg-ink/85 shadow-md pointer-events-none ring-4 ring-[rgba(200,131,47,.45)]" style={{ left: `${xOf(point.x) * 100}%`, top: `${point.y * 100}%` }} />}
+    </div>
+  );
+  const swipeProps = {
+    onPointerDown: (e: React.PointerEvent) => { if (e.pointerType !== "mouse") swipe.current = { x: e.clientX, y: e.clientY }; },
+    onPointerUp: (e: React.PointerEvent) => { const s0 = swipe.current; swipe.current = null; if (!s0) return; const dx = e.clientX - s0.x; if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(e.clientY - s0.y)) step(dx < 0 ? 1 : -1); },
+  };
+  const strip = (
+    <nav className="flex gap-2.5 overflow-x-auto px-4 pt-3 pb-1" aria-label="Spreads">
+      {data.spreads.map((s, k) => (
+        <button type="button" key={s.index} onClick={() => go(k)} aria-current={k === i ? "true" : undefined} className="shrink-0 flex flex-col items-center gap-1">
+          <span className={clsx("relative block h-[34px]", k === i ? "outline outline-2 outline-ink" : seen.has(s.index) ? "outline outline-1 outline-line" : "outline outline-1 outline-dashed outline-faint opacity-70")} style={{ aspectRatio: `${s.w} / ${s.h}` }}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- small signed thumbnail */}
+            <img src={papi.img(s.url)} alt="" loading="lazy" className="h-full w-full object-cover" />
+            {(counts.get(s.index) ?? 0) > 0 && <span className="absolute -top-1.5 -right-1.5 h-4 min-w-4 px-1 rounded-full text-white text-[9px] font-semibold flex items-center justify-center" style={{ background: GOLD }}>{counts.get(s.index)}</span>}
+          </span>
+          <span className={clsx("text-[11px]", k === i ? "text-ink font-medium" : "text-faint")}>{s.label}</span>
+        </button>
+      ))}
+    </nav>
+  );
+  const approveMobile = (cls: string) => approved
+    ? <span className={clsx("t-mono text-mute text-center", cls)}>{t.approvedOn(fmtDate(data.approved_at, lang))}</span>
+    : <button type="button" data-tour="approve" disabled={data.preview || !seenAll} onClick={() => setAsk(true)}
+        className={clsx("rounded-full font-medium disabled:bg-[#e7e4dc] disabled:text-mute text-white", cls)} style={seenAll && !data.preview ? { background: GOLD } : undefined}>
+        {seenAll ? t.approve : t.approveAfter(seen.size, n)}</button>;
+  const preview = data.preview && <div className="bg-ink text-white text-center text-[12px] py-1.5 px-4 shrink-0">{t.preview}</div>;
+
+  const overlays = (
+    <>
+      {mode === "portrait" && sheet && (
+        <div className="fixed inset-0 z-30 flex items-end bg-ink/25 admin-fade" onMouseDown={(e) => { if (e.target === e.currentTarget) setSheet(false); }}>
+          <div className="admin-pop w-full max-h-[78dvh] bg-white rounded-t-2xl px-5 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] flex flex-col">
+            <span className="mx-auto mb-3 h-1 w-9 rounded-full bg-line" />
+            {notesPanel}
+          </div>
+        </div>
+      )}
+      {ask && (
+        <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center p-4 bg-ink/45 admin-fade" onMouseDown={(e) => { if (e.target === e.currentTarget) setAsk(false); }}>
+          <div role="alertdialog" aria-modal="true" aria-labelledby="ap-t" className="admin-pop w-full max-w-[520px] max-h-[96dvh] overflow-y-auto bg-white p-8 flex flex-col gap-4">
+            <h2 id="ap-t" className="font-serif text-[32px] leading-tight">{t.approveTitle}</h2>
+            <p className="text-[15px] leading-[1.55] text-mute">{t.approveBody}</p>
+            {open > 0 && <p className="font-serif italic text-[16px]">{t.openNotes(open)}</p>}
+            {!store.get("lw_p_name") && <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t.name} maxLength={80} className="border border-line px-3 py-2.5 text-[14px] outline-none focus:border-ink" />}
+            {err && <p className="t-small text-error">{err}</p>}
+            <div className="flex gap-3 mt-1">
+              <button type="button" className="flex-1 rounded-full border border-line py-3 text-[14px] font-medium" onClick={() => setAsk(false)}>{t.notYet}</button>
+              <button type="button" disabled={busy} className="flex-1 rounded-full py-3 text-[14px] font-medium text-white disabled:opacity-50" style={{ background: GOLD }} onClick={() => void approve()}>{t.approveYes}</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {thanks && (
+        <div className="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center text-center gap-5 px-8 admin-fade">
+          <Logo size={40} stacked />
+          <span className="h-14 w-14 rounded-full" style={{ background: GOLD }} aria-hidden />
+          <h2 className="font-serif text-[34px] leading-tight">{t.thanks(data.approved_by || data.client_name)}</h2>
+          <p className="text-[15px] leading-[1.55] text-mute max-w-[38ch]">{t.thanksBody(fmtDate(data.approved_at, lang))}</p>
+          <button type="button" className="rounded-full border border-ink px-8 py-3 text-[14px] font-medium" onClick={() => setThanks(false)}>{t.view}</button>
+        </div>
+      )}
+      {tour === "welcome" && <Welcome t={t} mobile={mobile} name={data.client_name} onStart={() => setTour(0)} onSkip={endTour} />}
+      {typeof tour === "number" && <Tour t={t} mobile={mobile} step={tour} setStep={setTour} onEnd={endTour} />}
+    </>
+  );
+
+  if (mode === "portrait") {
+    const pageNo = nums ? nums[half + 1] : "";
+    return (
+      <div className="h-dvh flex flex-col bg-[#fbfaf7] overflow-hidden">
+        {preview}
+        <header className="h-14 shrink-0 border-b border-line flex items-center gap-3 px-4">
+          <div className="flex flex-col min-w-0 grow">
+            <span className="t-mono text-[10px] text-faint">{t.proof} · v{data.version}</span>
+            <span className="font-serif text-[22px] leading-[1.1] truncate">{data.client_name}</span>
+          </div>
+          <LangSwitch lang={lang} setLang={setLang} />
+          {helpBtn}
+        </header>
+        <div className="shrink-0 px-4 pt-3 flex items-center gap-2">
+          {nums && sp && sp.w / sp.h > 1.6 && (
+            <div role="group" aria-label={t.viewSpread} className="flex p-[3px] bg-[#efece5] rounded-[10px]">
+              {([[true, t.viewPage], [false, t.viewSpread]] as const).map(([v, l]) => (
+                <button type="button" key={l} aria-pressed={pageView === v} onClick={() => { setPageView(v); setHalf(0); }}
+                  className={clsx("h-[30px] px-3 rounded-lg text-[12px] font-medium", pageView === v ? "bg-white shadow-sm text-ink" : "text-mute")}>{l}</button>
+              ))}
+            </div>
+          )}
+          <span className="grow" />
+          <span className={clsx("text-[12px]", seenAll ? "text-[#3f6b3a] font-medium" : "text-mute")}>{seenAll ? `✓ ${t.allSeen}` : t.seen(seen.size, n)}</span>
+        </div>
+        <main className="flex-1 min-h-0 flex flex-col justify-center px-4 gap-3" {...swipeProps}>
+          {figure({ width: `min(100%, calc((100dvh - 330px) * ${ratio}))`, alignSelf: "center" })}
+          <div className="flex justify-between items-center text-[13px] text-mute">
+            <span>{single ? t.page(pageNo) : t.pages(label)}</span>
+            {single ? <span className="flex gap-1.5" aria-hidden><span className={clsx("h-1.5 w-1.5 rounded-full", half === 0 ? "bg-ink" : "bg-line")} /><span className={clsx("h-1.5 w-1.5 rounded-full", half === 1 ? "bg-ink" : "bg-line")} /></span> : <span>{t.spreadOf(i + 1, n)}</span>}
+            <span>{single && half === 0 ? t.nextPage(nums![2]) : !single ? t.pinch : ""}</span>
+          </div>
+        </main>
+        <div className="shrink-0 border-t border-line bg-white">
+          {strip}
+          <div className="px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] flex gap-2.5">
+            {canNote || notesHere.length ? (
+              <button type="button" data-tour="notes" onClick={() => setSheet(true)} className="flex-1 h-12 rounded-full border-[1.5px] border-ink bg-white text-[15px] font-medium flex items-center justify-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+                {notesHere.length ? `${t.notes} · ${notesHere.length}` : t.writeNote}
+              </button>
+            ) : null}
+            {approveMobile("flex-1 h-12 text-[15px]")}
+          </div>
+        </div>
+        {overlays}
+      </div>
+    );
+  }
+
+  if (mode === "land") {
+    return (
+      <div className="h-dvh flex bg-[#1c1b19] overflow-hidden text-white">
+        <div className="relative flex-1 min-w-0 flex items-center justify-center" {...swipeProps}>
+          {figure({ width: drawer ? `min(100% - 32px, (100dvh - 96px) * ${ratio})` : `min(100% - 112px, (100dvh - 96px) * ${ratio})`, boxShadow: "0 20px 60px rgba(0,0,0,.5)" })}
+          <div className="absolute inset-x-0 top-0 h-11 px-4 flex items-center gap-3 bg-gradient-to-b from-black/55 to-transparent pointer-events-none">
+            <span className="font-serif text-[18px] truncate pointer-events-auto">{data.client_name}</span>
+            <span className="text-[12px] text-white/75 whitespace-nowrap">{t.pages(label)} · {t.spreadOf(i + 1, n)}</span>
+            <span className="grow" />
+            {data.preview && <span className="text-[11px] text-white/75">{t.preview}</span>}
+            {!drawer && <span className="pointer-events-auto [&_button]:text-white [&_button]:border-white/40">{helpBtn}</span>}
+          </div>
+          {!drawer && (
+            <>
+              <button type="button" aria-label="Previous" onClick={() => step(-1)} disabled={i === 0} className="absolute left-2 top-1/2 -translate-y-1/2 h-[60px] w-10 rounded-full bg-white/12 text-[20px] disabled:opacity-25">‹</button>
+              <button type="button" aria-label="Next" onClick={() => step(1)} disabled={i >= n - 1} className="absolute right-2 top-1/2 -translate-y-1/2 h-[60px] w-10 rounded-full bg-white/12 text-[20px] disabled:opacity-25">›</button>
+            </>
+          )}
+          <div className="absolute inset-x-0 bottom-3 flex justify-center gap-1.5 pointer-events-none" aria-hidden>
+            {data.spreads.map((s, k) => <span key={s.index} className={clsx("h-1 w-[18px] rounded-full", k === i ? "bg-white" : seen.has(s.index) ? "bg-white/35" : "bg-white/15")} />)}
+          </div>
+          {!drawer && (
+            <div className="absolute right-4 bottom-2 flex gap-2">
+              {!approved && seenAll && !data.preview && <button type="button" data-tour="approve" onClick={() => setAsk(true)} className="h-10 px-4 rounded-full text-[13px] font-medium text-white shadow-lg" style={{ background: GOLD }}>{t.approve}</button>}
+              <button type="button" data-tour="notes" onClick={() => setDrawer(true)} className="h-10 px-4 rounded-full bg-white text-ink text-[13px] font-medium shadow-lg flex items-center gap-2">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                {t.notes} · {notesHere.length}
+              </button>
+            </div>
+          )}
+        </div>
+        {drawer && (
+          <aside className="w-[min(340px,44vw)] shrink-0 bg-[#fbfaf7] text-ink border-l border-line flex flex-col admin-fade pb-[env(safe-area-inset-bottom)]" aria-label={t.notes}>
+            <div className="flex justify-end px-2 pt-1 shrink-0">
+              <button type="button" aria-label={t.close} onClick={() => setDrawer(false)} className="h-10 w-10 rounded-full flex items-center justify-center">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M18 6 6 18M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="flex-1 min-h-0 px-4 pb-3 -mt-2 [&_h2]:text-[22px]">{notesPanel}</div>
+          </aside>
+        )}
+        {overlays}
+      </div>
+    );
+  }
 
   const spreadStyle: CSSProperties = sp ? { aspectRatio: `${sp.w} / ${sp.h}`, width: mobile ? "100%" : `min(100%, calc((100dvh - 330px) * ${sp.w / sp.h}))` } : {};
 
@@ -327,7 +551,6 @@ function Viewer({ slug, data, setData, lang, setLang }: { slug: string; data: Pr
           <div className="flex-1 min-h-0 relative flex flex-col items-center justify-center px-4 md:px-20 py-4"
             onPointerDown={(e) => { if (e.pointerType !== "mouse") swipe.current = { x: e.clientX, y: e.clientY }; }}
             onPointerUp={(e) => { const s = swipe.current; swipe.current = null; if (!s) return; const dx = e.clientX - s.x; if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(e.clientY - s.y)) go(i + (dx < 0 ? 1 : -1)); }}>
-            {mobile && <p className="font-serif italic text-[15px] text-mute mb-6">{t.rotate}</p>}
             {!mobile && canNote && <p className="font-serif italic text-[17px] text-mute absolute top-5">{t.tapHint}</p>}
             {sp && (
               <div data-tour="spread" className="relative bg-white shadow-[0_18px_40px_rgba(31,26,20,.18)]" style={spreadStyle}>
@@ -343,7 +566,6 @@ function Viewer({ slug, data, setData, lang, setLang }: { slug: string; data: Pr
               </div>
             )}
             {sp && <div className="flex justify-between text-[12px] text-mute mt-4" style={{ width: spreadStyle.width as string }}><span>{t.pages(label)}</span><span>{t.spreadOf(i + 1, n)}</span></div>}
-            {mobile && <p className="text-[12px] text-faint mt-6">{t.swipe}</p>}
             {!mobile && (
               <>
                 <button type="button" aria-label="Previous" onClick={() => go(i - 1)} disabled={i === 0} className="absolute left-6 top-1/2 -translate-y-1/2 h-11 w-11 rounded-full bg-white border border-line text-[18px] disabled:opacity-30">‹</button>
@@ -369,56 +591,7 @@ function Viewer({ slug, data, setData, lang, setLang }: { slug: string; data: Pr
         {!mobile && <aside data-tour="notes" className="w-[380px] shrink-0 border-l border-line p-6 min-h-0 flex flex-col">{notesPanel}</aside>}
       </div>
 
-      {mobile && (
-        <div className="shrink-0 border-t border-line bg-white px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] flex flex-col gap-3">
-          <div className="flex items-center gap-2.5">
-            <button type="button" aria-label="Previous" onClick={() => go(i - 1)} disabled={i === 0} className="h-10 w-10 rounded-full border border-line disabled:opacity-30">‹</button>
-            <span className="text-[14px] font-medium">{i + 1} / {n}</span>
-            <span className="grow" />
-            <button type="button" data-tour="notes" onClick={() => setSheet(true)} className="rounded-full border border-ink px-4 py-2 text-[14px] font-medium">{t.notes} · {notesHere.length}</button>
-            <button type="button" aria-label="Next" onClick={() => go(i + 1)} disabled={i >= n - 1} className="h-10 w-10 rounded-full border border-line disabled:opacity-30">›</button>
-          </div>
-          {approveBtn("w-full py-3 text-[14px] text-center")}
-        </div>
-      )}
-
-      {mobile && sheet && (
-        <div className="fixed inset-0 z-30 flex items-end bg-ink/25 admin-fade" onMouseDown={(e) => { if (e.target === e.currentTarget) setSheet(false); }}>
-          <div className="admin-pop w-full max-h-[78dvh] bg-white rounded-t-2xl px-5 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] flex flex-col">
-            <span className="mx-auto mb-3 h-1 w-9 rounded-full bg-line" />
-            {notesPanel}
-          </div>
-        </div>
-      )}
-
-      {ask && (
-        <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center p-4 bg-ink/45 admin-fade" onMouseDown={(e) => { if (e.target === e.currentTarget) setAsk(false); }}>
-          <div role="alertdialog" aria-modal="true" aria-labelledby="ap-t" className="admin-pop w-full max-w-[520px] bg-white p-8 flex flex-col gap-4">
-            <h2 id="ap-t" className="font-serif text-[32px] leading-tight">{t.approveTitle}</h2>
-            <p className="text-[15px] leading-[1.55] text-mute">{t.approveBody}</p>
-            {open > 0 && <p className="font-serif italic text-[16px]">{t.openNotes(open)}</p>}
-            {!store.get("lw_p_name") && <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t.name} maxLength={80} className="border border-line px-3 py-2.5 text-[14px] outline-none focus:border-ink" />}
-            {err && <p className="t-small text-error">{err}</p>}
-            <div className="flex gap-3 mt-1">
-              <button type="button" className="flex-1 rounded-full border border-line py-3 text-[14px] font-medium" onClick={() => setAsk(false)}>{t.notYet}</button>
-              <button type="button" disabled={busy} className="flex-1 rounded-full py-3 text-[14px] font-medium text-white disabled:opacity-50" style={{ background: GOLD }} onClick={() => void approve()}>{t.approveYes}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {thanks && (
-        <div className="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center text-center gap-5 px-8 admin-fade">
-          <Logo size={40} stacked />
-          <span className="h-14 w-14 rounded-full" style={{ background: GOLD }} aria-hidden />
-          <h2 className="font-serif text-[34px] leading-tight">{t.thanks(data.approved_by || data.client_name)}</h2>
-          <p className="text-[15px] leading-[1.55] text-mute max-w-[38ch]">{t.thanksBody(fmtDate(data.approved_at, lang))}</p>
-          <button type="button" className="rounded-full border border-ink px-8 py-3 text-[14px] font-medium" onClick={() => setThanks(false)}>{t.view}</button>
-        </div>
-      )}
-
-      {tour === "welcome" && <Welcome t={t} mobile={mobile} name={data.client_name} onStart={() => setTour(0)} onSkip={endTour} />}
-      {typeof tour === "number" && <Tour t={t} mobile={mobile} step={tour} setStep={setTour} onEnd={endTour} />}
+      {overlays}
     </div>
   );
 }
@@ -439,7 +612,7 @@ function Welcome({ t, mobile, name, onStart, onSkip }: { t: Dict; mobile: boolea
   );
   return (
     <div className={clsx("fixed inset-0 z-50 bg-[rgba(26,22,18,.55)] admin-fade flex", mobile ? "items-end" : "items-center justify-center p-6")} role="dialog" aria-modal="true" aria-labelledby="tour-w">
-      <div className={clsx("admin-pop bg-white flex flex-col gap-4", mobile ? "w-full rounded-t-2xl px-6 pt-3 pb-[max(28px,env(safe-area-inset-bottom))]" : "w-full max-w-[640px] px-11 pt-10 pb-8 items-center text-center")}>
+      <div className={clsx("admin-pop bg-white flex flex-col gap-4", mobile ? "w-full max-h-[100dvh] overflow-y-auto rounded-t-2xl px-6 pt-3 pb-[max(28px,env(safe-area-inset-bottom))]" : "w-full max-w-[640px] px-11 pt-10 pb-8 items-center text-center")}>
         {mobile && <span className="mx-auto h-1 w-9 rounded-full bg-line" />}
         <span className="t-mono text-[10px] text-faint">{t.proof}</span>
         <h2 id="tour-w" className="font-serif text-[32px] md:text-[38px] leading-tight -mt-2">{t.tour.welcome(name)}</h2>
