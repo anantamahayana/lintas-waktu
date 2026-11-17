@@ -38,7 +38,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ token:
         </header>
         <div className="mt-10 flex flex-col gap-1">
           <span className="t-mono text-mute">{s.amount}</span>
-          <span className="text-[36px] font-semibold leading-tight tabular-nums">{money(r.amount, r.currency)}</span>
+          <span className="text-[36px] font-medium leading-tight tabular-nums">{money(r.amount, r.currency)}</span>
           {r.balance_after === 0 && <span className="t-small text-[#5f7a4a] font-medium">{s.settled}</span>}
         </div>
         <dl className="mt-8 t-small tabular-nums">

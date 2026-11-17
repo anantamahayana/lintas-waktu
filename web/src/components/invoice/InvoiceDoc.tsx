@@ -97,7 +97,7 @@ export function InvoiceDoc({ doc, business, className }: { doc: Doc; business: B
           {(t.discount > 0 || t.tax > 0) && <><dt className="text-mute">{s.subtotal}</dt><dd className="text-right">{money(t.subtotal, doc.currency)}</dd></>}
           {t.discount > 0 && <><dt className="text-mute">{s.discount}</dt><dd className="text-right">− {money(t.discount, doc.currency)}</dd></>}
           {t.tax > 0 && <><dt className="text-mute">{s.tax} {doc.tax_percent}%</dt><dd className="text-right">{money(t.tax, doc.currency)}</dd></>}
-          <dt className="border-t border-ink pt-3 text-[18px] font-medium">{s.total}</dt><dd className="border-t border-ink pt-3 text-right text-[22px] font-semibold">{money(t.total, doc.currency)}</dd>
+          <dt className="border-t border-ink pt-3 text-[18px] font-medium">{s.total}</dt><dd className="border-t border-ink pt-3 text-right text-[22px] font-medium">{money(t.total, doc.currency)}</dd>
           {t.deposit_paid > 0 && doc.status !== "paid" && (
             <>
               <dt className="text-mute">{s.received}</dt><dd className="text-right">− {money(t.deposit_paid, doc.currency)}</dd>
