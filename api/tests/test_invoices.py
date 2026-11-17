@@ -100,3 +100,12 @@ def test_old_deposit_becomes_first_payment_and_mark_paid_records_rest(client, ad
     client.post(f"/api/admin/invoices/{inv['id']}/status", headers=admin, json={"status": "sent"})
     d = client.post(f"/api/admin/invoices/{inv['id']}/status", headers=admin, json={"status": "paid"}).json()
     assert [p["amount"] for p in d["payments"]] == [14000000, 15800000] and d["totals"]["balance"] == 0
+
+
+def test_bank_account_template_is_printed_until_changed(client, admin):
+    b = client.get("/api/admin/invoice-settings", headers=admin).json()
+    assert "6690749317" in b["bank_details"]
+    client.put("/api/admin/invoice-settings", headers=admin, json={"bank_details": " "})
+    assert "6690749317" in client.get("/api/admin/invoice-settings", headers=admin).json()["bank_details"]
+    client.put("/api/admin/invoice-settings", headers=admin, json={"bank_details": "Mandiri 123"})
+    assert client.get("/api/admin/invoice-settings", headers=admin).json()["bank_details"] == "Mandiri 123"

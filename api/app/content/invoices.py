@@ -198,6 +198,10 @@ class EventOut(BaseModel):
     detail: dict
 
 
+# The studio's account, printed on invoices until another one is saved in Settings (an empty field falls back to it too).
+DEFAULT_BANK = "BCA · 6690749317\na.n. I KOMANG ANANTA MAHAYANA"
+
+
 class Business(BaseModel):
     """Who is invoicing — printed on every document. Admin-only (bank details)."""
 
@@ -206,7 +210,7 @@ class Business(BaseModel):
     address: str = ""
     email: str = ""
     phone: str = ""
-    bank_details: str = ""  # free text: bank, account name, number
+    bank_details: str = DEFAULT_BANK  # free text: bank, account name, number
     prefix: str = "LW"
     default_terms: str = "50% booking fee secures the date. Balance due 7 days before the event. Prices include delivery through the private gallery."
     default_terms_id: str = "DP 50% mengunci tanggal. Pelunasan paling lambat 7 hari sebelum acara. Harga sudah termasuk pengiriman lewat galeri privat."
@@ -281,7 +285,7 @@ def get_business(db: DbSession) -> Business:
     rows = {r.key[len(PREFIX):]: r.value for r in db.query(Setting).filter(Setting.key.like(f"{PREFIX}%")).all()}
     data: dict = {}
     for name, field in Business.model_fields.items():
-        if name in rows and rows[name] is not None:
+        if name in rows and rows[name] is not None and not (name == "bank_details" and not rows[name].strip()):
             data[name] = int(rows[name]) if field.annotation is int else rows[name]
     return Business(**data)
 

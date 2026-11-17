@@ -6,6 +6,8 @@ import { Btn, Card, Field, Input, PageHeader, Select, Textarea, confirm, focusFi
 
 type Branding = { studio_name: string; tagline: string; contact: string; logo_url: string | null };
 
+const BANK_TEMPLATE = "BCA · 6690749317\na.n. I KOMANG ANANTA MAHAYANA";
+
 export default function SettingsPage() {
   const [s, setS] = useState<SiteSettings | null>(null);
   const [b, setB] = useState<Branding | null>(null);
@@ -190,7 +192,8 @@ function InvoiceCard() {
         <Field label="Pajak bawaan %" hint="0 kalau bukan PKP"><Input type="number" min={0} max={100} value={b.tax_percent} onChange={set("tax_percent")} /></Field>
       </div>
       <Field label="Alamat" hint="di bagian bawah dokumen"><Textarea value={b.address} onChange={set("address")} rows={2} className="!min-h-[64px]" /></Field>
-      <Field label="Rekening / cara bayar" hint="dicetak di invoice yang belum lunas"><Textarea value={b.bank_details} onChange={set("bank_details")} rows={3} placeholder={"BCA 123 456 7890 · a.n. I Komang Ananta Mahayana"} /></Field>
+      <Field label="Rekening / cara bayar" hint="dicetak di invoice yang belum lunas"><Textarea value={b.bank_details} onChange={set("bank_details")} rows={3} placeholder={BANK_TEMPLATE} /></Field>
+      {b.bank_details.trim() !== BANK_TEMPLATE && <div><Btn type="button" onClick={() => setB((x) => (x ? { ...x, bank_details: BANK_TEMPLATE } : x))}>Pakai rekening BCA (template)</Btn></div>}
       <Field label="Catatan bawaan · English"><Textarea value={b.default_terms} onChange={set("default_terms")} rows={3} /></Field>
       <Field label="Catatan bawaan · Bahasa Indonesia"><Textarea value={b.default_terms_id ?? ""} onChange={set("default_terms_id")} rows={3} /></Field>
       <div><Btn type="button" kind="ink" onClick={save} disabled={busy || !dirty}>{busy ? "Menyimpan…" : dirty ? "Simpan data invoice" : "Tersimpan"}</Btn></div>
