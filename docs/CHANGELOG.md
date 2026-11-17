@@ -3,6 +3,7 @@
 Yang terbaru di atas. Setiap perubahan yang di-push menambah satu entri di sini (aturannya di `CLAUDE.md`).
 Format: `### 2026-11-17 · NantaPakeAI
 - Invoice: rekening **BCA 6690749317 a.n. I KOMANG ANANTA MAHAYANA** tercetak otomatis di invoice yang belum lunas (bawaan, juga kalau kolom rekening dikosongkan). Pengaturan situs punya tombol "Pakai rekening BCA (template)".
+- Invoice & kuitansi: angka Total dan jumlah diterima memakai huruf yang sama dengan rincian (sans, tebal, lebih besar) supaya mudah dibaca.
 - **Manual:** tidak ada.
 
 ### 2026-11-13 · NantaPakeAI (proof album di HP)
