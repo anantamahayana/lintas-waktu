@@ -9,9 +9,20 @@ Baru di sini? Baca `docs/CONTEXT.md` dulu.
 2. Cek juga pull request yang masih terbuka, supaya tidak mengerjakan hal yang sama.
 
 ## Siapa push ke mana
-- **Pemilik** boleh commit dan push langsung ke `main` (= deploy produksi Vercel; API di VPS lewat Actions → "Deploy API ke VPS").
-- **Kolaborator** kerja di branch sendiri (`nama/topik`, mis. `rina/halaman-harga`), lalu buka pull request ke `main`.
+- **Pemilik (NantaPakeAI) dan Yukti** boleh commit dan push langsung ke `main` = produksi, dan menjalankan deploy/rilis sendiri
+  (izin pemilik 18 Nov 2026). Syaratnya: tes dan pengecekan di bawah bersih, dan alurnya dipahami (`docs/CONTEXT.md`).
+- **Kolaborator lain** kerja di branch sendiri (`nama/topik`, mis. `rina/halaman-harga`), lalu buka pull request ke `main`.
   Pemilik yang menggabungkan. Jangan push langsung ke `main` kecuali pemilik mengizinkan.
+
+## Setelah push ke `main` (yang boleh push langsung)
+- **Web (`web/`)**: Vercel deploy otomatis dalam 1–2 menit. Cek halamannya di produksi.
+- **API (`api/`)**: tidak otomatis. Jalankan GitHub Actions → **Deploy API ke VPS**, tunggu hijau, lalu cek https://api.lintaswaktuvisual.com/api/health.
+  Perubahan database hanya boleh menambah tabel/kolom (`migrate()`); jangan menghapus atau mengganti nama kolom.
+- **Aplikasi album (`desktop/`)**: naikkan versi di `desktop/package.json`, `desktop/package-lock.json` (2 tempat),
+  `desktop/src-tauri/tauri.conf.json`, `desktop/src-tauri/Cargo.toml`, dan entri `lw-album` di `Cargo.lock`; commit, push,
+  lalu jalankan Actions → **Album app (Windows installer)** dengan centang *release* dan catatan singkat (bahasa Indonesia).
+  Aplikasi yang terpasang menawarkan pembaruan sendiri. Jangan membuat GitHub Release lain di repo ini.
+- Satu perubahan = satu commit = satu deploy/rilis. Kalau produksi rusak setelah push: `git revert` commit itu, push, deploy ulang.
 - Push hanya ke `anantamahayana/lintas-waktu`, tidak pernah ke repo photo-selection-platform asli.
 - Beri tahu orang yang sedang bekerja kalau ada langkah manual (env var, dashboard, DNS). Detail deploy: `docs/DEPLOYMENT.md`. Rencana berjalan: `docs/PLAN.md`.
 
