@@ -500,3 +500,29 @@ describe("character units", () => {
     expect(leadingMm({ sizeMm: 8, leading: 12 })).toBe(12);
   });
 });
+
+import { baseName, extraId, isImagePath, mergeImport, parentDir, photoFromFile, sourcesOf } from "./importing";
+describe("importing", () => {
+  const ph = (id: string, path: string, time: number) => ({ id, name: baseName(path), path, time, w: 0, h: 0, pick: null, stars: 0 });
+  it("names sources and files", () => {
+    expect(baseName("C:\\Foto\\Acara\\")).toBe("Acara");
+    expect(parentDir("C:\\Foto\\Acara\\a.jpg")).toBe("C:\\Foto\\Acara");
+    expect(extraId("D:\\Kartu 2", "sub/a.jpg")).toBe("@Kartu 2/sub/a.jpg");
+    expect(photoFromFile("D:\\x\\IMG_1.CR3")).toMatchObject({ id: "@x/IMG_1.CR3", raw: true });
+    expect(isImagePath("a.JPG")).toBe(true);
+    expect(isImagePath("a.txt")).toBe(false);
+    expect(sourcesOf({ folder: "A" })).toEqual(["A"]);
+    expect(sourcesOf({ folder: "A", sources: ["A", "B"] })).toEqual(["A", "B"]);
+  });
+  it("skips duplicates and keeps ids unique", () => {
+    const have = [ph("a.jpg", "C:/A/a.jpg", 10)];
+    const { added, dupes } = mergeImport(have, [
+      ph("@A/a.jpg", "C:/A/a.jpg", 10), // same file
+      ph("@B/a.jpg", "D:/B/a.jpg", 10), // a copy: same name, same time
+      ph("@B/b.jpg", "D:/B/b.jpg", 20),
+      ph("@B/b.jpg", "E:/C/b.jpg", 30), // other picture, same id
+    ]);
+    expect(dupes).toBe(2);
+    expect(added.map((p) => p.id)).toEqual(["@B/b.jpg", "@B/b.jpg~2"]);
+  });
+});

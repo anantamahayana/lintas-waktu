@@ -99,7 +99,7 @@ export function Section({ id, title, children, defaultOpen = true, action }: { i
 
 type Item = CommandId | "-";
 const MENUS: { label: string; access: string; items: Item[] }[] = [
-  { label: "File", access: "F", items: ["app.new", "app.open", "-", "app.save", "-", "app.export", "-", "app.close", "app.home"] },
+  { label: "File", access: "F", items: ["app.new", "app.open", "app.import", "-", "app.save", "-", "app.export", "-", "app.close", "app.home"] },
   { label: "Edit", access: "E", items: ["app.undo", "app.redo", "-", "e.dup", "e.delete", "-", "app.prefs"] },
   { label: "Foto", access: "O", items: ["k.pick", "k.reject", "k.unflag", "-", "k.grid", "k.one", "k.compare", "k.zoom", "-", "k.stack", "k.keep"] },
   { label: "Album", access: "A", items: ["app.props", "app.auto", "e.shuffleAll", "e.heroAll", "-", "app.templates", "-", "app.proof"] },

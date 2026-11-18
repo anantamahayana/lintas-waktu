@@ -8,11 +8,12 @@ import { AboutDialog, UpdateDialog, UpdateToast } from "./views/Update";
 import { ProofSendDialog } from "./views/Proof";
 import { emptyAlbum, newAlbum, setCustomTemplates, type Album, type Tpl } from "./lib/layout";
 import { photosFromFiles, readAll, type Photo } from "./lib/photos";
-import { isNative, pickFolder, pickProjectFile, preparePhotos, ready, scanFolder, exists } from "./lib/platform";
+import { isNative, pickFolder, pickFolders, pickProjectFile, preparePhotos, ready, scanFolder, exists } from "./lib/platform";
 import { DEFAULT_PRESET, type Placement, type Preset } from "./lib/print";
 import { listProjects, loadProject, loadProjectFile, projectsDir, removeProject, saveProject, updateMeta, type ProjectMeta, type Saved } from "./lib/projects";
 import { Beranda, NewProject } from "./views/Beranda";
 import { Crash } from "./views/Crash";
+import { extraId, isImagePath, mergeImport, parentDir, photoFromFile, sourcesOf } from "./lib/importing";
 import { DragLayer } from "./views/DragLayer";
 import { Editor, useLaidPages } from "./views/Editor";
 import { Ekspor } from "./views/Ekspor";
@@ -78,6 +79,36 @@ export function App() {
     if (isNative) void projectsDir().then(setDir);
   }, [refresh]);
 
+  /**
+   * Read thumbnails, sizes and capture times in small batches, so the window stays responsive and
+   * photos appear as they are ready. Stops quietly once `cancelled()` says so.
+   */
+  const prepare = useCallback((list: Photo[], cancelled: () => boolean, done?: (n: number) => void) => {
+    if (isNative) {
+      void (async () => {
+        for (let i = 0; i < list.length && !cancelled(); i += 24) {
+          const batch = list.slice(i, i + 24);
+          const got = await preparePhotos(batch).catch(() => new Map());
+          if (cancelled()) return;
+          setPhotos((ps) => ps.map((p) => {
+            const g = got.get(p.id);
+            return g ? { ...p, thumb: g.thumb, full: g.full, w: g.w, h: g.h, time: g.taken ?? p.time, camera: g.camera } : p;
+          }));
+          setRead((n) => n + batch.length);
+          done?.(batch.length);
+        }
+        // Once every capture time is known, put the photos in the order they were taken.
+        if (!cancelled()) setPhotos((ps) => [...ps].sort((a, b) => a.time - b.time || a.id.localeCompare(b.id)));
+      })();
+    } else {
+      void readAll(list, (got) => {
+        setPhotos((ps) => ps.map((p) => (got.has(p.id) ? { ...p, ...got.get(p.id)! } : p)));
+        setRead((n) => n + got.size);
+        done?.(got.size);
+      }, cancelled);
+    }
+  }, []);
+
   /** Start working on a set of photos, restoring decisions and the design from a save when there is one. */
   const start = useCallback((next: ProjectMeta, list: Photo[], saved: Saved | null, fresh?: Preset) => {
     if (saved) {
@@ -108,38 +139,35 @@ export function App() {
     setPhotos(list); setCurId(list[0]?.id ?? ""); setRead(0); setTab(saved?.design ? "editor" : "kurasi");
 
     const mine = ++run.current;
-    const cancelled = () => run.current !== mine;
-    if (isNative) {
-      void (async () => {
-        for (let i = 0; i < list.length && !cancelled(); i += 24) {
-          const batch = list.slice(i, i + 24);
-          const got = await preparePhotos(batch).catch(() => new Map());
-          if (cancelled()) return;
-          setPhotos((ps) => ps.map((p) => {
-            const g = got.get(p.id);
-            return g ? { ...p, thumb: g.thumb, full: g.full, w: g.w, h: g.h, time: g.taken ?? p.time, camera: g.camera } : p;
-          }));
-          setRead((n) => n + batch.length);
-        }
-        // Once every capture time is known, put the photos in the order they were taken.
-        if (!cancelled()) setPhotos((ps) => [...ps].sort((a, b) => a.time - b.time || a.id.localeCompare(b.id)));
-      })();
-    } else {
-      void readAll(list, (done) => {
-        setPhotos((ps) => ps.map((p) => (done.has(p.id) ? { ...p, ...done.get(p.id)! } : p)));
-        setRead((n) => n + done.size);
-      }, cancelled);
-    }
+    prepare(list, () => run.current !== mine);
   }, []);
 
   // ---- Windows app: folders and project files on disk ----
   const createNative = async (name: string, fresh: Preset) => {
-    const folder = await pickFolder("Pilih folder foto acara");
-    if (!folder) return;
-    const list = await scanFolder(folder);
-    if (!list.length) { void tell("Tidak ada foto (JPG, PNG, WebP, atau RAW) di folder itu.", "Folder kosong"); return; }
+    const dropped = droppedFor.current;
+    droppedFor.current = null;
+    const sources = dropped ?? await pickFolders("Pilih folder foto acara (boleh beberapa: tahan Ctrl)");
+    if (!sources.length) return;
+    const { list, missing } = await scanSources(sources);
+    if (!list.length) { void tell("Tidak ada foto (JPG, PNG, WebP, TIFF, HEIC, atau RAW) di situ.", "Tidak ada foto"); return; }
+    const folder = isImagePath(sources[0]) ? parentDir(sources[0]) : sources[0];
     const projectName = name || folderName(folder);
-    start({ id: Date.now().toString(36), name: projectName, folder, updated: Date.now(), photos: list.length, picked: 0, size: "" }, list, null, { ...fresh, pattern: projectName });
+    start({ id: Date.now().toString(36), name: projectName, folder, sources: sources.length > 1 || dropped ? sources : undefined, updated: Date.now(), photos: list.length, picked: 0, size: "" }, list, null, { ...fresh, pattern: projectName });
+    if (missing) void tell(`${missing} sumber tidak bisa dibaca dan dilewati.`);
+  };
+  /** Photos from several folders and files; the first folder keeps the plain ids old projects use. */
+  const scanSources = async (sources: string[]) => {
+    const all: Photo[] = [];
+    let missing = 0;
+    for (const [i, src] of sources.entries()) {
+      try {
+        if (isImagePath(src)) { if (await exists(src).catch(() => false)) all.push(photoFromFile(src)); else missing++; continue; }
+        const got = await scanFolder(src);
+        all.push(...(i === 0 ? got : got.map((p) => ({ ...p, id: extraId(src, p.id) }))));
+      } catch { missing++; }
+    }
+    const { added } = mergeImport([], all);
+    return { list: added.sort((a, b) => a.time - b.time || a.id.localeCompare(b.id)), missing };
   };
   const openSaved = async (saved: Saved) => {
     let folder = saved.meta.folder;
@@ -150,9 +178,72 @@ export function App() {
       if (!picked) return;
       folder = picked;
     }
-    const list = await scanFolder(folder);
-    start({ ...saved.meta, folder }, list, saved);
+    const srcs = sourcesOf(saved.meta);
+    const { list, missing } = await scanSources([folder, ...srcs.slice(1)]);
+    start({ ...saved.meta, folder, sources: saved.meta.sources ? [folder, ...srcs.slice(1)] : undefined }, list, saved);
+    if (missing) void tell(`${missing} folder/file tambahan proyek ini tidak ditemukan (dipindah atau drive tidak tersambung). Fotonya tampil kosong sampai tersambung lagi.`, "Sebagian foto tidak ditemukan");
   };
+  // ---- Import into an open project: more folders or files, dropped or picked ----
+  const [importing, setImporting] = useState<{ ids: Set<string>; total: number; done: number; dupes: number; before?: string[] } | null>(null);
+  const importRun = useRef(0);
+  const photosRef = useRef(photos);
+  photosRef.current = photos;
+  const addSources = async (paths: string[]) => {
+    const m = metaRef.current;
+    if (!isNative || !m || !paths.length) return;
+    const scanned: Photo[] = [];
+    for (const src of paths) {
+      try {
+        if (isImagePath(src)) scanned.push(photoFromFile(src));
+        else scanned.push(...(await scanFolder(src)).map((p) => ({ ...p, id: extraId(src, p.id) })));
+      } catch { /* unreadable source: skipped, counted below as nothing added */ }
+    }
+    const { added, dupes } = mergeImport(photosRef.current, scanned);
+    if (!added.length) { void tell(dupes ? `Semua ${dupes} foto itu sudah ada di proyek ini.` : "Tidak ada foto yang bisa dibaca di situ.", "Tidak ada foto baru"); return; }
+    const before = m.sources;
+    setMeta({ ...m, sources: [...new Set([...sourcesOf(m), ...paths])] });
+    setPhotos((ps) => [...ps, ...added]);
+    const mine = ++importRun.current, ids = new Set(added.map((p) => p.id));
+    setImporting({ ids, total: added.length, done: 0, dupes, before });
+    prepare(added, () => importRun.current !== mine, (n) => setImporting((x) => (x && x.ids === ids ? { ...x, done: x.done + n } : x)));
+  };
+  /** Stop an import and take its photos out again, as if it never happened. */
+  const cancelImport = () => {
+    const x = importing;
+    if (!x) return;
+    importRun.current++;
+    setPhotos((ps) => ps.filter((p) => !x.ids.has(p.id)));
+    setRead((n) => Math.max(0, n - x.done));
+    const m = metaRef.current;
+    if (m) setMeta({ ...m, sources: x.before });
+    setImporting(null);
+  };
+  useEffect(() => { if (importing && importing.done >= importing.total) { const t = setTimeout(() => setImporting(null), 1500); return () => clearTimeout(t); } }, [importing]);
+  const addFolders = async () => { const p = await pickFolders("Tambah folder foto (boleh beberapa: tahan Ctrl)"); if (p.length) void addSources(p); };
+
+  // ---- Files and folders dropped from Explorer onto the window ----
+  const droppedFor = useRef<string[] | null>(null);
+  const [dropHover, setDropHover] = useState(false);
+  const onDropPaths = useRef<(paths: string[]) => void>(() => {});
+  onDropPaths.current = (paths) => {
+    // Image files are taken as they are; anything else is tried as a folder (unreadable ones are skipped).
+    const usable = paths;
+    if (!usable.length) return;
+    if (metaRef.current) void addSources(usable);
+    else { droppedFor.current = usable; setMaking(true); }
+  };
+  useEffect(() => {
+    if (!isNative) return;
+    let off: (() => void) | undefined, dead = false;
+    void import("@tauri-apps/api/webview").then(({ getCurrentWebview }) => getCurrentWebview().onDragDropEvent((e) => {
+      const p = e.payload;
+      if (p.type === "enter" || p.type === "over") setDropHover(true);
+      else if (p.type === "leave") setDropHover(false);
+      else if (p.type === "drop") { setDropHover(false); onDropPaths.current(p.paths); }
+    })).then((un) => { if (dead) un(); else off = un; }).catch(() => {});
+    return () => { dead = true; off?.(); };
+  }, []);
+
   const openNative = async (m: ProjectMeta) => {
     const saved = await loadProject(m).catch(() => null);
     if (!saved) { void tell("File proyek ini tidak bisa dibaca.", "Gagal membuka"); refresh(); return; }
@@ -257,6 +348,7 @@ export function App() {
     "app.close": { run: goHome, enabled: has },
     "app.home": { run: goHome, enabled: has },
     "app.export": { run: () => setTab("ekspor"), enabled: has && !!design },
+    "app.import": { run: () => void addFolders(), enabled: has && isNative && !importing },
     "app.undo": { run: undo, enabled: has && hist.past.length > 0 },
     "app.redo": { run: redo, enabled: has && hist.future.length > 0 },
     "app.keys": { run: () => setSheet((s) => (s ? null : "view")) },
@@ -286,6 +378,14 @@ export function App() {
       {about && <AboutDialog onClose={() => setAbout(false)} onCheck={() => runCommand("app.update")} />}
       {!upd && <UpdateToast onOpen={() => setUpd(true)} />}
       <DragLayer />
+      {dropHover && <div className="drop-ovl" aria-hidden="true"><div><Icon2 /><strong>{meta ? "Lepas untuk menambah foto ke proyek ini" : "Lepas untuk membuat proyek baru"}</strong><span>Folder dan file foto, boleh beberapa sekaligus</span></div></div>}
+      {importing && (
+        <div className="import-bar" role="status">
+          <span>{importing.done >= importing.total ? `${importing.total.toLocaleString("id-ID")} foto ditambahkan` : `Mengimpor ${importing.done.toLocaleString("id-ID")} dari ${importing.total.toLocaleString("id-ID")} foto`}{importing.dupes ? ` · ${importing.dupes} duplikat dilewati` : ""}</span>
+          <i className="bar"><b style={{ transform: `scaleX(${importing.total ? importing.done / importing.total : 1})` }} /></i>
+          {importing.done < importing.total && <Btn label="Batal" kind="ghost" onClick={cancelImport} />}
+        </div>
+      )}
       {sheet && <ShortcutSheet edit={sheet === "edit"} onClose={() => setSheet(null)} />}
       {making && <NewProject onCancel={() => setMaking(false)} onCreate={create} />}
       {templates && <TemplateEditor preset={preset} custom={custom} setCustom={setCustom} startSpread={false} onClose={() => setTemplates(false)}

@@ -27,6 +27,13 @@ export async function pickFolder(title: string): Promise<string | null> {
   return typeof r === "string" ? r : null;
 }
 
+/** One or more folders (Ctrl/Shift in the dialog picks several). */
+export async function pickFolders(title: string): Promise<string[]> {
+  const { open } = await import("@tauri-apps/plugin-dialog");
+  const r = await open({ directory: true, multiple: true, title });
+  return Array.isArray(r) ? r : typeof r === "string" ? [r] : [];
+}
+
 export async function pickProjectFile(): Promise<string | null> {
   const { open } = await import("@tauri-apps/plugin-dialog");
   const r = await open({ multiple: false, title: "Buka proyek", filters: [{ name: "Proyek LW Album", extensions: ["lwalbum"] }] });

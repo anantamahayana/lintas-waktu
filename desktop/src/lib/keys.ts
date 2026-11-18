@@ -20,6 +20,7 @@ export const CATALOG = {
   "app.save": E("Simpan", ["Ctrl+S"], "global", "File"),
   "app.close": E("Tutup proyek", ["Ctrl+W"], "global", "File"),
   "app.home": E("Beranda", ["Ctrl+Shift+H"], "global", "File"),
+  "app.import": E("Tambah folder foto…", ["Ctrl+Shift+I"], "global", "File"),
   "app.export": E("Ekspor…", ["Ctrl+E"], "global", "File"),
   "app.undo": E("Urungkan", ["Ctrl+Z"], "global", "Edit", true),
   "app.redo": E("Ulangi", ["Ctrl+Y", "Ctrl+Shift+Z"], "global", "Edit", true),

@@ -13,6 +13,8 @@ export type ProjectMeta = {
   name: string;
   /** Browser: the folder's name. Windows app: the folder's full path. */
   folder: string;
+  /** Windows app: every folder or file the photos come from, the first being `folder`; absent = just `folder`. */
+  sources?: string[];
   updated: number;
   photos: number;
   picked: number;
