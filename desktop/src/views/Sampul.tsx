@@ -1,3 +1,4 @@
+import { beginDrag, useDrag } from "../lib/drag";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Design } from "../App";
 import { coverMm, coverParts, DEFAULT_COVER, drawCover, fromThumb, type Cover } from "../lib/cover";
@@ -28,7 +29,7 @@ export function Sampul({ photos, design, commit, preset, setPreset, panels }: Pr
   const [all, setAll] = useState(false);
   const [side, setSide] = useState<"front" | "back">("front");
   const [guides, setGuides] = useState(true);
-  const [over, setOver] = useState<"" | "front" | "back">("");
+  const dragNow = useDrag();
   const sliding = useRef(false);
 
   const set = (patch: Partial<Cover>, replace = false) => commit({ ...design, cover: { ...cover, ...patch } }, replace);
@@ -106,8 +107,13 @@ export function Sampul({ photos, design, commit, preset, setPreset, panels }: Pr
           <div className="scroll">
             <div className="tray">
               {list.slice(0, 600).map((p) => (
-                <button key={p.id} type="button" className={`pt bare ${p.id === chosen ? "cur" : ""}`} title={p.name} draggable aria-label={`Pakai ${p.name}`}
-                  onDragStart={(e) => { e.dataTransfer.setData("text/plain", p.id); e.dataTransfer.effectAllowed = "copy"; }}
+                <button key={p.id} type="button" className={`pt bare ${p.id === chosen ? "cur" : ""}`} title={p.name} aria-label={`Pakai ${p.name}`}
+                  onPointerDown={(e) => beginDrag(e, {
+                    item: `photo:${p.id}`, thumb: p.thumb,
+                    accepts: (k) => k.startsWith("zone:"),
+                    hint: (k) => (k === "zone:front" ? (pano ? "Pasang sebagai panorama" : "Pasang di depan") : k === "zone:back" ? "Pasang di belakang" : "Seret ke depan/belakang"),
+                    onDrop: (k) => drop(k.slice(5) as "front" | "back", p.id),
+                  })}
                   onClick={() => drop(side, p.id)}>
                   {p.thumb && <img src={p.thumb} alt="" loading="lazy" draggable={false} />}
                 </button>
@@ -136,15 +142,14 @@ export function Sampul({ photos, design, commit, preset, setPreset, panels }: Pr
               <div ref={sheetRef} className="sheet" style={{ aspectRatio: `${sheet.w} / ${sheet.h}`, background: cover.bg }}>
                 {img && <img className="coverimg" src={img} alt="Pratinjau sampul" />}
                 {(pano ? (["front"] as const) : (["back", "front"] as const)).map((zn) => (
-                  <button key={zn} type="button" className={`zone ${sideNow === zn ? "on" : ""} ${over === zn ? "over" : ""} ${chosen && sideNow === zn ? "movable" : ""}`} aria-pressed={sideNow === zn} aria-label={pano ? "Sampul panorama" : zn === "front" ? "Sampul depan" : "Sampul belakang"}
+                  <button key={zn} type="button" className={`zone ${sideNow === zn ? "on" : ""} ${dragNow?.over === `zone:${zn}` ? "over" : ""} ${chosen && sideNow === zn ? "movable" : ""}`} aria-pressed={sideNow === zn} aria-label={pano ? "Sampul panorama" : zn === "front" ? "Sampul depan" : "Sampul belakang"}
                     style={pano ? box({ x: 0, y: 0, w: sheet.w, h: sheet.h }) : box(parts[zn])}
                     onClick={() => { if (!drag.current?.moved) setSide(zn); }}
                     onDoubleClick={() => { if (chosen && sideNow === zn) place(CENTER); }}
                     onPointerDown={(e) => { if (e.button !== 0 || sideNow !== zn || !chosen) return; const r = e.currentTarget.getBoundingClientRect(); drag.current = { x: e.clientX, y: e.clientY, pl, w: r.width, h: r.height, moved: false }; e.currentTarget.setPointerCapture(e.pointerId); }}
                     onPointerMove={(e) => { const d = drag.current; if (!d) return; const dx = e.clientX - d.x, dy = e.clientY - d.y; if (!d.moved && Math.hypot(dx, dy) < 3) return; d.moved = true; slide({ [placeKey]: { ...d.pl, x: clamp(d.pl.x - dx / d.w / d.pl.z, 0, 1), y: clamp(d.pl.y - dy / d.h / d.pl.z, 0, 1) } }); }}
                     onPointerUp={() => { endSlide(); setTimeout(() => { drag.current = null; }, 0); }}
-                    onDragOver={(e) => { e.preventDefault(); setOver(zn); }} onDragLeave={() => setOver("")}
-                    onDrop={(e) => { e.preventDefault(); setOver(""); drop(zn, e.dataTransfer.getData("text/plain")); }} />
+                    data-drop={`zone:${zn}`} />
                 ))}
                 {guides && <>
                   {preset.wrapMm > 0 && <div style={{ position: "absolute", inset: 0, pointerEvents: "none", boxShadow: `inset 0 0 0 ${(preset.wrapMm / sheet.w) * 100}cqw rgba(0,0,0,0.28)` }} />}

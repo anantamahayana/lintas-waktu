@@ -1,3 +1,4 @@
+import { beginDrag, useDrag } from "../lib/drag";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../lib/icons";
 import { STATUSES, type ProjectMeta, type Status } from "../lib/projects";
@@ -15,7 +16,7 @@ const daysLeft = (due?: string) => (due ? Math.ceil((new Date(due + "T23:59:59")
 /** Production board (Figma page 03): every album by stage; drag a card to change its stage. */
 export function Papan({ projects, onOpen, onUpdate }: Props) {
   const [edit, setEdit] = useState<ProjectMeta | null>(null);
-  const [over, setOver] = useState<Status | null>(null);
+  const drag = useDrag();
   const [q, setQ] = useState("");
   const status = (p: ProjectMeta): Status => p.status ?? "desain";
   const active = projects.filter((p) => status(p) !== "selesai");
@@ -26,7 +27,13 @@ export function Papan({ projects, onOpen, onUpdate }: Props) {
   const card = (p: ProjectMeta) => {
     const d = daysLeft(p.due), late = d !== null && d <= 3 && status(p) !== "selesai";
     return (
-      <div key={p.id} className="bcard" draggable onDragStart={(e) => { e.dataTransfer.setData("text/plain", p.id); e.dataTransfer.effectAllowed = "move"; }}
+      <div key={p.id} className={`bcard ${drag?.item === `card:${p.id}` ? "dragging" : ""}`}
+        onPointerDown={(e) => beginDrag(e, {
+          item: `card:${p.id}`, label: p.name,
+          accepts: (k) => k.startsWith("col:") && k !== `col:${status(p)}`,
+          hint: (k) => (k ? "Pindah ke tahap ini" : ""),
+          onDrop: (k) => onUpdate(p, { status: k.slice(4) as Status }),
+        })}
         onClick={() => setEdit(p)} onDoubleClick={() => onOpen(p)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter") setEdit(p); }}>
         <strong>{p.name}</strong>
         <span className="mt">{[p.client && `Klien: ${p.client}`, p.printer].filter(Boolean).join(" · ") || p.size}</span>
@@ -53,9 +60,7 @@ export function Papan({ projects, onOpen, onUpdate }: Props) {
         {STATUSES.map((s) => {
           const list = shown.filter((p) => status(p) === s.id).sort((a, b) => (a.due ?? "9").localeCompare(b.due ?? "9"));
           return (
-            <section key={s.id} className={`bcol ${over === s.id ? "drop" : ""}`} aria-label={s.label}
-              onDragOver={(e) => { e.preventDefault(); setOver(s.id); }} onDragLeave={() => setOver(null)}
-              onDrop={(e) => { e.preventDefault(); setOver(null); const p = projects.find((x) => x.id === e.dataTransfer.getData("text/plain")); if (p && status(p) !== s.id) onUpdate(p, { status: s.id }); }}>
+            <section key={s.id} className={`bcol ${drag?.over === `col:${s.id}` ? "drop" : ""}`} aria-label={s.label} data-drop={`col:${s.id}`}>
               <h3><i className={`st-${s.id}`} />{s.label}<span className="n">{list.length}</span></h3>
               {list.map(card)}
             </section>

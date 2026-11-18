@@ -13,7 +13,8 @@ import { MiniSheet, Overview } from "./Overview";
 import { Btn, IconBtn, NumField, Row, Section, Seg, StatusBar } from "./Shell";
 import { pinNumbers, proofHasCover, RevisionPanel } from "./Proof";
 import { proofs, signedIn, type ProofInfo, type ProofNote } from "../lib/proofs";
-import { Sheet, trayDrag, type TextSel } from "./Sheet";
+import { Sheet, type TextSel } from "./Sheet";
+import { beginDrag, useDrag } from "../lib/drag";
 
 type Props = {
   photos: Photo[];
@@ -82,7 +83,6 @@ export function Editor({ photos, onMark, design, commit, preset, setPreset, cust
   const [spaceHand, setSpaceHand] = useState(false);
   const [zoom, setZoom] = useState<number | "fit">("fit");
   const [view, setView] = useState({ w: 800, h: 600 });
-  const [stripDrag, setStripDrag] = useState<{ from: number; over: number } | null>(null);
   const sliding = useRef(false);
   const textArea = useRef<HTMLTextAreaElement>(null);
   const canvas = useRef<HTMLDivElement>(null);
@@ -389,7 +389,6 @@ export function Editor({ photos, onMark, design, commit, preset, setPreset, cust
   };
   // ---- cut / copy / paste a photo (moves it: a photo is in the album once) ----
   const [photoClip, setPhotoClip] = useState<string | null>(null);
-  const [photoOver, setPhotoOver] = useState<number | null>(null);
   const clipPhoto = () => { if (sel && selOnSpread && !isEmpty(sel)) { setPhotoClip(sel); void 0; } };
   const pastePhoto = () => {
     if (!photoClip || !album.order.includes(photoClip)) { setPhotoClip(null); return; }
@@ -438,6 +437,15 @@ export function Editor({ photos, onMark, design, commit, preset, setPreset, cust
   /** Dragging a photo over a spread in the strip: wait a moment, then open that spread so it can be dropped in a frame. */
   const hoverTimer = useRef(0);
   const hoverSpread = (i: number) => { clearTimeout(hoverTimer.current); hoverTimer.current = window.setTimeout(() => { setSi(i); }, 600); };
+  // A photo held over a spread thumbnail turns to that spread, so it can be dropped into a frame there.
+  const dragNow = useDrag();
+  const overSpread = dragNow?.item.startsWith("photo:") && dragNow.over.startsWith("spread:") ? +dragNow.over.slice(7) : null;
+  useEffect(() => { if (overSpread !== null && overSpread !== s) hoverSpread(overSpread); else clearTimeout(hoverTimer.current); }, [overSpread]); // eslint-disable-line react-hooks/exhaustive-deps
+  /** A photo dropped on a spread thumbnail lands on that spread in a new frame. */
+  const dropOnSpread = (id: string, i: number) => {
+    const sp = spreads[i], pg = sp && [sp.left, sp.right].find((x) => x && x.side !== "tail" && !x.cfg.locked);
+    if (pg && placeOnPage(id, pg)) setSi(i);
+  };
   const deleteSpread = async () => {
     if (!spread) return;
     const pgs = [spread.left, spread.right].filter((p): p is LaidPage => !!p && p.side !== "tail");
@@ -631,7 +639,7 @@ export function Editor({ photos, onMark, design, commit, preset, setPreset, cust
               onSelectPhoto={selectFrame} more={group.slice(1)} onSelectMany={selectMany} onGroup={(m, replace) => setRects(m, replace)}
               onSelectText={(t) => { setSelText(t); setSel(""); if (t) setTab("props"); }}
               onEditText={(t) => { setSelText(t); setSel(""); setTab("props"); setTimeout(() => textArea.current?.focus(), 30); }}
-              onDrop={drop}
+              onDrop={drop} onDropSpread={dropOnSpread}
               onFrames={(page, boxes, replace) => setPage(page, { free: boxes }, replace)}
               onText={(page, id, patch, replace) => setText(page, id, patch, replace)} />
             {proofPins.length > 0 && (
@@ -671,20 +679,15 @@ export function Editor({ photos, onMark, design, commit, preset, setPreset, cust
           const note = [sp.left, sp.right].some((x) => x?.cfg.note && !x.cfg.noteDone);
           const warn = warnPages.has(i * 2 + 1) || warnPages.has(i * 2 + 2);
           return (
-            <button key={i} type="button" className={`st-item ${i === s ? "cur" : ""} ${warn ? "warn" : ""} ${(stripDrag && stripDrag.over === i && stripDrag.from !== i) || photoOver === i ? "drop" : ""}`} draggable
+            <button key={i} type="button" data-drop={`spread:${i}`} className={`st-item ${i === s ? "cur" : ""} ${warn ? "warn" : ""} ${dragNow?.over === `spread:${i}` ? "drop" : ""} ${dragNow?.item === `spread:${i}` ? "dragging" : ""}`}
               ref={(el) => { if (el && i === s) el.scrollIntoView?.({ block: "nearest", inline: "nearest" }); }}
               onClick={() => { setSi(i); deselect(); }}
-              onDragStart={(e) => { setStripDrag({ from: i, over: i }); e.dataTransfer.setData("text/plain", `spread:${i}`); e.dataTransfer.effectAllowed = "move"; }}
-              onDragOver={(e) => { e.preventDefault(); if (stripDrag) { if (stripDrag.over !== i) setStripDrag({ ...stripDrag, over: i }); } else if (i !== s) { if (photoOver !== i) { setPhotoOver(i); hoverSpread(i); } } }}
-              onDragLeave={() => { if (!stripDrag) { clearTimeout(hoverTimer.current); setPhotoOver(null); } }}
-              onDrop={(e) => {
-                e.preventDefault(); clearTimeout(hoverTimer.current); setPhotoOver(null);
-                if (stripDrag) { if (stripDrag.from !== i) { setAlbum(moveSheet(album, pages, stripDrag.from, i)); setSi(i); } setStripDrag(null); return; }
-                // A photo dropped on a spread thumbnail lands on that spread in a new frame.
-                const id = e.dataTransfer.getData("text/plain"), pg = [sp.left, sp.right].find((x) => x && x.side !== "tail" && !x.cfg.locked);
-                if (id && !id.startsWith("spread:") && pg && placeOnPage(id, pg)) setSi(i);
-              }}
-              onDragEnd={() => setStripDrag(null)}>
+              onPointerDown={(e) => beginDrag(e, {
+                item: `spread:${i}`, label: `Hal. ${i * 2 + 1}–${i * 2 + 2}`,
+                accepts: (k) => k.startsWith("spread:") && k !== `spread:${i}`,
+                hint: (k) => (k ? "Pindahkan ke sini" : "Seret ke posisi baru · Esc batal"),
+                onDrop: (k) => { const j = +k.slice(7); setAlbum(moveSheet(album, pages, i, j)); setSi(j); },
+              })}>
               <MiniSheet sp={sp} preset={preset} byId={byId} place={place} />
               <span className="lb">{warn && <Icon name="triangle-alert" size={11} className="warn-text" />}{i * 2 + 1}–{i * 2 + 2}{sp.left?.side === "both" ? " · panorama" : ""}{note && <i className="dot" />}</span>
             </button>
@@ -853,9 +856,13 @@ export function Editor({ photos, onMark, design, commit, preset, setPreset, cust
             {tray.length === 0 ? <p className="caption" style={{ padding: "0 12px" }}>{trayAll ? "Semua foto sudah ada di album." : "Semua foto terpilih sudah ada di album. Pilih “Semua foto” untuk memakai foto lain."}</p> : (
               <div className="tray">
                 {tray.slice(0, 600).map((p) => (
-                  <div key={p.id} className="pt bare" draggable title={p.name}
-                    onDragStart={(e) => { trayDrag.id = p.id; e.dataTransfer.setData("text/plain", p.id); e.dataTransfer.effectAllowed = "move"; }}
-                    onDragEnd={() => { trayDrag.id = ""; }}>
+                  <div key={p.id} className={`pt bare ${dragNow?.item === `photo:${p.id}` ? "dragging" : ""}`} title={p.name}
+                    onPointerDown={(e) => beginDrag(e, {
+                      item: `photo:${p.id}`, thumb: p.thumb,
+                      accepts: (k) => k.startsWith("frame:") || k.startsWith("spread:"),
+                      hint: (k) => (k.startsWith("spread:") ? "Taruh di spread ini" : k ? "Lepas di bingkai ini" : "Seret ke bingkai · Esc batal"),
+                      onDrop: (k) => (k.startsWith("spread:") ? dropOnSpread(p.id, +k.slice(7)) : drop(k.slice(6), p.id)),
+                    })}>
                     {p.thumb && <img src={p.thumb} alt={p.name} draggable={false} loading="lazy" />}
                     {p.stars > 0 && <span className="badge burst" style={{ color: "var(--warn)" }}>{"★".repeat(p.stars)}</span>}
                   </div>

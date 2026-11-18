@@ -13,6 +13,7 @@ import { DEFAULT_PRESET, type Placement, type Preset } from "./lib/print";
 import { listProjects, loadProject, loadProjectFile, projectsDir, removeProject, saveProject, updateMeta, type ProjectMeta, type Saved } from "./lib/projects";
 import { Beranda, NewProject } from "./views/Beranda";
 import { Crash } from "./views/Crash";
+import { DragLayer } from "./views/DragLayer";
 import { Editor, useLaidPages } from "./views/Editor";
 import { Ekspor } from "./views/Ekspor";
 import { Kurasi } from "./views/Kurasi";
@@ -284,6 +285,7 @@ export function App() {
       {upd && <UpdateDialog onClose={() => setUpd(false)} save={() => saveNow.current()} project={meta?.name} />}
       {about && <AboutDialog onClose={() => setAbout(false)} onCheck={() => runCommand("app.update")} />}
       {!upd && <UpdateToast onOpen={() => setUpd(true)} />}
+      <DragLayer />
       {sheet && <ShortcutSheet edit={sheet === "edit"} onClose={() => setSheet(null)} />}
       {making && <NewProject onCancel={() => setMaking(false)} onCreate={create} />}
       {templates && <TemplateEditor preset={preset} custom={custom} setCustom={setCustom} startSpread={false} onClose={() => setTemplates(false)}

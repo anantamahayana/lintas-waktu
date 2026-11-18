@@ -429,6 +429,9 @@ dialog.dlg::backdrop { background: rgba(17, 18, 19, 0.6); }
 .frame.preview > .cell { cursor: copy; }
 .photo-ghost { position: fixed; left: 0; top: 0; z-index: 1000; pointer-events: none; display: flex; flex-direction: column; gap: 4px; align-items: flex-start; will-change: transform; }
 .photo-ghost img { width: 120px; height: 84px; object-fit: cover; border-radius: 4px; outline: 2px solid var(--accent); box-shadow: 0 6px 18px rgba(0, 0, 0, .45); }
+body.is-dragging, body.is-dragging * { user-select: none !important; cursor: grabbing !important; }
+.photo-ghost b { display: block; padding: 6px 10px; border-radius: 4px; background: var(--accent); color: #fff; font-size: 12px; font-weight: 600; box-shadow: 0 6px 18px rgba(0, 0, 0, .45); }
+.st-item.dragging, .ov-item.dragging, .bcard.dragging, .pt.dragging { opacity: .4; }
 .photo-ghost span { font-size: 11px; padding: 2px 6px; border-radius: 4px; background: var(--raise, #26272b); color: var(--text, #eee); white-space: nowrap; }
 .frame > .cell { touch-action: none; }
 .frame.lowres > .cell { box-shadow: inset 0 0 0 2px var(--warn); }

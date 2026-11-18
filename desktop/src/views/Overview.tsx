@@ -1,4 +1,5 @@
-import { useState, type CSSProperties } from "react";
+import { beginDrag, useDrag } from "../lib/drag";
+import { type CSSProperties } from "react";
 import type { Spread } from "../lib/export";
 import { boxToMm, frameRectMm } from "../lib/frames";
 import { Icon } from "../lib/icons";
@@ -44,8 +45,7 @@ type Props = {
 
 /** Every spread at a glance (G), to read the album as a story and drag spreads into a new order. */
 export function Overview({ spreads, preset, byId, place, current, warnPages, onOpen, onMove }: Props) {
-  const [dragging, setDragging] = useState<number | null>(null);
-  const [over, setOver] = useState<number | null>(null);
+  const d = useDrag();
   return (
     <div className="overview">
       <div className="ov-grid">
@@ -53,12 +53,14 @@ export function Overview({ spreads, preset, byId, place, current, warnPages, onO
           const notes = [sp.left, sp.right].filter((x) => x?.cfg.note);
           const warn = warnPages.has(i * 2 + 1) || warnPages.has(i * 2 + 2);
           return (
-            <button key={i} type="button" className={`ov-item ${i === current ? "cur" : ""} ${over === i && dragging !== null && dragging !== i ? "drop" : ""}`}
-              draggable onClick={() => onOpen(i)}
-              onDragStart={(e) => { setDragging(i); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", `spread:${i}`); }}
-              onDragEnd={() => { setDragging(null); setOver(null); }}
-              onDragOver={(e) => { e.preventDefault(); setOver(i); }}
-              onDrop={(e) => { e.preventDefault(); if (dragging !== null && dragging !== i) onMove(dragging, i); setDragging(null); setOver(null); }}>
+            <button key={i} type="button" className={`ov-item ${i === current ? "cur" : ""} ${d?.over === `ov:${i}` ? "drop" : ""} ${d?.item === `ov:${i}` ? "dragging" : ""}`}
+              data-drop={`ov:${i}`} onClick={() => onOpen(i)}
+              onPointerDown={(e) => beginDrag(e, {
+                item: `ov:${i}`, label: `Hal. ${i * 2 + 1}–${i * 2 + 2}`,
+                accepts: (k) => k.startsWith("ov:") && k !== `ov:${i}`,
+                hint: (k) => (k ? "Pindahkan ke sini" : "Esc batal"),
+                onDrop: (k) => onMove(i, +k.slice(3)),
+              })}>
               <MiniSheet sp={sp} preset={preset} byId={byId} place={place} />
               <span className="ov-meta">
                 <span className="grow">Hal. {i * 2 + 1}–{i * 2 + 2}{sp.left?.side === "both" ? " · panorama" : ""}</span>
