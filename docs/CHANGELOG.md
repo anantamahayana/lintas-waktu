@@ -3,6 +3,10 @@
 Yang terbaru di atas. Setiap perubahan yang di-push menambah satu entri di sini (aturannya di `CLAUDE.md`).
 Format: `### 2026-11-18 · Yukti
 - Aplikasi album 0.4.8: kalau satu bagian aplikasi galat (mis. setelah Ctrl+Z), layar tidak lagi kosong. Muncul pesan "Bagian ini gagal ditampilkan" dengan tombol Kembalikan (Ulangi) / Urungkan lagi / Tampilkan ulang / Ke Beranda, plus "Salin detail galat" untuk dilaporkan. Ctrl+Z/Ctrl+Y tetap jalan dan memulihkan tampilan. Penyebab layar blank setelah Ctrl+Z belum ditemukan (tidak terulang di browser); detail galat berikutnya akan menunjukkannya.
+- Aplikasi album 0.4.9 (editing, dari audit alur kerja harian):
+  - Seleksi kotak bisa dimulai dari area gelap di sekitar spread (bukan hanya kertas kosong), Shift menambah.
+  - Seret foto antar bingkai kini mengikuti kursor dengan bayangan foto, kedua bingkai menampilkan hasil tukar sebelum dilepas, Esc membatalkan; sorotan tidak berkedip lagi (juga saat menyeret dari panel foto).
+  - Prioritas: Susun otomatis menaruh foto berbintang tertinggi di bingkai terbesar tiap halaman; pilih beberapa bingkai lalu **Prioritaskan** (Shift+H) untuk memindahkannya ke bingkai terbesar; menu Album → "Foto berbintang ke bingkai terbesar"; panel foto mengurutkan foto berbintang di atas.
 - **Manual:** tidak ada.
 
 ### 2026-11-18 · NantaPakeAI

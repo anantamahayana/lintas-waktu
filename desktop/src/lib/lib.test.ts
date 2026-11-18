@@ -5,7 +5,7 @@ import { jpegSize } from "./photos";
 import { crc32, zip } from "./zip";
 import { burstLeaders, bursts, windowRows } from "./cull";
 import { boxToMm, currentBoxes, frameRectMm, mmToBox } from "./frames";
-import { moveSheet, sheetsOf, snap } from "./layout";
+import { heroSwaps, moveSheet, sheetsOf, snap } from "./layout";
 import { wrap } from "./paint";
 import type { Photo } from "./photos";
 import { coverMm, coverParts } from "./cover";
@@ -460,5 +460,25 @@ describe("align and distribute", async () => {
     expect(matchSize(rs, "w", 0).map((r) => [r.w, r.h])).toEqual([[20, 10], [20, 20], [20, 30]]);
     expect(mainAxis(rs)).toBe("x");
     expect(mainAxis([{ x: 0, y: 0, w: 10, h: 10 }, { x: 0, y: 50, w: 10, h: 10 }])).toBe("y");
+  });
+});
+
+describe("priority photos", () => {
+  it("puts each page's best photo first without moving photos between pages", () => {
+    const ids = ["a", "b", "c", "d", "e", "f"];
+    const stars: Record<string, number> = { c: 5, e: 3, f: 4 };
+    const a = newAlbum(ids, 2, (id) => stars[id] ?? 0);
+    expect(a.pages.map((p) => p.n)).toEqual([3, 3]);
+    expect(a.order).toEqual(["c", "a", "b", "f", "e", "d"]);
+    expect(newAlbum(ids, 2).order).toEqual(ids);
+  });
+  it("swaps chosen photos into the biggest frames, most important first", () => {
+    // frame 2 is biggest, then frame 0
+    expect(heroSwaps(["a", "b", "c"], [5, 1, 9], ["b"])).toEqual([["b", "c"]]);
+    const sw = heroSwaps(["a", "b", "c"], [5, 1, 9], ["b", "a"]);
+    const cur = ["a", "b", "c"];
+    for (const [x, y] of sw) { const i = cur.indexOf(x), j = cur.indexOf(y); [cur[i], cur[j]] = [cur[j], cur[i]]; }
+    expect(cur).toEqual(["a", "c", "b"]);
+    expect(heroSwaps(["a", "b"], [9, 1], ["a", "z"])).toEqual([]);
   });
 });

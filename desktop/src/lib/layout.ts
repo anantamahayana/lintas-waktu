@@ -194,8 +194,39 @@ export function autoCounts(nPhotos: number, pages: number): number[] {
   return out;
 }
 
-export function newAlbum(ids: string[], pages: number): Album {
-  return { order: [...ids], pages: autoCounts(ids.length, pages).map((n) => ({ n })) };
+/**
+ * A new album in shooting order. With `score` (e.g. stars), each page's best photo comes first,
+ * which is the page's biggest frame; pages keep the same photos, so the story order stays.
+ */
+export function newAlbum(ids: string[], pages: number, score?: (id: string) => number): Album {
+  const counts = autoCounts(ids.length, pages);
+  if (!score) return { order: [...ids], pages: counts.map((n) => ({ n })) };
+  const order: string[] = [];
+  let at = 0;
+  for (const n of counts) {
+    const page = ids.slice(at, at + n);
+    at += n;
+    order.push(...page.map((id, i) => ({ id, i, s: score(id) })).sort((a, b) => b.s - a.s || a.i - b.i).map((x) => x.id));
+  }
+  return { order, pages: counts.map((n) => ({ n })) };
+}
+
+/**
+ * Put the photos in `want` (most important first) into the biggest frames of one page.
+ * `ids` are the page's photos by frame, `areas` the size of each frame. Returns the swaps to make,
+ * as pairs of photo ids, so the album changes only by swapping photos within the page.
+ */
+export function heroSwaps(ids: string[], areas: number[], want: string[]): [string, string][] {
+  const cur = [...ids];
+  const ranked = areas.map((a, k) => ({ a, k })).sort((x, y) => y.a - x.a || x.k - y.k).map((x) => x.k);
+  const out: [string, string][] = [];
+  want.filter((id) => cur.includes(id)).forEach((id, t) => {
+    const j = cur.indexOf(id), k = ranked[t];
+    if (k === undefined || j === k) return;
+    out.push([id, cur[k]]);
+    [cur[j], cur[k]] = [cur[k], cur[j]];
+  });
+  return out;
 }
 
 /**

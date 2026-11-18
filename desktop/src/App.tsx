@@ -220,7 +220,9 @@ export function App() {
   useEffect(() => { document.title = meta ? `${meta.name} · LW Album` : "LW Album"; }, [meta]);
 
   const build = useCallback(() => {
-    commit({ album: newAlbum(picked.map((p) => p.id), preset.pages), place: {}, cover: hist.now?.cover });
+    // Stars decide which photo of each page gets the biggest frame.
+    const stars = new Map(picked.map((p) => [p.id, p.stars]));
+    commit({ album: newAlbum(picked.map((p) => p.id), preset.pages, (id) => stars.get(id) ?? 0), place: {}, cover: hist.now?.cover });
     setTab("editor");
   }, [commit, picked, preset.pages, hist.now?.cover]);
   const buildEmpty = useCallback(() => {

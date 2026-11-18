@@ -6,14 +6,14 @@ import { align, bounds, distribute, mainAxis, matchSize, spaceBy, type AlignMode
 import { currentBoxes, frameRectMm, mmToBox } from "../lib/frames";
 import { Icon } from "../lib/icons";
 import { runCommand, useCommands } from "../lib/keys";
-import { addEmptyFrames, addPage, applyTpl, clearFrame, clearPage, deletePage, insertPage, countsFor, FONTS, isEmpty, joinPages, layPages, moveSheet, patchPage, removePhoto, replacePhoto, setCount, shuffleTemplates, splitPages, swapPhotos, templatesFor, type Album, type Box, type LaidPage, type PageCfg, type TextBox, type Tpl } from "../lib/layout";
+import { addEmptyFrames, addPage, applyTpl, clearFrame, clearPage, deletePage, insertPage, countsFor, FONTS, heroSwaps, isEmpty, joinPages, layPages, moveSheet, patchPage, removePhoto, replacePhoto, setCount, shuffleTemplates, splitPages, swapPhotos, templatesFor, type Album, type Box, type LaidPage, type PageCfg, type TextBox, type Tpl } from "../lib/layout";
 import type { Photo } from "../lib/photos";
 import { CENTER, effectiveDpi, pageBoxMm, spreadMm, type Placement, type Preset, type Rect } from "../lib/print";
 import { MiniSheet, Overview } from "./Overview";
 import { Btn, IconBtn, NumField, Row, Section, Seg, StatusBar } from "./Shell";
 import { pinNumbers, proofHasCover, RevisionPanel } from "./Proof";
 import { proofs, signedIn, type ProofInfo, type ProofNote } from "../lib/proofs";
-import { Sheet, type TextSel } from "./Sheet";
+import { Sheet, trayDrag, type TextSel } from "./Sheet";
 
 type Props = {
   photos: Photo[];
@@ -56,6 +56,7 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
   const { byId, pages } = useLaidPages(photos, design, preset, custom);
   const spreads = useMemo(() => toSpreads(pages), [pages]);
   const [overview, setOverview] = useState(false);
+  const marqueeStart = useRef<((x: number, y: number, add: boolean) => void) | null>(null);
   const [si, setSi] = useState(0);
   const [sel, setSel] = useState("");
   const [selText, setSelText] = useState<TextSel>(null);
@@ -96,7 +97,9 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
   const anyPicked = useMemo(() => photos.some((p) => p.pick === true), [photos]);
   const [trayAll, setTrayAll] = useState(!anyPicked);
   const [q, setQ] = useState("");
-  const tray = useMemo(() => photos.filter((p) => (trayAll || p.pick === true) && !inAlbum.has(p.id) && (!q || p.name.toLowerCase().includes(q.toLowerCase()))), [photos, inAlbum, trayAll, q]);
+  // Starred photos first (stable, so the rest keep shooting order): the ones worth placing are on top.
+  const tray = useMemo(() => photos.filter((p) => (trayAll || p.pick === true) && !inAlbum.has(p.id) && (!q || p.name.toLowerCase().includes(q.toLowerCase())))
+    .map((p, i) => ({ p, i })).sort((a, b) => b.p.stars - a.p.stars || a.i - b.i).map((x) => x.p), [photos, inAlbum, trayAll, q]);
   const blanks = useMemo(() => album.order.filter(isEmpty).length, [album.order]);
   const warnings = useMemo(() => lowResWarnings(pages, byId, place, preset), [pages, byId, place, preset]);
   const lowres = useMemo(() => new Map(warnings.map((w) => [w.id, w.dpi])), [warnings]);
@@ -384,16 +387,30 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
     }
     if (selPage && placeOnPage(photoClip, selPage)) setPhotoClip(null);
   };
-  /** Move the selected photo into the biggest frame of its page (the one it was in takes the other photo). */
-  const makeHero = () => {
-    if (!sel || !selPage?.tpl || multi) return;
-    const areas = selPage.ids.map((_, k) => { const r = frameRectMm(preset, selPage, k); return r.w * r.h; });
-    const big = areas.indexOf(Math.max(...areas)), there = selPage.ids[big];
-    if (there === sel) return;
-    // Keep the frames where they are: fix the current template so it does not change with the new aspect.
-    const a = selPage.cfg.free || selPage.cfg.tpl ? album : patchPage(album, selPage.index, { tpl: selPage.tpl.id });
-    setAlbum(swapPhotos(a, sel, there));
+  /**
+   * Priority: the selected photos (the one clicked first) move into the biggest frames of their pages.
+   * Only photos within a page swap places; frames stay where they are.
+   */
+  const heroOn = (a: Album, pgs: LaidPage[], want: (pg: LaidPage) => string[]) => {
+    for (const pg of pgs) {
+      if (!pg.tpl || pg.ids.length < 2 || pg.cfg.locked) continue;
+      const areas = pg.ids.map((_, k) => { const r = frameRectMm(preset, pg, k); return r.w * r.h; });
+      const swaps = heroSwaps(pg.ids, areas, want(pg));
+      if (!swaps.length) continue;
+      // Keep the frames where they are: fix the current template so it does not change with the new aspect.
+      if (!pg.cfg.free && !pg.cfg.tpl) a = patchPage(a, pg.index, { tpl: pg.tpl.id });
+      for (const [x, y] of swaps) a = swapPhotos(a, x, y);
+    }
+    return a;
   };
+  const makeHero = () => {
+    if (!sel) return;
+    const chosen = multi ? group : [sel];
+    setAlbum(heroOn(album, sheetPages.filter((pg) => chosen.some((id) => pg.ids.includes(id))), (pg) => chosen.filter((id) => pg.ids.includes(id))));
+  };
+  /** Every page: starred photos into the biggest frames, most stars first. */
+  const starsOf = (id: string) => byId.get(id)?.stars ?? 0;
+  const heroAll = () => setAlbum(heroOn(album, pages, (pg) => pg.ids.filter((id) => starsOf(id) > 0).sort((x, y) => starsOf(y) - starsOf(x))));
   /** Put a photo (from the album or the panel) on a page in a new frame; its old frame stays empty. */
   const placeOnPage = (id: string, pg: LaidPage): boolean => {
     if (pg.cfg.locked || pg.side === "tail") return false;
@@ -460,7 +477,8 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
     "e.join": { run: toggleJoin, enabled: !!selPage, checked: joined },
     "e.delete": { run: deleteSel, enabled: !!tb || selOnSpread },
     "e.deleteFrame": { run: deleteFrames, enabled: selOnSpread },
-    "e.hero": { run: makeHero, enabled: selOnSpread && !!selPhoto && !multi && (selPage?.ids.length ?? 0) > 1 },
+    "e.hero": { run: makeHero, enabled: selOnSpread && (multi || (!!selPhoto && (selPage?.ids.length ?? 0) > 1)) },
+    "e.heroAll": { run: heroAll },
     "e.cut": { run: clipPhoto, enabled: selOnSpread && !isEmpty(sel) && !multi },
     "e.copyPhoto": { run: clipPhoto, enabled: selOnSpread && !isEmpty(sel) && !multi },
     "e.paste": { run: pastePhoto, enabled: !!photoClip && (selOnSpread || !!selPage) },
@@ -511,6 +529,7 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
           <IconBtn icon="align-start-horizontal" cmd="e.alignTop" /><IconBtn icon="align-center-horizontal" cmd="e.alignVCenter" /><IconBtn icon="align-end-horizontal" cmd="e.alignBottom" />
           <span className="vdiv" />
           <IconBtn icon="align-horizontal-distribute-center" cmd="e.distH" /><IconBtn icon="align-vertical-distribute-center" cmd="e.distV" />
+          <span className="vdiv" /><Btn label="Prioritaskan" icon="maximize-2" kind="ghost" cmd="e.hero" tip="Foto terpilih ke bingkai terbesar halamannya (Shift+H)" />
           <span className="vdiv" />
           <span className="lbl">Rata ke</span>
           <Seg value={alignTo} onChange={setAlignTo} items={[{ v: "sel", label: "Seleksi" }, { v: "page", label: "Halaman", tip: "Tepi halaman dengan margin" }, { v: "safe", label: "Area aman" }]} />
@@ -571,7 +590,11 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
       <div ref={canvas} className={`canvas ${hand ? "panning" : ""} ${grabbing ? "grabbing" : ""}`}
         onDoubleClick={(e) => { if (e.target === e.currentTarget || (e.target as Element).classList.contains("canvas-in")) zoomTo("fit"); }}
         onAuxClick={(e) => { if (e.button === 1) e.preventDefault(); }}
-        onPointerDown={(e) => { const mid = e.button === 1; if ((!hand && !mid) || !canvas.current) return; if (mid) e.preventDefault(); pan.current = { x: e.clientX, y: e.clientY, sl: canvas.current.scrollLeft, st: canvas.current.scrollTop }; setGrabbing(true); (e.currentTarget as Element).setPointerCapture(e.pointerId); }}
+        onPointerDown={(e) => {
+          const mid = e.button === 1;
+          // Left-drag on the empty canvas around the sheet: selection box, like Figma/Lightroom.
+          if (!hand && !mid && e.button === 0) { const t = e.target as Element; if (t === e.currentTarget || t.classList.contains("canvas-in") || t.classList.contains("sheetbox") || t.closest(".pagenos")) marqueeStart.current?.(e.clientX, e.clientY, e.shiftKey); return; }
+          if ((!hand && !mid) || !canvas.current) return; if (mid) e.preventDefault(); pan.current = { x: e.clientX, y: e.clientY, sl: canvas.current.scrollLeft, st: canvas.current.scrollTop }; setGrabbing(true); (e.currentTarget as Element).setPointerCapture(e.pointerId); }}
         onPointerMove={(e) => { const p = pan.current; if (p && canvas.current) { canvas.current.scrollLeft = p.sl - (e.clientX - p.x); canvas.current.scrollTop = p.st - (e.clientY - p.y); } }}
         onPointerUp={() => { pan.current = null; setGrabbing(false); }}
         onClick={(e) => { if (e.target === e.currentTarget || (e.target as Element).classList.contains("canvas-in")) deselect(); }}>
@@ -579,7 +602,7 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
           <div className="sheetbox" style={{ width: sheetW }}>
             <div className="pagenos"><span>Halaman {s * 2 + 1}</span>{spread.left?.side === "both" && <span>panorama dua halaman</span>}<span>Spread {s + 1} dari {spreads.length} · halaman {s * 2 + 2}</span></div>
             <div className="sheetwrap"><Sheet spread={spread} preset={preset} byId={byId} place={place} sel={sel} selText={selText} guides={guides} lowres={lowres} passive={hand}
-              crop={crop} onCrop={setCropId}
+              crop={crop} onCrop={setCropId} marqueeFrom={marqueeStart}
               hiSide={blankPick ? pickOn!.side : pickPage && !sel && !selText ? (pickPage.side as 0 | 1 | "both") : null}
               onSelectPage={(side) => { setSel(""); setSelText(null); setPick({ spread: s, side }); setTab("props"); }}
               onPlace={(id, pl, replace) => commit({ ...design, place: { ...place, [id]: pl } }, replace)}
@@ -668,6 +691,7 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
               <p className="caption">{preset.pageWmm / 10} × {preset.pageHmm / 10} cm per halaman · {preset.pages} halaman · {preset.binding === "layflat" ? "lay-flat" : "jilid biasa"} · bleed {preset.bleedMm} mm · {preset.dpi} dpi</p>
               <Btn label="Properti album…" icon="sliders-horizontal" full cmd="app.props" />
               <Btn label="Acak semua tata letak" icon="shuffle" full cmd="e.shuffleAll" />
+              <Btn label="Foto berbintang ke bingkai terbesar" icon="maximize-2" full cmd="e.heroAll" />
               <Btn label="Template tata letak…" icon="layout-template" full cmd="app.templates" />
             </Section>
             <Section id="e-sum" title="Ringkasan">
@@ -808,7 +832,8 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
               <div className="tray">
                 {tray.slice(0, 600).map((p) => (
                   <div key={p.id} className="pt bare" draggable title={p.name}
-                    onDragStart={(e) => { e.dataTransfer.setData("text/plain", p.id); e.dataTransfer.effectAllowed = "move"; }}>
+                    onDragStart={(e) => { trayDrag.id = p.id; e.dataTransfer.setData("text/plain", p.id); e.dataTransfer.effectAllowed = "move"; }}
+                    onDragEnd={() => { trayDrag.id = ""; }}>
                     {p.thumb && <img src={p.thumb} alt={p.name} draggable={false} loading="lazy" />}
                     {p.stars > 0 && <span className="badge burst" style={{ color: "var(--warn)" }}>{"★".repeat(p.stars)}</span>}
                   </div>
@@ -817,7 +842,7 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
             )}
             {tray.length > 600 && <p className="caption" style={{ padding: "0 12px 12px" }}>Menampilkan 600 dari {tray.length.toLocaleString("id-ID")}. Saring di Kurasi untuk mempersempit.</p>}
           </div>
-          <div className="pad" style={{ borderTop: "1px solid var(--line-subtle)", flexDirection: "row", alignItems: "center" }}><Icon name="info" size={14} className="dimtext" /><span className="caption">Seret ke bingkai · seret antar bingkai = tukar</span></div>
+          <div className="pad" style={{ borderTop: "1px solid var(--line-subtle)", flexDirection: "row", alignItems: "center" }}><Icon name="info" size={14} className="dimtext" /><span className="caption">Seret ke bingkai · seret foto antar bingkai = tukar · pegangan biru = pindah bingkai</span></div>
         </aside>
         <main className="center">
           {overview ? (

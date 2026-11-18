@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { useEffect, useRef, useState, type CSSProperties, type MouseEvent as ME, type PointerEvent as PE } from "react";
 import type { Spread } from "../lib/export";
 import { boxToMm, currentBoxes, frameRectMm, mmToBox } from "../lib/frames";
@@ -46,9 +47,19 @@ type Props = {
   hiSide?: 0 | 1 | "both" | null;
   /** Click on the paper of a page (not on a frame or text): pick that page, even a blank one. */
   onSelectPage?: (side: 0 | 1) => void;
+  /** Filled by the sheet: lets the canvas around it start a selection box too. */
+  marqueeFrom?: { current: ((x: number, y: number, add: boolean) => void) | null };
 };
 
 const MAX_Z = 3;
+/** The panel photo being dragged with the browser's drag and drop (its id cannot be read during dragover). */
+export const trayDrag = { id: "" };
+/** Swallow the click that ends a drag, so it neither selects nor clears anything. */
+function swallowNextClick() {
+  const stop = (e: Event) => { e.stopPropagation(); e.preventDefault(); };
+  window.addEventListener("click", stop, { capture: true, once: true });
+  setTimeout(() => window.removeEventListener("click", stop, { capture: true }), 0);
+}
 /** Size and offset of the whole photo against its frame (frame = 1 × 1), matching the CSS cover crop. */
 export function photoBox(aspect: number, frameAspect: number, pl: Placement) {
   const z = Math.max(1, pl.z);
@@ -61,8 +72,10 @@ const pct = (n: number) => `${n * 100}%`;
 const SNAP_MM = 2;
 
 /** One sheet of the album, editable: photos in frames, frames and text that can be moved and resized. */
-export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSelectPhoto, onSelectText, onDrop, onFrames, onText, onEditText, lowres, passive, crop = "", onCrop, onPlace, hiSide = null, onSelectPage, more = [], onSelectMany, onGroup }: Props) {
+export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSelectPhoto, onSelectText, onDrop, onFrames, onText, onEditText, lowres, passive, crop = "", onCrop, onPlace, hiSide = null, onSelectPage, more = [], onSelectMany, onGroup, marqueeFrom }: Props) {
   const [dragOver, setDragOver] = useState("");
+  /** A photo being dragged onto another frame (pointer, not browser drag and drop): where it is and what is under it. */
+  const [pdrag, setPdrag] = useState<{ id: string; x: number; y: number; over: string } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const sheet = spreadMm(preset);
   const [lines, setLines] = useState<{ x: number[]; y: number[] }>({ x: [], y: [] });
@@ -71,9 +84,7 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
   const multi = chosen.size > 1;
   /** Box being dragged on the paper to select frames (sheet mm), and whether the click after it is swallowed. */
   const [marquee, setMarquee] = useState<Rect | null>(null);
-  const mq = useRef<{ x: number; y: number; moved: boolean; add: boolean } | null>(null);
-  const swallowClick = useRef(false);
-
+  
   const box = (r: Rect): CSSProperties => ({ left: pct(r.x / sheet.w), top: pct(r.y / sheet.h), width: pct(r.w / sheet.w), height: pct(r.h / sheet.h) });
   const mmPerPx = () => sheet.w / (ref.current?.getBoundingClientRect().width || 1);
   const pages = [spread.left, spread.right].filter((p): p is LaidPage => !!p && p.side !== "tail");
@@ -83,36 +94,73 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
   const isPaper = (e: { target: EventTarget; currentTarget: EventTarget }) => { const t = e.target as Element; return t === e.currentTarget || t.classList.contains("pagebg") || !!t.closest(".blankpage"); };
   /** Every frame on this sheet with its page and place, for box selection and group moves. */
   const allFrames = () => pages.flatMap((pg) => (pg.tpl ? pg.ids.map((id, k) => ({ id, pg, k, rect: frameRectMm(preset, pg, k) })) : []));
+  /** Start a selection box at a screen point; it follows the pointer anywhere on screen until release. */
+  const startMarquee = (cx: number, cy: number, add: boolean) => {
+    if (!onSelectMany || !ref.current) return;
+    const m = { x: cx, y: cy, moved: false, add, rect: null as Rect | null };
+    const mv = (e: PointerEvent) => {
+      if (!m.moved && Math.hypot(e.clientX - m.x, e.clientY - m.y) < 4) return;
+      m.moved = true;
+      const p = toMm(m.x, m.y), q = toMm(e.clientX, e.clientY);
+      m.rect = { x: Math.min(p.x, q.x), y: Math.min(p.y, q.y), w: Math.abs(p.x - q.x), h: Math.abs(p.y - q.y) };
+      setMarquee(m.rect);
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", mv); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", up);
+      setMarquee(null);
+      const r = m.rect;
+      if (!m.moved || !r) return;
+      // The click that ends the drag must not clear the new selection.
+      swallowNextClick();
+      const hit = allFrames().filter((f) => f.rect.x < r.x + r.w && f.rect.x + f.rect.w > r.x && f.rect.y < r.y + r.h && f.rect.y + f.rect.h > r.y).map((f) => f.id);
+      onSelectMany(hit, m.add);
+    };
+    window.addEventListener("pointermove", mv); window.addEventListener("pointerup", up); window.addEventListener("pointercancel", up);
+  };
+  if (marqueeFrom) marqueeFrom.current = startMarquee;
   const paperDown = (e: PE) => {
-    if (!onSelectMany || e.button !== 0 || !isPaper(e)) return;
-    mq.current = { x: e.clientX, y: e.clientY, moved: false, add: e.shiftKey };
-    (e.currentTarget as Element).setPointerCapture(e.pointerId);
-  };
-  const paperMove = (e: PE) => {
-    const m = mq.current;
-    if (!m) return;
-    if (!m.moved && Math.hypot(e.clientX - m.x, e.clientY - m.y) < 5) return;
-    m.moved = true;
-    const a = toMm(m.x, m.y), b = toMm(e.clientX, e.clientY);
-    setMarquee({ x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(a.x - b.x), h: Math.abs(a.y - b.y) });
-  };
-  const paperUp = () => {
-    const m = mq.current;
-    mq.current = null;
-    if (!m?.moved || !marquee) { setMarquee(null); return; }
-    const r = marquee;
-    const hit = allFrames().filter((f) => f.rect.x < r.x + r.w && f.rect.x + f.rect.w > r.x && f.rect.y < r.y + r.h && f.rect.y + f.rect.h > r.y).map((f) => f.id);
-    swallowClick.current = true;
-    setMarquee(null);
-    onSelectMany?.(hit, m.add);
+    if (e.button !== 0 || !isPaper(e)) return;
+    startMarquee(e.clientX, e.clientY, e.shiftKey);
   };
   const paperClick = (e: ME) => {
-    if (swallowClick.current) { swallowClick.current = false; return; }
     const t = e.target as Element;
     if (t !== e.currentTarget && !t.classList.contains("pagebg") && !t.closest(".blankpage")) return;
     const r = ref.current!.getBoundingClientRect(), xmm = ((e.clientX - r.left) / r.width) * sheet.w;
     if (onSelectPage) onSelectPage(xmm < preset.bleedMm + preset.pageWmm ? 0 : 1);
     else { onSelectPhoto(""); onSelectText(null); }
+  };
+
+  /**
+   * Drag a photo to another frame to swap them. The photo follows the pointer, the frame under it
+   * shows the result before letting go; Esc cancels. Plain clicks still select.
+   */
+  const photoDown = (e: PE, id: string) => {
+    if (e.button !== 0 || passive || e.shiftKey) return;
+    const sx = e.clientX, sy = e.clientY;
+    let live: { id: string; x: number; y: number; over: string } | null = null;
+    const under = (x: number, y: number) => {
+      const el = document.elementFromPoint(x, y)?.closest("[data-frame]") as HTMLElement | null;
+      return el && ref.current?.contains(el) ? el.dataset.frame ?? "" : "";
+    };
+    const mv = (ev: PointerEvent) => {
+      if (!live && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 6) return;
+      const over = under(ev.clientX, ev.clientY);
+      live = { id, x: ev.clientX, y: ev.clientY, over: over === id ? "" : over };
+      setPdrag(live);
+    };
+    const done = (drop: boolean) => {
+      window.removeEventListener("pointermove", mv); window.removeEventListener("pointerup", upH);
+      window.removeEventListener("pointercancel", cancel); window.removeEventListener("keydown", key, true);
+      setPdrag(null);
+      if (!live) return;
+      swallowNextClick();
+      if (drop && live.over) onDrop(live.over, id);
+    };
+    const upH = () => done(true);
+    const cancel = () => done(false);
+    const key = (ev: KeyboardEvent) => { if (ev.key === "Escape" && live) { ev.stopPropagation(); ev.preventDefault(); done(false); } };
+    window.addEventListener("pointermove", mv); window.addEventListener("pointerup", upH);
+    window.addEventListener("pointercancel", cancel); window.addEventListener("keydown", key, true);
   };
 
   /** Lines a frame edge can snap to on its page: trim edges, centre, margins, safe area, other frames. */
@@ -195,7 +243,7 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
     d.moved = true;
   };
 
-  const end = () => { drag.current = null; cdrag.current = null; setLines({ x: [], y: [] }); paperUp(); };
+  const end = () => { drag.current = null; cdrag.current = null; setLines({ x: [], y: [] }); };
 
   // ---- photo inside its frame (crop mode) ----
   // The wheel zooms the photo; a native listener because React's wheel handler cannot stop the page scrolling.
@@ -261,7 +309,10 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
   );
 
   const frame = (pg: LaidPage, k: number) => {
-    const id = pg.ids[k], ph = byId.get(id), pl = place[id] ?? CENTER;
+    const id = pg.ids[k];
+    // While a photo is dragged over a frame, both frames show the swap before it happens.
+    const swapWith = pdrag?.over ? (id === pdrag.over ? pdrag.id : id === pdrag.id ? pdrag.over : "") : dragOver === id && trayDrag.id ? trayDrag.id : "";
+    const ph = byId.get(id), pl = place[id] ?? CENTER, show = swapWith ? byId.get(swapWith) : ph;
     const r = frameRectMm(preset, pg, k), selected = chosen.has(id), single = selected && !multi;
     const pos = `${pl.x * 100}% ${pl.y * 100}%`;
     const cropping = crop === id && !!ph?.thumb;
@@ -270,19 +321,20 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
     if (cropping) wheel.current = (e) => cropWheel(e, id, aspect);
     const stroke = pg.cfg.stroke && pg.cfg.stroke.mm > 0 ? { boxShadow: `inset 0 0 0 ${(pg.cfg.stroke.mm / sheet.w) * 100}cqw ${pg.cfg.stroke.color}` } : undefined;
     return (
-      <div key={id} className={`frame ${selected ? "on" : ""} ${selected && multi ? "multi" : ""} ${cropping ? "cropping" : ""} ${dragOver === id ? "over" : ""} ${lowres?.has(id) ? "lowres" : ""}`} style={box(r)}>
+      <div key={id} data-frame={id} className={`frame ${selected ? "on" : ""} ${selected && multi ? "multi" : ""} ${cropping ? "cropping" : ""} ${dragOver === id || pdrag?.over === id ? "over" : ""} ${pdrag?.id === id ? "dragging" : ""} ${swapWith ? "preview" : ""} ${lowres?.has(id) ? "lowres" : ""}`} style={box(r)}>
         {pb && <img className="crop-ghost" src={ph!.thumb} alt="" draggable={false} style={{ left: pct(pb.x), top: pct(pb.y), width: pct(pb.w), height: pct(pb.h) }} />}
         <button type="button" className={ph ? "cell" : "cell blank"} style={stroke} aria-pressed={selected}
-          aria-label={ph ? `Foto ${ph.name}` : `Bingkai kosong`} draggable={!!ph && !cropping}
+          aria-label={ph ? `Foto ${ph.name}` : `Bingkai kosong`}
+          onPointerDown={ph && !cropping ? (e) => photoDown(e, id) : undefined}
           title={ph && selected && !cropping ? "Klik dua kali untuk mengatur foto di dalam bingkai" : undefined}
           onClick={(e) => { e.stopPropagation(); onSelectPhoto(id, e.shiftKey); }}
           onDoubleClick={(e) => { e.stopPropagation(); if (ph?.thumb) { onSelectPhoto(id); onCrop?.(cropping ? "" : id); } }}
-          onDragStart={(e) => { e.dataTransfer.setData("text/plain", id); e.dataTransfer.effectAllowed = "move"; }}
           onDragOver={(e) => { e.preventDefault(); if (dragOver !== id) setDragOver(id); }}
           onDragLeave={() => setDragOver((d) => (d === id ? "" : d))}
           onDrop={(e) => { e.preventDefault(); setDragOver(""); onDrop(id, e.dataTransfer.getData("text/plain")); }}>
-          {ph?.thumb && <img src={ph.thumb} alt="" draggable={false} style={{ objectPosition: pos, transformOrigin: pos, transform: `scale(${pl.z})` }} />}
-          {!ph && <span>{isEmpty(id) ? "Seret foto ke sini" : "Foto tidak ditemukan"}</span>}
+          {swapWith ? (show?.thumb ? <img src={show.thumb} alt="" draggable={false} /> : <span>Bingkai kosong</span>)
+            : ph?.thumb && <img src={ph.thumb} alt="" draggable={false} style={{ objectPosition: pos, transformOrigin: pos, transform: `scale(${pl.z})` }} />}
+          {!ph && !swapWith && <span>{isEmpty(id) ? "Seret foto ke sini" : "Foto tidak ditemukan"}</span>}
         </button>
         {lowres?.has(id) && <span className="lowres-badge">{lowres.get(id)} dpi</span>}
         {pb && (
@@ -317,7 +369,7 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
   return (
     <div ref={ref} className="sheet" style={{ aspectRatio: `${sheet.w} / ${sheet.h}`, background: preset.bg, pointerEvents: passive ? "none" : undefined }}
       onClick={paperClick} onPointerDown={paperDown}
-      onPointerMove={(e) => { move(e); cropMove(e); paperMove(e); }} onPointerUp={end} onPointerCancel={end}>
+      onPointerMove={(e) => { move(e); cropMove(e); }} onPointerUp={end} onPointerCancel={end}>
       {pages.filter((pg) => pg.cfg.bg).map((pg) => <div key={`bg${pg.index}`} className="pagebg" style={{ ...box(pageBgRectMm(preset, pg.side as Side)), background: pg.cfg.bg }} />)}
       {blanks.map((side) => (
         <div key={`blank${side}`} className={`blankpage ${hiSide === side ? "on" : ""}`} style={box(pageBoxMm(preset, side))}>
@@ -351,6 +403,11 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
         );
       })()}
       {marquee && <div className="marquee" style={box(marquee)} />}
+      {pdrag && createPortal(
+        <div className="photo-ghost" style={{ transform: `translate(${pdrag.x + 12}px, ${pdrag.y + 12}px)` }} aria-hidden="true">
+          {byId.get(pdrag.id)?.thumb && <img src={byId.get(pdrag.id)!.thumb} alt="" />}
+          <span>{pdrag.over ? "Lepas untuk menukar" : "Seret ke bingkai lain · Esc batal"}</span>
+        </div>, document.body)}
       {lines.x.map((x, i) => <div key={`gx${i}`} className="snapline v" style={{ left: pct(x / sheet.w) }} />)}
       {lines.y.map((y, i) => <div key={`gy${i}`} className="snapline h" style={{ top: pct(y / sheet.h) }} />)}
     </div>
