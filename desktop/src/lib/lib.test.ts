@@ -6,7 +6,7 @@ import { crc32, zip } from "./zip";
 import { burstLeaders, bursts, windowRows } from "./cull";
 import { boxToMm, currentBoxes, frameRectMm, mmToBox } from "./frames";
 import { heroSwaps, moveSheet, sheetsOf, snap } from "./layout";
-import { wrap } from "./paint";
+import { LINE, leadingMm, mmToPt, ptToMm, trackingUnits, unitsToTracking, wrap } from "./paint";
 import type { Photo } from "./photos";
 import { coverMm, coverParts } from "./cover";
 import { pdfFromJpegs } from "./pdf";
@@ -480,5 +480,23 @@ describe("priority photos", () => {
     for (const [x, y] of sw) { const i = cur.indexOf(x), j = cur.indexOf(y); [cur[i], cur[j]] = [cur[j], cur[i]]; }
     expect(cur).toEqual(["a", "c", "b"]);
     expect(heroSwaps(["a", "b"], [9, 1], ["a", "z"])).toEqual([]);
+  });
+});
+
+describe("character units", () => {
+  it("converts pt and mm both ways (1 pt = 0.352778 mm)", () => {
+    expect(ptToMm(1)).toBeCloseTo(0.352778, 5);
+    expect(ptToMm(72)).toBeCloseTo(25.4, 9);
+    expect(mmToPt(ptToMm(12.5))).toBeCloseTo(12.5, 9);
+  });
+  it("tracking is thousandths of an em", () => {
+    expect(unitsToTracking(100)).toBe(0.1);
+    expect(trackingUnits(0.05)).toBe(50);
+    expect(trackingUnits(undefined)).toBe(0);
+    expect(trackingUnits(unitsToTracking(-25))).toBe(-25);
+  });
+  it("leading defaults to the old line factor so earlier albums look the same", () => {
+    expect(leadingMm({ sizeMm: 8 })).toBe(8 * LINE);
+    expect(leadingMm({ sizeMm: 8, leading: 12 })).toBe(12);
   });
 });

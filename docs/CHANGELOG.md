@@ -11,6 +11,7 @@ dan **langkah manual** kalau ada. Detail teknis lengkap ada di pesan commit (`gi
 - Alat baru seperti InDesign: **A** pilih langsung (klik foto langsung mengatur foto di dalam bingkai) dan **Z** alat zoom (klik perbesar, Alt+klik perkecil, kursor kaca pembesar).
 - Tata letak: rating seperti modul Book Lightroom: **P** pilih, **X** tolak, **U** hapus tanda, **0–5** bintang untuk bingkai terpilih (bisa beberapa sekaligus); bintang/tanda tolak tampil di pojok bingkai.
 - Semua seret di aplikasi (foto ke bingkai, panel foto, filmstrip spread, semua spread, papan produksi, sampul) memakai satu cara seret baru: langsung mengikuti kursor, target menyala tanpa kedip, petunjuk di samping kursor, Esc membatalkan. Foto bisa diseret ke thumbnail spread lain (menahan di atasnya membuka spread itu).
+- Teks album seperti panel Character InDesign: pemilih font baru dengan pencarian, pratinjau langsung saat diarahkan, **font yang terpasang di Windows**, Favorit (bintang) dan Terakhir dipakai; ukuran dalam pt, **jarak baris (leading) dalam pt**, jarak huruf dalam 1/1000 em. Album lama tampil sama.
 - **Manual:** tidak ada (masuk rilis berikutnya).
 
 ### 2026-11-18 · NantaPakeAI (dokumentasi aplikasi album)

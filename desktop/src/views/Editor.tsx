@@ -6,7 +6,7 @@ import { align, bounds, distribute, mainAxis, matchSize, spaceBy, type AlignMode
 import { currentBoxes, frameRectMm, mmToBox } from "../lib/frames";
 import { Icon } from "../lib/icons";
 import { runCommand, useCommands } from "../lib/keys";
-import { addEmptyFrames, addPage, applyTpl, clearFrame, clearPage, deletePage, insertPage, countsFor, FONTS, heroSwaps, isEmpty, joinPages, layPages, moveSheet, patchPage, removePhoto, replacePhoto, setCount, shuffleTemplates, splitPages, swapPhotos, templatesFor, type Album, type Box, type LaidPage, type PageCfg, type TextBox, type Tpl } from "../lib/layout";
+import { addEmptyFrames, addPage, applyTpl, clearFrame, clearPage, deletePage, insertPage, countsFor, heroSwaps, isEmpty, joinPages, layPages, moveSheet, patchPage, removePhoto, replacePhoto, setCount, shuffleTemplates, splitPages, swapPhotos, templatesFor, type Album, type Box, type LaidPage, type PageCfg, type TextBox, type Tpl } from "../lib/layout";
 import type { Photo } from "../lib/photos";
 import { CENTER, effectiveDpi, pageBoxMm, spreadMm, type Placement, type Preset, type Rect } from "../lib/print";
 import { MiniSheet, Overview } from "./Overview";
@@ -15,6 +15,8 @@ import { pinNumbers, proofHasCover, RevisionPanel } from "./Proof";
 import { proofs, signedIn, type ProofInfo, type ProofNote } from "../lib/proofs";
 import { Sheet, type TextSel } from "./Sheet";
 import { beginDrag, useDrag } from "../lib/drag";
+import { FontPicker } from "./FontPicker";
+import { leadingMm, mmToPt, ptToMm, trackingUnits, unitsToTracking } from "../lib/paint";
 
 type Props = {
   photos: Photo[];
@@ -137,6 +139,14 @@ export function Editor({ photos, onMark, design, commit, preset, setPreset, cust
   const pageOfId = (id: string) => sheetPages.find((p) => p.ids.includes(id));
   const rectOf = (id: string): Rect => { const pg = pageOfId(id)!; return frameRectMm(preset, pg, pg.ids.indexOf(id)); };
   const tb: TextBox | undefined = selText ? pages[selText.page]?.cfg.texts?.find((x) => x.id === selText.id) : undefined;
+
+  /** Font under the cursor in the picker: shown on the selected text without touching the album. */
+  const [previewFont, setPreviewFont] = useState<string | null>(null);
+  const shown = useMemo(() => {
+    if (!previewFont || !selText || !spread) return spread;
+    const ov = (pg: LaidPage | null) => (pg && pg.index === selText.page ? { ...pg, cfg: { ...pg.cfg, texts: pg.cfg.texts?.map((x) => (x.id === selText.id ? { ...x, font: previewFont } : x)) } } : pg);
+    return { ...spread, left: ov(spread.left), right: ov(spread.right) };
+  }, [previewFont, selText, spread]);
 
   const setAlbum = (a: Album, replace = false) => { if (a !== album) commit({ ...design, album: a }, replace); };
   const setPage = (i: number, patch: Partial<PageCfg>, replace = false) => setAlbum(patchPage(album, i, patch), replace);
@@ -567,10 +577,8 @@ export function Editor({ photos, onMark, design, commit, preset, setPreset, cust
       ) : tb && selText ? (
         <>
           <span className="ctx"><Icon name="type" size={14} />Teks</span><span className="vdiv" />
-          <select value={tb.font} onChange={(e) => setText(selText.page, tb.id, { font: e.target.value })} style={{ width: 190, fontFamily: `"${tb.font}"` }} aria-label="Huruf">
-            {FONTS.map((f) => <option key={f.family} value={f.family} style={{ fontFamily: f.family }}>{f.family}</option>)}
-          </select>
-          <NumField value={tb.sizeMm} min={1} max={80} step={0.5} unit="mm" width={78} label="Ukuran huruf" onChange={(v) => setText(selText.page, tb.id, { sizeMm: v })} />
+          <FontPicker value={tb.font} onPreview={setPreviewFont} onChange={(font) => setText(selText.page, tb.id, { font })} />
+          <NumField value={mmToPt(tb.sizeMm)} min={2} max={240} step={1} unit="pt" width={72} label="Ukuran huruf" onChange={(v) => setText(selText.page, tb.id, { sizeMm: ptToMm(v) })} />
           <span className="vdiv" />
           <IconBtn icon="bold" tip="Tebal" on={!!tb.bold} onClick={() => setText(selText.page, tb.id, { bold: !tb.bold })} />
           <IconBtn icon="italic" tip="Miring" on={!!tb.italic} onClick={() => setText(selText.page, tb.id, { italic: !tb.italic })} />
@@ -631,7 +639,7 @@ export function Editor({ photos, onMark, design, commit, preset, setPreset, cust
         <div className="canvas-in" style={{ minWidth: "100%", minHeight: "100%", width: sheetW + 96, height: sheetW * (sheetMm.h / sheetMm.w) + 112 }}>
           <div className="sheetbox" style={{ width: sheetW }}>
             <div className="pagenos"><span>Halaman {s * 2 + 1}</span>{spread.left?.side === "both" && <span>panorama dua halaman</span>}<span>Spread {s + 1} dari {spreads.length} · halaman {s * 2 + 2}</span></div>
-            <div className="sheetwrap"><Sheet spread={spread} preset={preset} byId={byId} place={place} sel={sel} selText={selText} guides={guides} lowres={lowres} passive={hand || zoomTool}
+            <div className="sheetwrap"><Sheet spread={shown ?? spread} preset={preset} byId={byId} place={place} sel={sel} selText={selText} guides={guides} lowres={lowres} passive={hand || zoomTool}
               crop={crop} onCrop={setCropId} marqueeFrom={marqueeStart}
               hiSide={blankPick ? pickOn!.side : pickPage && !sel && !selText ? (pickPage.side as 0 | 1 | "both") : null}
               onSelectPage={(side) => { setSel(""); setSelText(null); setPick({ spread: s, side }); setTab("props"); }}
@@ -735,15 +743,15 @@ export function Editor({ photos, onMark, design, commit, preset, setPreset, cust
               <>
                 <Section id="e-text" title={`Teks · halaman ${textPage ? pageNo(textPage) : ""}`}>
                   <textarea ref={textArea} rows={4} value={tb.text} aria-label="Isi teks" onChange={(e) => textSlide({ text: e.target.value })} onBlur={endSlide} />
-                  <Row label="Huruf"><select value={tb.font} onChange={(e) => setText(selText.page, tb.id, { font: e.target.value })} style={{ fontFamily: `"${tb.font}"` }}>
-                    {FONTS.map((f) => <option key={f.family} value={f.family} style={{ fontFamily: f.family }}>{f.family}</option>)}</select></Row>
-                  <Row label="Ukuran"><NumField value={tb.sizeMm} min={1} max={80} step={0.5} unit="mm" onChange={(v) => setText(selText.page, tb.id, { sizeMm: v })} />
+                  <Row label="Huruf"><FontPicker width={150} value={tb.font} onPreview={setPreviewFont} onChange={(font) => setText(selText.page, tb.id, { font })} /></Row>
+                  <Row label="Ukuran"><NumField value={mmToPt(tb.sizeMm)} min={2} max={240} step={1} unit="pt" label="Ukuran huruf" onChange={(v) => setText(selText.page, tb.id, { sizeMm: ptToMm(v) })} />
                     <IconBtn icon="bold" small tip="Tebal" on={!!tb.bold} onClick={() => setText(selText.page, tb.id, { bold: !tb.bold })} />
                     <IconBtn icon="italic" small tip="Miring" on={!!tb.italic} onClick={() => setText(selText.page, tb.id, { italic: !tb.italic })} /></Row>
                   <Row label="Perataan"><Seg full value={tb.align} onChange={(a) => setText(selText.page, tb.id, { align: a })}
                     items={[{ v: "left", label: "", icon: "align-left", tip: "Rata kiri" }, { v: "center", label: "", icon: "align-center", tip: "Tengah" }, { v: "right", label: "", icon: "align-right", tip: "Rata kanan" }]} /></Row>
                   <Row label="Warna"><ColorField value={tb.color} onChange={(v) => textSlide({ color: v })} onEnd={endSlide} /></Row>
-                  <Row label="Jarak huruf">{slider(tb.tracking ?? 0, 0, 0.5, 0.01, (v) => textSlide({ tracking: v }), `${Math.round((tb.tracking ?? 0) * 100)}`)}</Row>
+                  <Row label="Jarak baris"><NumField value={mmToPt(leadingMm(tb))} min={2} max={400} step={1} unit="pt" label="Jarak baris (leading)" onChange={(v) => setText(selText.page, tb.id, { leading: ptToMm(v) })} /></Row>
+                  <Row label="Jarak huruf"><NumField value={trackingUnits(tb.tracking)} min={-200} max={1000} step={10} label="Jarak huruf (tracking, per seribu em)" onChange={(v) => setText(selText.page, tb.id, { tracking: unitsToTracking(v) })} /></Row>
                   <div className="pair"><Btn label="Duplikat" icon="copy" full cmd="e.dup" /><Btn label="Hapus" icon="trash-2" full cmd="e.delete" /></div>
                 </Section>
               </>

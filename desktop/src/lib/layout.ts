@@ -97,8 +97,10 @@ export type TextBox = Box & {
   align: "left" | "center" | "right";
   bold?: boolean;
   italic?: boolean;
-  /** Letter spacing in em. */
+  /** Letter spacing in em (the panel shows it as thousandths of an em, like InDesign). */
   tracking?: number;
+  /** Line spacing in millimetres of paper; unset = the size times the default line factor. */
+  leading?: number;
 };
 
 export const FONTS: { family: string; label: string }[] = [

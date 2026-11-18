@@ -1,6 +1,7 @@
 // No console window behind the app on Windows release builds.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod fonts;
 mod photos;
 
 use std::fs;
@@ -117,6 +118,12 @@ fn snapshot(path: String, dir: String, keep: usize) -> Result<(), String> {
 /// LW_UPDATER_PUBKEY at build time overrides it (only if the key is ever replaced).
 const UPDATER_PUBKEY: &str = match option_env!("LW_UPDATER_PUBKEY") { Some(k) if !k.is_empty() => k, _ => "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDI1RkM4MTc4NEYxMTc0M0UKUldRK2RCRlBlSUg4SlhxbWVmUlg4MndUQUk1THc5Z3pvcSszWlRmR2hkUXRKS3Jtc0c4KzRqVFAK" };
 
+/// Installed font families for the text font picker.
+#[tauri::command]
+async fn list_fonts() -> Result<Vec<String>, String> {
+    tauri::async_runtime::spawn_blocking(fonts::list).await.map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 fn updater_ready() -> bool { !UPDATER_PUBKEY.trim().is_empty() }
 
@@ -127,7 +134,7 @@ fn main() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
-            scan_folder, prepare_photos, read_text, write_text, write_bytes, list_files, remove_file, path_exists, snapshot, updater_ready
+            scan_folder, prepare_photos, read_text, write_text, write_bytes, list_files, remove_file, path_exists, snapshot, updater_ready, list_fonts
         ])
         .run(tauri::generate_context!())
         .expect("error while running LW Album");

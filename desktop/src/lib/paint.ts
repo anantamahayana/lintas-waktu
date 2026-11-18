@@ -32,6 +32,16 @@ export function wrap(ctx: Pick<Ctx, "measureText">, text: string, width: number)
 
 export const LINE = 1.25;
 
+/** Typographic units: 1 pt = 1/72 inch. Text is stored in mm (and em for tracking), shown the InDesign way. */
+export const PT_MM = 25.4 / 72;
+export const mmToPt = (mm: number) => mm / PT_MM;
+export const ptToMm = (pt: number) => pt * PT_MM;
+/** Tracking is stored in em; the panel shows thousandths of an em. */
+export const trackingUnits = (em: number | undefined) => Math.round((em ?? 0) * 1000);
+export const unitsToTracking = (u: number) => u / 1000;
+/** Line spacing in mm: the box's own leading, or the old default so earlier albums look the same. */
+export const leadingMm = (t: Pick<TextBox, "sizeMm" | "leading">) => t.leading ?? t.sizeMm * LINE;
+
 export function drawText(ctx: Ctx, p: Preset, side: Side, t: TextBox, dpi: number) {
   const r = boxToMm(p, side, t);
   const px = mmToPx(t.sizeMm, dpi);
@@ -43,8 +53,9 @@ export function drawText(ctx: Ctx, p: Preset, side: Side, t: TextBox, dpi: numbe
   ctx.textAlign = t.align;
   const x0 = mmToPx(r.x, dpi), w = mmToPx(r.w, dpi);
   const x = t.align === "left" ? x0 : t.align === "right" ? x0 + w : x0 + w / 2;
-  let y = mmToPx(r.y, dpi) + (px * (LINE - 1)) / 2;
-  for (const line of wrap(ctx, t.text, w)) { ctx.fillText(line, x, y); y += px * LINE; }
+  const lead = mmToPx(leadingMm(t), dpi);
+  let y = mmToPx(r.y, dpi) + (lead - px) / 2;
+  for (const line of wrap(ctx, t.text, w)) { ctx.fillText(line, x, y); y += lead; }
   ctx.restore();
 }
 

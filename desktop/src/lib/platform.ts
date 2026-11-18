@@ -50,6 +50,19 @@ export const removeFile = (path: string) => invoke<void>("remove_file", { path }
 export const listFiles = (dir: string, ext: string) => invoke<{ path: string; modified: number }[]>("list_files", { dir, ext });
 export const snapshot = (path: string, dir: string, keep: number) => invoke<void>("snapshot", { path, dir, keep });
 
+let fonts: Promise<string[]> | null = null;
+/** Font families installed on this computer (cached). Native: read from the font folders; browser: Local Font Access if allowed. */
+export function listSystemFonts(): Promise<string[]> {
+  return (fonts ??= (async () => {
+    try {
+      if (isNative) return await invoke<string[]>("list_fonts");
+      const q = (window as unknown as { queryLocalFonts?: () => Promise<{ family: string }[]> }).queryLocalFonts;
+      if (q) return [...new Set((await q.call(window)).map((f) => f.family))].sort((a, b) => a.localeCompare(b));
+    } catch { /* denied or unsupported */ }
+    return [];
+  })());
+}
+
 export async function writeBytes(path: string, data: Blob | Uint8Array): Promise<void> {
   const bytes = data instanceof Uint8Array ? data : new Uint8Array(await data.arrayBuffer());
   await (await tauri()).invoke("write_bytes", bytes, { headers: { "x-path": encodeURIComponent(path) } });

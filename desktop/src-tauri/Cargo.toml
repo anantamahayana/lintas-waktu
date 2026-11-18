@@ -16,6 +16,7 @@ image = { version = "0.25", default-features = false, features = ["jpeg", "png",
 jpeg-decoder = "0.3"
 kamadak-exif = "0.6"
 tauri-plugin-opener = "2"
+ttf-parser = "0.25"
 
 [profile.release]
 opt-level = 3

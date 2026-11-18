@@ -4,7 +4,7 @@ import type { Spread } from "../lib/export";
 import { boxToMm, currentBoxes, frameRectMm, mmToBox } from "../lib/frames";
 import { isEmpty, snap, type Box, type LaidPage, type TextBox } from "../lib/layout";
 import { bounds as groupBounds } from "../lib/align";
-import { LINE, pageBgRectMm } from "../lib/paint";
+import { leadingMm, pageBgRectMm } from "../lib/paint";
 import type { Photo } from "../lib/photos";
 import { CENTER, pageBoxMm, spreadMm, type Placement, type Preset, type Rect } from "../lib/print";
 
@@ -332,7 +332,7 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
         onDoubleClick={(e) => { e.stopPropagation(); onEditText({ page: pg.index, id: t.id }); }}>
         <div className="textbody" style={{
           fontFamily: `"${t.font}", serif`, fontWeight: t.bold ? 700 : 400, fontStyle: t.italic ? "italic" : "normal",
-          fontSize: `${(t.sizeMm / sheet.w) * 100}cqw`, lineHeight: LINE, letterSpacing: `${t.tracking ?? 0}em`, color: t.color, textAlign: t.align,
+          fontSize: `${(t.sizeMm / sheet.w) * 100}cqw`, lineHeight: leadingMm(t) / t.sizeMm, letterSpacing: `${t.tracking ?? 0}em`, color: t.color, textAlign: t.align,
         }}>{t.text || " "}</div>
         {on && handles(pg, -1, t)}
       </div>
