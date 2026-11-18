@@ -1,4 +1,4 @@
-import { beginDrag, useDrag } from "../lib/drag";
+import { beginDrag, useDragTarget } from "../lib/drag";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../lib/icons";
 import { STATUSES, type ProjectMeta, type Status } from "../lib/projects";
@@ -16,7 +16,7 @@ const daysLeft = (due?: string) => (due ? Math.ceil((new Date(due + "T23:59:59")
 /** Production board (Figma page 03): every album by stage; drag a card to change its stage. */
 export function Papan({ projects, onOpen, onUpdate }: Props) {
   const [edit, setEdit] = useState<ProjectMeta | null>(null);
-  const drag = useDrag();
+  const drag = useDragTarget();
   const [q, setQ] = useState("");
   const status = (p: ProjectMeta): Status => p.status ?? "desain";
   const active = projects.filter((p) => status(p) !== "selesai");

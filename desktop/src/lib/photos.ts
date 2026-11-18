@@ -13,6 +13,8 @@ export type Photo = {
   raw?: boolean;
   /** Capture time: EXIF when known, else the file's modified time. */
   time: number;
+  /** The file's modified time as scanned; stays put when `time` becomes the EXIF time (finds copies). */
+  mtime?: number;
   camera?: string;
   /** Full-resolution size as it is displayed (after EXIF rotation). 0 until read. */
   w: number;

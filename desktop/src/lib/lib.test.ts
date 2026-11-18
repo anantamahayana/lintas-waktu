@@ -503,7 +503,7 @@ describe("character units", () => {
 
 import { baseName, extraId, isImagePath, mergeImport, parentDir, photoFromFile, sourcesOf } from "./importing";
 describe("importing", () => {
-  const ph = (id: string, path: string, time: number) => ({ id, name: baseName(path), path, time, w: 0, h: 0, pick: null, stars: 0 });
+  const ph = (id: string, path: string, time: number) => ({ id, name: baseName(path), path, time: time + 5000, mtime: time, w: 0, h: 0, pick: null, stars: 0 });
   it("names sources and files", () => {
     expect(baseName("C:\\Foto\\Acara\\")).toBe("Acara");
     expect(parentDir("C:\\Foto\\Acara\\a.jpg")).toBe("C:\\Foto\\Acara");
@@ -524,6 +524,8 @@ describe("importing", () => {
     ]);
     expect(dupes).toBe(2);
     expect(added.map((p) => p.id)).toEqual(["@B/b.jpg", "@B/b.jpg~2"]);
+    // Opening a saved project: only the very same file is dropped, never a look-alike.
+    expect(mergeImport([], [ph("x/a.jpg", "C:/x/a.jpg", 10), ph("y/a.jpg", "C:/y/a.jpg", 10)], false).added).toHaveLength(2);
   });
 });
 

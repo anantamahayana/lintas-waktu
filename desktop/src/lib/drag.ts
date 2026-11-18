@@ -26,6 +26,15 @@ const emit = () => subs.forEach((f) => f());
 const subscribe = (f: () => void) => { subs.add(f); return () => { subs.delete(f); }; };
 export const dragState = () => cur;
 export const useDrag = () => useSyncExternalStore(subscribe, dragState, dragState);
+/** Snapshot that only changes when the dragged item or its target changes, not on every pointer move. */
+const pairSnap = () => (cur ? `${cur.item}\n${cur.over}` : "");
+/** What is dragged and what it is over, for highlighting targets; re-renders only when either changes. */
+export function useDragTarget(): { item: string; over: string } | null {
+  const k = useSyncExternalStore(subscribe, pairSnap, pairSnap);
+  if (!k) return null;
+  const i = k.indexOf("\n");
+  return { item: k.slice(0, i), over: k.slice(i + 1) };
+}
 
 /** The drop key under a screen point (the ghost ignores the pointer, so it never hides a target). */
 export function dropKeyAt(x: number, y: number): string {

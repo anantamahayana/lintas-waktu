@@ -1,6 +1,6 @@
 [package]
 name = "lw-album"
-version = "0.4.9"
+version = "0.5.0"
 description = "Lintas Waktu Album"
 edition = "2021"
 

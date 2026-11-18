@@ -90,7 +90,7 @@ export async function scanFolder(dir: string): Promise<Photo[]> {
   const jpegStems = new Set(list.filter((e) => !e.raw).map((e) => stem(e.rel)));
   return list
     .filter((e) => !(e.raw && jpegStems.has(stem(e.rel))))
-    .map<Photo>((e) => ({ id: e.rel, name: base(e.rel), path: e.path, raw: e.raw, time: e.mtime, w: 0, h: 0, pick: null, stars: 0 }))
+    .map<Photo>((e) => ({ id: e.rel, name: base(e.rel), path: e.path, raw: e.raw, time: e.mtime, mtime: e.mtime, w: 0, h: 0, pick: null, stars: 0 }))
     .sort((a, b) => a.time - b.time || a.id.localeCompare(b.id));
 }
 

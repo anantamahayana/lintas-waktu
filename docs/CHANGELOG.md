@@ -6,7 +6,7 @@ dan **langkah manual** kalau ada. Detail teknis lengkap ada di pesan commit (`gi
 
 ---
 
-### 2026-11-18 · Yukti (aplikasi album: alur ala Adobe)
+### 2026-11-18 · Yukti (aplikasi album 0.5.0: alur ala Adobe)
 - Tata letak: Ctrl+klik (dan Shift+klik) menambah/mengurangi bingkai terpilih, juga saat menarik kotak seleksi.
 - Alat baru seperti InDesign: **A** pilih langsung (klik foto langsung mengatur foto di dalam bingkai) dan **Z** alat zoom (klik perbesar, Alt+klik perkecil, kursor kaca pembesar).
 - Tata letak: rating seperti modul Book Lightroom: **P** pilih, **X** tolak, **U** hapus tanda, **0–5** bintang untuk bingkai terpilih (bisa beberapa sekaligus); bintang/tanda tolak tampil di pojok bingkai.
@@ -14,7 +14,8 @@ dan **langkah manual** kalau ada. Detail teknis lengkap ada di pesan commit (`gi
 - Teks album seperti panel Character InDesign: pemilih font baru dengan pencarian, pratinjau langsung saat diarahkan, **font yang terpasang di Windows**, Favorit (bintang) dan Terakhir dipakai; ukuran dalam pt, **jarak baris (leading) dalam pt**, jarak huruf dalam 1/1000 em. Album lama tampil sama.
 - Import foto: **seret folder/file foto dari Explorer** ke jendela (di Beranda = proyek baru, di proyek = tambah foto); **banyak folder sekaligus** (Ctrl/Shift di dialog), menu File → "Tambah folder foto…" (Ctrl+Shift+I); bilah progres dengan **Batal** (foto yang baru diimpor diambil lagi); **duplikat dilewati** (file yang sama, atau nama + waktu potret sama). Proyek mengingat semua sumbernya; sumber yang hilang dilaporkan, tidak menggagalkan proyek.
 - Kenyamanan: pesan info tidak lagi berupa dialog yang menghentikan kerja, tapi catatan kecil di bawah yang hilang sendiri (✕ untuk menutup, berhenti saat diarahkan mouse); status simpan "Tersimpan otomatis 14.32"; panel tampil/sembunyi diingat; pesan galat sistem (file hilang, izin, disk penuh, file dipakai program lain, internet) ditulis dalam bahasa yang bisa ditindaklanjuti.
-- **Manual:** tidak ada (masuk rilis berikutnya).
+- Perbaikan dari review: dua impor bersamaan tidak lagi membuat foto impor pertama tanpa thumbnail (impor kedua menunggu); file yang dijatuhkan lalu dibatalkan tidak terpakai diam-diam di proyek baru berikutnya; membuka proyek lama tidak pernah membuang foto mirip; deteksi salinan memakai waktu file; alat A tidak menukar foto saat diseret; seret tidak lagi menggambar ulang seluruh editor tiap gerak mouse.
+- **Manual:** tidak ada.
 
 ### 2026-11-18 · NantaPakeAI (dokumentasi aplikasi album)
 - `docs/ALBUM_APP_PLAN.md` ditulis ulang: status per fase, alur kerja sekarang, fitur per modul, teknologi, langkah rilis, pengujian, masalah yang diketahui, backlog, keputusan. `desktop/README.md`: fitur lengkap per modul dengan pintasan, peta kode per file, aturan saat mengubah.

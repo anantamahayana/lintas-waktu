@@ -1,4 +1,4 @@
-import { beginDrag, useDrag } from "../lib/drag";
+import { beginDrag, useDragTarget } from "../lib/drag";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Design } from "../App";
 import { coverMm, coverParts, DEFAULT_COVER, drawCover, fromThumb, type Cover } from "../lib/cover";
@@ -29,7 +29,7 @@ export function Sampul({ photos, design, commit, preset, setPreset, panels }: Pr
   const [all, setAll] = useState(false);
   const [side, setSide] = useState<"front" | "back">("front");
   const [guides, setGuides] = useState(true);
-  const dragNow = useDrag();
+  const dragNow = useDragTarget();
   const sliding = useRef(false);
 
   const set = (patch: Partial<Cover>, replace = false) => commit({ ...design, cover: { ...cover, ...patch } }, replace);

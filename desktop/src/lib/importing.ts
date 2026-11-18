@@ -23,25 +23,27 @@ export function photoFromFile(path: string): Photo {
 }
 
 /** Same picture already in the project: the same file, or the same name taken at the same moment (a copy). */
-const keyOf = (p: Photo) => `${p.name.toLowerCase()}|${p.time}`;
+const stamp = (p: Photo) => p.mtime ?? 0;
+const keyOf = (p: Photo) => `${p.name.toLowerCase()}|${stamp(p)}`;
 
 /**
  * New photos to add, without ones the project already has (or that came in twice).
  * Ids that clash with different pictures get a number so nothing is overwritten.
  */
-export function mergeImport(existing: Photo[], incoming: Photo[]): { added: Photo[]; dupes: number } {
+export function mergeImport(existing: Photo[], incoming: Photo[], copies = true): { added: Photo[]; dupes: number } {
   const paths = new Set(existing.map((p) => p.path).filter(Boolean));
-  const keys = new Set(existing.filter((p) => p.time).map(keyOf));
+  // `copies` off (opening a saved project): only the very same file counts, so no photo of an old project goes missing.
+  const keys = new Set(copies ? existing.filter(stamp).map(keyOf) : []);
   const ids = new Set(existing.map((p) => p.id));
   const added: Photo[] = [];
   let dupes = 0;
   for (const p of incoming) {
-    if ((p.path && paths.has(p.path)) || (p.time && keys.has(keyOf(p)))) { dupes++; continue; }
+    if ((p.path && paths.has(p.path)) || (copies && stamp(p) && keys.has(keyOf(p)))) { dupes++; continue; }
     let id = p.id, n = 2;
     while (ids.has(id)) id = `${p.id}~${n++}`;
     ids.add(id);
     if (p.path) paths.add(p.path);
-    if (p.time) keys.add(keyOf(p));
+    if (copies && stamp(p)) keys.add(keyOf(p));
     added.push(id === p.id ? p : { ...p, id });
   }
   return { added, dupes };

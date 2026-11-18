@@ -37,6 +37,8 @@ export function FontPicker({ value, onChange, onPreview, width = 190 }: { value:
   }, [q, fav, recent, sys]);
 
   const close = () => { setOpen(false); onPreview?.(null); btn.current?.focus(); };
+  const closeRef = useRef(close);
+  closeRef.current = close;
   const choose = (family: string) => {
     const r = [family, ...recent.filter((x) => x !== family)].slice(0, MAX_RECENT);
     setRecent(r); save(RECENT, r);
@@ -54,10 +56,10 @@ export function FontPicker({ value, onChange, onPreview, width = 190 }: { value:
 
   useEffect(() => {
     if (!open) return;
-    const down = (e: PointerEvent) => { if (!pop.current?.contains(e.target as Node) && !btn.current?.contains(e.target as Node)) close(); };
+    const down = (e: PointerEvent) => { if (!pop.current?.contains(e.target as Node) && !btn.current?.contains(e.target as Node)) closeRef.current(); };
     document.addEventListener("pointerdown", down, true);
     return () => document.removeEventListener("pointerdown", down, true);
-  });
+  }, [open]);
 
   const step = (dir: 1 | -1) => {
     let i = hi;

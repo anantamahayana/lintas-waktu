@@ -52,12 +52,13 @@ export function tell(message: string, title?: string): Promise<void> {
     const x = document.createElement("button"); x.type = "button"; x.className = "toast-x"; x.textContent = "✕"; x.setAttribute("aria-label", "Tutup");
     let timer = 0;
     const close = () => { clearTimeout(timer); t.remove(); resolve(); };
+    (t as HTMLElement & { close?: () => void }).close = close;
     const arm = () => { clearTimeout(timer); timer = window.setTimeout(close, Math.min(14000, 4000 + message.length * 50)); };
     x.onclick = close;
     t.onmouseenter = () => clearTimeout(timer); // reading it: keep it
     t.onmouseleave = arm;
     t.append(body, x); box.append(t);
-    while (box.children.length > 3) box.firstElementChild?.remove();
+    while (box.children.length > 3) { const old = box.firstElementChild as (Element & { close?: () => void }) | null; if (!old) break; if (old.close) old.close(); else old.remove(); }
     arm();
   });
 }
@@ -66,7 +67,7 @@ export function tell(message: string, title?: string): Promise<void> {
 export function friendly(e: unknown): string {
   const raw = e instanceof Error ? e.message : String(e);
   const m = raw.toLowerCase();
-  if (/os error (2|3)\b|not found|cannot find/.test(m)) return "File atau folder tidak ditemukan. Mungkin dipindah, diganti nama, atau drive-nya tidak tersambung.";
+  if (/os error (2|3)\b|cannot find the (file|path)|no such file/.test(m)) return "File atau folder tidak ditemukan. Mungkin dipindah, diganti nama, atau drive-nya tidak tersambung.";
   if (/os error 5\b|access is denied|permission denied/.test(m)) return "Tidak punya izin menulis di sana. Tutup program lain yang memakai file itu, atau pilih folder lain.";
   if (/os error (112|39)\b|no space|disk full/.test(m)) return "Disk penuh. Kosongkan ruang lalu coba lagi.";
   if (/os error 32\b|being used by another process/.test(m)) return "File sedang dipakai program lain. Tutup program itu lalu coba lagi.";

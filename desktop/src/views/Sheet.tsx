@@ -1,4 +1,4 @@
-import { beginDrag, swallowNextClick, useDrag } from "../lib/drag";
+import { beginDrag, swallowNextClick, useDragTarget } from "../lib/drag";
 import { useEffect, useRef, useState, type CSSProperties, type MouseEvent as ME, type PointerEvent as PE } from "react";
 import type { Spread } from "../lib/export";
 import { boxToMm, currentBoxes, frameRectMm, mmToBox } from "../lib/frames";
@@ -50,6 +50,8 @@ type Props = {
   /** Click on the paper of a page (not on a frame or text): pick that page, even a blank one. */
   onSelectPage?: (side: 0 | 1) => void;
   /** Filled by the sheet: lets the canvas around it start a selection box too. */
+  /** Direct selection tool (A): pressing a photo works on the photo inside its frame, never swaps frames. */
+  direct?: boolean;
   marqueeFrom?: { current: ((x: number, y: number, add: boolean) => void) | null };
 };
 
@@ -66,8 +68,8 @@ const pct = (n: number) => `${n * 100}%`;
 const SNAP_MM = 2;
 
 /** One sheet of the album, editable: photos in frames, frames and text that can be moved and resized. */
-export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSelectPhoto, onSelectText, onDrop, onFrames, onText, onEditText, lowres, passive, crop = "", onCrop, onPlace, hiSide = null, onSelectPage, more = [], onSelectMany, onGroup, marqueeFrom, onDropSpread }: Props) {
-  const drag0 = useDrag();
+export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSelectPhoto, onSelectText, onDrop, onFrames, onText, onEditText, lowres, passive, crop = "", onCrop, onPlace, hiSide = null, onSelectPage, more = [], onSelectMany, onGroup, marqueeFrom, onDropSpread, direct }: Props) {
+  const drag0 = useDragTarget();
   /** The photo being dragged and the frame it hovers, when a photo drag is on. */
   const pdrag = drag0?.item.startsWith("photo:") ? { id: drag0.item.slice(6), over: drag0.over.startsWith("frame:") ? drag0.over.slice(6) : "" } : null;
   const ref = useRef<HTMLDivElement>(null);
@@ -129,7 +131,7 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
    * shows the result before letting go; Esc cancels. Plain clicks still select.
    */
   const photoDown = (e: PE, id: string) => {
-    if (passive || e.shiftKey || e.ctrlKey || e.metaKey) return;
+    if (passive || direct || e.shiftKey || e.ctrlKey || e.metaKey) return;
     beginDrag(e, {
       item: `photo:${id}`, thumb: byId.get(id)?.thumb,
       accepts: (k) => (k.startsWith("frame:") && k !== `frame:${id}`) || (!!onDropSpread && k.startsWith("spread:")),

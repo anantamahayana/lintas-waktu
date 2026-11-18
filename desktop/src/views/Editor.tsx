@@ -14,7 +14,7 @@ import { Btn, IconBtn, NumField, Row, Section, Seg, StatusBar } from "./Shell";
 import { pinNumbers, proofHasCover, RevisionPanel } from "./Proof";
 import { proofs, signedIn, type ProofInfo, type ProofNote } from "../lib/proofs";
 import { Sheet, type TextSel } from "./Sheet";
-import { beginDrag, useDrag } from "../lib/drag";
+import { beginDrag, useDragTarget } from "../lib/drag";
 import { FontPicker } from "./FontPicker";
 import { leadingMm, mmToPt, ptToMm, trackingUnits, unitsToTracking } from "../lib/paint";
 
@@ -65,8 +65,9 @@ export function Editor({ photos, onMark, design, commit, preset, setPreset, cust
   const [altDown, setAltDown] = useState(false);
   useEffect(() => {
     const k = (e: KeyboardEvent) => setAltDown(e.altKey);
-    window.addEventListener("keydown", k); window.addEventListener("keyup", k);
-    return () => { window.removeEventListener("keydown", k); window.removeEventListener("keyup", k); };
+    const off = () => setAltDown(false); // Alt released in another window (Alt+Tab)
+    window.addEventListener("keydown", k); window.addEventListener("keyup", k); window.addEventListener("blur", off);
+    return () => { window.removeEventListener("keydown", k); window.removeEventListener("keyup", k); window.removeEventListener("blur", off); };
   }, []);
   const marqueeStart = useRef<((x: number, y: number, add: boolean) => void) | null>(null);
   const [si, setSi] = useState(0);
@@ -448,7 +449,7 @@ export function Editor({ photos, onMark, design, commit, preset, setPreset, cust
   const hoverTimer = useRef(0);
   const hoverSpread = (i: number) => { clearTimeout(hoverTimer.current); hoverTimer.current = window.setTimeout(() => { setSi(i); }, 600); };
   // A photo held over a spread thumbnail turns to that spread, so it can be dropped into a frame there.
-  const dragNow = useDrag();
+  const dragNow = useDragTarget();
   const overSpread = dragNow?.item.startsWith("photo:") && dragNow.over.startsWith("spread:") ? +dragNow.over.slice(7) : null;
   useEffect(() => { if (overSpread !== null && overSpread !== s) hoverSpread(overSpread); else clearTimeout(hoverTimer.current); }, [overSpread]); // eslint-disable-line react-hooks/exhaustive-deps
   /** A photo dropped on a spread thumbnail lands on that spread in a new frame. */
@@ -640,7 +641,7 @@ export function Editor({ photos, onMark, design, commit, preset, setPreset, cust
           <div className="sheetbox" style={{ width: sheetW }}>
             <div className="pagenos"><span>Halaman {s * 2 + 1}</span>{spread.left?.side === "both" && <span>panorama dua halaman</span>}<span>Spread {s + 1} dari {spreads.length} · halaman {s * 2 + 2}</span></div>
             <div className="sheetwrap"><Sheet spread={shown ?? spread} preset={preset} byId={byId} place={place} sel={sel} selText={selText} guides={guides} lowres={lowres} passive={hand || zoomTool}
-              crop={crop} onCrop={setCropId} marqueeFrom={marqueeStart}
+              crop={crop} onCrop={setCropId} marqueeFrom={marqueeStart} direct={tool === "direct"}
               hiSide={blankPick ? pickOn!.side : pickPage && !sel && !selText ? (pickPage.side as 0 | 1 | "both") : null}
               onSelectPage={(side) => { setSel(""); setSelText(null); setPick({ spread: s, side }); setTab("props"); }}
               onPlace={(id, pl, replace) => commit({ ...design, place: { ...place, [id]: pl } }, replace)}

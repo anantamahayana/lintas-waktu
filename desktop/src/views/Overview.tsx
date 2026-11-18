@@ -1,4 +1,4 @@
-import { beginDrag, useDrag } from "../lib/drag";
+import { beginDrag, useDragTarget } from "../lib/drag";
 import { type CSSProperties } from "react";
 import type { Spread } from "../lib/export";
 import { boxToMm, frameRectMm } from "../lib/frames";
@@ -45,7 +45,7 @@ type Props = {
 
 /** Every spread at a glance (G), to read the album as a story and drag spreads into a new order. */
 export function Overview({ spreads, preset, byId, place, current, warnPages, onOpen, onMove }: Props) {
-  const d = useDrag();
+  const d = useDragTarget();
   return (
     <div className="overview">
       <div className="ov-grid">

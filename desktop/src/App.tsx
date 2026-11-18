@@ -169,7 +169,7 @@ export function App() {
         all.push(...(i === 0 ? got : got.map((p) => ({ ...p, id: extraId(src, p.id) }))));
       } catch { missing++; }
     }
-    const { added } = mergeImport([], all);
+    const { added } = mergeImport([], all, false);
     return { list: added.sort((a, b) => a.time - b.time || a.id.localeCompare(b.id)), missing };
   };
   const openSaved = async (saved: Saved) => {
@@ -189,11 +189,14 @@ export function App() {
   // ---- Import into an open project: more folders or files, dropped or picked ----
   const [importing, setImporting] = useState<{ ids: Set<string>; total: number; done: number; dupes: number; before?: string[] } | null>(null);
   const importRun = useRef(0);
+  const importingRef = useRef(false);
+  importingRef.current = !!importing && importing.done < importing.total;
   const photosRef = useRef(photos);
   photosRef.current = photos;
   const addSources = async (paths: string[]) => {
     const m = metaRef.current;
-    if (!isNative || !m || !paths.length) return;
+    if (!isNative || !m || !paths.length || importingRef.current) return;
+    importingRef.current = true; // until the scan below is done, a second drop waits
     const scanned: Photo[] = [];
     for (const src of paths) {
       try {
@@ -202,7 +205,7 @@ export function App() {
       } catch { /* unreadable source: skipped, counted below as nothing added */ }
     }
     const { added, dupes } = mergeImport(photosRef.current, scanned);
-    if (!added.length) { void tell(dupes ? `Semua ${dupes} foto itu sudah ada di proyek ini.` : "Tidak ada foto yang bisa dibaca di situ.", "Tidak ada foto baru"); return; }
+    if (!added.length) { importingRef.current = false; void tell(dupes ? `Semua ${dupes} foto itu sudah ada di proyek ini.` : "Tidak ada foto yang bisa dibaca di situ.", "Tidak ada foto baru"); return; }
     const before = m.sources;
     setMeta({ ...m, sources: [...new Set([...sourcesOf(m), ...paths])] });
     setPhotos((ps) => [...ps, ...added]);
@@ -232,6 +235,7 @@ export function App() {
     // Image files are taken as they are; anything else is tried as a folder (unreadable ones are skipped).
     const usable = paths;
     if (!usable.length) return;
+    if (importingRef.current) { void tell("Tunggu impor yang sedang berjalan selesai (atau batalkan), lalu seret lagi.", "Impor masih berjalan"); return; }
     if (metaRef.current) void addSources(usable);
     else { droppedFor.current = usable; setMaking(true); }
   };
@@ -390,7 +394,7 @@ export function App() {
         </div>
       )}
       {sheet && <ShortcutSheet edit={sheet === "edit"} onClose={() => setSheet(null)} />}
-      {making && <NewProject onCancel={() => setMaking(false)} onCreate={create} />}
+      {making && <NewProject onCancel={() => { droppedFor.current = null; setMaking(false); }} onCreate={create} />}
       {templates && <TemplateEditor preset={preset} custom={custom} setCustom={setCustom} startSpread={false} onClose={() => setTemplates(false)}
         onUse={meta && tab === "editor" ? (t) => tplUse.current?.(t) : undefined} />}
       {props && meta && <PropsDialog preset={preset} setPreset={setPreset} onClose={() => setProps(false)} />}
