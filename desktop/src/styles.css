@@ -371,6 +371,8 @@ dialog.dlg::backdrop { background: rgba(17, 18, 19, 0.6); }
 .canvas { position: relative; flex: 1 1 auto; min-height: 0; min-width: 0; overflow: auto; background: var(--canvas); }
 .canvas.panning, .canvas.panning * { cursor: grab !important; }
 .canvas.panning.grabbing, .canvas.panning.grabbing * { cursor: grabbing !important; }
+.canvas.zooming, .canvas.zooming * { cursor: zoom-in !important; }
+.canvas.zooming.out, .canvas.zooming.out * { cursor: zoom-out !important; }
 .canvas-in { display: flex; align-items: center; justify-content: center; padding: 56px 48px; box-sizing: border-box; }
 .sheetbox { position: relative; flex: none; }
 .pagenos { position: absolute; left: 0; right: 0; top: -22px; display: flex; justify-content: space-between; color: var(--faint); font-size: 11px; white-space: nowrap; }

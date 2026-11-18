@@ -120,7 +120,7 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
   if (marqueeFrom) marqueeFrom.current = startMarquee;
   const paperDown = (e: PE) => {
     if (e.button !== 0 || !isPaper(e)) return;
-    startMarquee(e.clientX, e.clientY, e.shiftKey);
+    startMarquee(e.clientX, e.clientY, e.shiftKey || e.ctrlKey || e.metaKey);
   };
   const paperClick = (e: ME) => {
     const t = e.target as Element;
@@ -135,7 +135,7 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
    * shows the result before letting go; Esc cancels. Plain clicks still select.
    */
   const photoDown = (e: PE, id: string) => {
-    if (e.button !== 0 || passive || e.shiftKey) return;
+    if (e.button !== 0 || passive || e.shiftKey || e.ctrlKey || e.metaKey) return;
     const sx = e.clientX, sy = e.clientY;
     let live: { id: string; x: number; y: number; over: string } | null = null;
     const under = (x: number, y: number) => {
@@ -327,7 +327,7 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
           aria-label={ph ? `Foto ${ph.name}` : `Bingkai kosong`}
           onPointerDown={ph && !cropping ? (e) => photoDown(e, id) : undefined}
           title={ph && selected && !cropping ? "Klik dua kali untuk mengatur foto di dalam bingkai" : undefined}
-          onClick={(e) => { e.stopPropagation(); onSelectPhoto(id, e.shiftKey); }}
+          onClick={(e) => { e.stopPropagation(); onSelectPhoto(id, e.shiftKey || e.ctrlKey || e.metaKey); }}
           onDoubleClick={(e) => { e.stopPropagation(); if (ph?.thumb) { onSelectPhoto(id); onCrop?.(cropping ? "" : id); } }}
           onDragOver={(e) => { e.preventDefault(); if (dragOver !== id) setDragOver(id); }}
           onDragLeave={() => setDragOver((d) => (d === id ? "" : d))}

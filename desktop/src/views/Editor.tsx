@@ -48,7 +48,8 @@ export function useLaidPages(photos: Photo[], design: Design, preset: Preset, cu
 
 const PX_PER_MM = 96 / 25.4;
 const STEPS = [0.1, 0.15, 0.2, 0.25, 0.33, 0.5, 0.67, 0.75, 1, 1.5, 2, 3, 4];
-type Tool = "select" | "hand";
+/** Adobe tools: V selection, A direct selection (the photo inside its frame), H hand, Z zoom. */
+type Tool = "select" | "direct" | "hand" | "zoom";
 
 /** Layout editor (Figma page 05): tool rail, photo tray, canvas with options bar and filmstrip, properties. */
 export function Editor({ photos, design, commit, preset, setPreset, custom, panels, registerTemplateUse, projectKey, onSendProof, proofTick = 0 }: Props) {
@@ -56,6 +57,12 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
   const { byId, pages } = useLaidPages(photos, design, preset, custom);
   const spreads = useMemo(() => toSpreads(pages), [pages]);
   const [overview, setOverview] = useState(false);
+  const [altDown, setAltDown] = useState(false);
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => setAltDown(e.altKey);
+    window.addEventListener("keydown", k); window.addEventListener("keyup", k);
+    return () => { window.removeEventListener("keydown", k); window.removeEventListener("keyup", k); };
+  }, []);
   const marqueeStart = useRef<((x: number, y: number, add: boolean) => void) | null>(null);
   const [si, setSi] = useState(0);
   const [sel, setSel] = useState("");
@@ -193,6 +200,8 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
       if (group.includes(id)) { const rest = group.filter((x) => x !== id); setSel(rest[0] ?? ""); setMore(rest.slice(1)); }
       else { setMore(group); setSel(id); }
     } else { setSel(id); setMore([]); }
+    // Direct selection (A) goes straight to the photo inside the frame, like InDesign.
+    if (tool === "direct" && id && !add && byId.get(id)?.thumb) setCropId(id);
     if (id) setTab("props");
   };
   const selectMany = (ids: string[], add = false) => {
@@ -233,6 +242,7 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
   const zoomTo = (next: number | "fit") => setZoom(next === "fit" ? "fit" : Math.min(4, Math.max(0.1, next)));
   const stepZoom = (d: 1 | -1) => { const i = d > 0 ? STEPS.findIndex((x) => x > z + 0.001) : STEPS.length - 1 - [...STEPS].reverse().findIndex((x) => x < z - 0.001); zoomTo(STEPS[Math.max(0, Math.min(STEPS.length - 1, i))] ?? z); };
   const hand = tool === "hand" || spaceHand;
+  const zoomTool = tool === "zoom" && !spaceHand;
   // Client pins of the current proof version on this spread (Revisi tab), positioned on the trimmed spread like on the web.
   const proofPins = useMemo(() => {
     if (!proof || !showPins) return [];
@@ -461,6 +471,8 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
   void keyState;
   useCommands({
     "e.select": { run: () => setTool("select"), checked: tool === "select" && !spaceHand },
+    "e.direct": { run: () => setTool("direct"), checked: tool === "direct" && !spaceHand },
+    "e.zoomTool": { run: () => setTool("zoom"), checked: zoomTool, enabled: !overview },
     "e.hand": { run: (c) => { if (c === "Space") setSpaceHand(true); else setTool(tool === "hand" ? "select" : "hand"); }, up: () => setSpaceHand(false), checked: hand, enabled: !overview },
     "e.text": { run: addText, enabled: !overview && !!pages.length },
     "e.frame": { run: addFrame, enabled: !overview && (!!selPage || blankPick) },
@@ -587,13 +599,15 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
   // ---------- canvas ----------
   const canvasEl = spread ? (
     <div className="canvas-wrap">
-      <div ref={canvas} className={`canvas ${hand ? "panning" : ""} ${grabbing ? "grabbing" : ""}`}
+      <div ref={canvas} className={`canvas ${hand ? "panning" : ""} ${zoomTool ? "zooming" : ""} ${zoomTool && altDown ? "out" : ""} ${grabbing ? "grabbing" : ""}`}
         onDoubleClick={(e) => { if (e.target === e.currentTarget || (e.target as Element).classList.contains("canvas-in")) zoomTo("fit"); }}
         onAuxClick={(e) => { if (e.button === 1) e.preventDefault(); }}
         onPointerDown={(e) => {
           const mid = e.button === 1;
+          // Zoom tool (Z): click zooms in, Alt+click zooms out.
+          if (zoomTool && e.button === 0) { stepZoom(e.altKey ? -1 : 1); return; }
           // Left-drag on the empty canvas around the sheet: selection box, like Figma/Lightroom.
-          if (!hand && !mid && e.button === 0) { const t = e.target as Element; if (t === e.currentTarget || t.classList.contains("canvas-in") || t.classList.contains("sheetbox") || t.closest(".pagenos")) marqueeStart.current?.(e.clientX, e.clientY, e.shiftKey); return; }
+          if (!hand && !mid && e.button === 0) { const t = e.target as Element; if (t === e.currentTarget || t.classList.contains("canvas-in") || t.classList.contains("sheetbox") || t.closest(".pagenos")) marqueeStart.current?.(e.clientX, e.clientY, e.shiftKey || e.ctrlKey || e.metaKey); return; }
           if ((!hand && !mid) || !canvas.current) return; if (mid) e.preventDefault(); pan.current = { x: e.clientX, y: e.clientY, sl: canvas.current.scrollLeft, st: canvas.current.scrollTop }; setGrabbing(true); (e.currentTarget as Element).setPointerCapture(e.pointerId); }}
         onPointerMove={(e) => { const p = pan.current; if (p && canvas.current) { canvas.current.scrollLeft = p.sl - (e.clientX - p.x); canvas.current.scrollTop = p.st - (e.clientY - p.y); } }}
         onPointerUp={() => { pan.current = null; setGrabbing(false); }}
@@ -601,7 +615,7 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
         <div className="canvas-in" style={{ minWidth: "100%", minHeight: "100%", width: sheetW + 96, height: sheetW * (sheetMm.h / sheetMm.w) + 112 }}>
           <div className="sheetbox" style={{ width: sheetW }}>
             <div className="pagenos"><span>Halaman {s * 2 + 1}</span>{spread.left?.side === "both" && <span>panorama dua halaman</span>}<span>Spread {s + 1} dari {spreads.length} · halaman {s * 2 + 2}</span></div>
-            <div className="sheetwrap"><Sheet spread={spread} preset={preset} byId={byId} place={place} sel={sel} selText={selText} guides={guides} lowres={lowres} passive={hand}
+            <div className="sheetwrap"><Sheet spread={spread} preset={preset} byId={byId} place={place} sel={sel} selText={selText} guides={guides} lowres={lowres} passive={hand || zoomTool}
               crop={crop} onCrop={setCropId} marqueeFrom={marqueeStart}
               hiSide={blankPick ? pickOn!.side : pickPage && !sel && !selText ? (pickPage.side as 0 | 1 | "both") : null}
               onSelectPage={(side) => { setSel(""); setSelText(null); setPick({ spread: s, side }); setTab("props"); }}
@@ -817,7 +831,7 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
     <>
       <div className={`work ${panels ? "" : "no-panels"}`}>
         <div className="rail" role="toolbar" aria-label="Alat">
-          {tool2("mouse-pointer-2", "e.select")}{tool2("hand", "e.hand")}{tool2("type", "e.text")}{tool2("square-dashed", "e.frame")}{tool2("zoom-in", "e.zoomIn")}
+          {tool2("mouse-pointer-2", "e.select")}{tool2("crop", "e.direct")}{tool2("hand", "e.hand")}{tool2("search", "e.zoomTool")}{tool2("type", "e.text")}{tool2("square-dashed", "e.frame")}{tool2("zoom-in", "e.zoomIn")}
           <span className="hdiv" />
           {tool2("grid-3x3", "e.guides")}{tool2("layout-grid", "e.overview")}{tool2("sliders-horizontal", "app.props")}
         </div>

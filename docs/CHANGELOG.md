@@ -6,6 +6,11 @@ dan **langkah manual** kalau ada. Detail teknis lengkap ada di pesan commit (`gi
 
 ---
 
+### 2026-11-18 · Yukti (aplikasi album: alur ala Adobe)
+- Tata letak: Ctrl+klik (dan Shift+klik) menambah/mengurangi bingkai terpilih, juga saat menarik kotak seleksi.
+- Alat baru seperti InDesign: **A** pilih langsung (klik foto langsung mengatur foto di dalam bingkai) dan **Z** alat zoom (klik perbesar, Alt+klik perkecil, kursor kaca pembesar).
+- **Manual:** tidak ada (masuk rilis berikutnya).
+
 ### 2026-11-18 · NantaPakeAI (dokumentasi aplikasi album)
 - `docs/ALBUM_APP_PLAN.md` ditulis ulang: status per fase, alur kerja sekarang, fitur per modul, teknologi, langkah rilis, pengujian, masalah yang diketahui, backlog, keputusan. `desktop/README.md`: fitur lengkap per modul dengan pintasan, peta kode per file, aturan saat mengubah.
 - Baris format di atas CHANGELOG diperbaiki (sempat tertimpa entri).
