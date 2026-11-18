@@ -1,7 +1,11 @@
 # Catatan perubahan
 
 Yang terbaru di atas. Setiap perubahan yang di-push menambah satu entri di sini (aturannya di `CLAUDE.md`).
-Format: `### 2026-11-18 · NantaPakeAI
+Format: `### 2026-11-18 · Yukti
+- Aplikasi album 0.4.8: kalau satu bagian aplikasi galat (mis. setelah Ctrl+Z), layar tidak lagi kosong. Muncul pesan "Bagian ini gagal ditampilkan" dengan tombol Kembalikan (Ulangi) / Urungkan lagi / Tampilkan ulang / Ke Beranda, plus "Salin detail galat" untuk dilaporkan. Ctrl+Z/Ctrl+Y tetap jalan dan memulihkan tampilan. Penyebab layar blank setelah Ctrl+Z belum ditemukan (tidak terulang di browser); detail galat berikutnya akan menunjukkannya.
+- **Manual:** tidak ada.
+
+### 2026-11-18 · NantaPakeAI
 - Yukti boleh push langsung ke `main` dan menjalankan deploy API / rilis aplikasi album; langkah setelah push ada di `CLAUDE.md`.
 - Dokumentasi diperbarui untuk kolaborator: `docs/CONTEXT.md` (arsitektur VPS, aplikasi album, proof, pembayaran, klien, bagian "Mulai berkontribusi"), `docs/DEPLOYMENT.md` (VPS menggantikan Railway), `CLAUDE.md` (deploy API lewat Actions, tes `desktop/`).
 - **Manual:** tidak ada.

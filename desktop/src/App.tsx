@@ -12,6 +12,7 @@ import { isNative, pickFolder, pickProjectFile, preparePhotos, ready, scanFolder
 import { DEFAULT_PRESET, type Placement, type Preset } from "./lib/print";
 import { listProjects, loadProject, loadProjectFile, projectsDir, removeProject, saveProject, updateMeta, type ProjectMeta, type Saved } from "./lib/projects";
 import { Beranda, NewProject } from "./views/Beranda";
+import { Crash } from "./views/Crash";
 import { Editor, useLaidPages } from "./views/Editor";
 import { Ekspor } from "./views/Ekspor";
 import { Kurasi } from "./views/Kurasi";
@@ -320,6 +321,8 @@ export function App() {
           <Btn label="Ekspor…" icon="download" kind="primary" cmd="app.export" />
         </>} />
 
+      <Crash resetKey={`${tab}:${hist.past.length}:${hist.future.length}`} onUndo={undo} onRedo={redo} onHome={goHome}
+        canUndo={hist.past.length > 0} canRedo={hist.future.length > 0}>
       {tab === "kurasi" && (
         <Kurasi photos={photos} setPhotos={setPhotos} curId={curId} setCurId={setCurId} target={target} setTarget={setTarget} panels={panels}
           hasAlbum={!!design} used={used} onBuild={() => void autoBuild()} onBuildEmpty={buildEmpty} onOpenEditor={() => setTab("editor")} loading={loading} folder={folderName(meta.folder)} />
@@ -353,6 +356,7 @@ export function App() {
         <Ekspor photos={photos} design={design} preset={preset} setPreset={setPreset} custom={custom} onGo={setTab}
           onDone={(status) => { if (status && meta.status !== status) { const next = { ...meta, status }; setMeta(next); } }} />
       )}
+      </Crash>
       {dialogs}
     </div>
   );
