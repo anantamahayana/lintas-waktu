@@ -612,3 +612,13 @@ dialog.dlg .row-label { width: 128px; }
 .import-bar .bar { flex: 1; min-width: 60px; height: 4px; border-radius: 2px; background: var(--line-subtle); overflow: hidden; }
 .import-bar .bar b { display: block; height: 100%; background: var(--accent); transform-origin: left; transition: transform .2s ease-out; }
 @media (prefers-reduced-motion: reduce) { .import-bar .bar b { transition: none; } }
+
+/* Notes that do not stop the work (tell). */
+#toasts { position: fixed; left: 50%; bottom: 40px; z-index: 950; display: flex; flex-direction: column; gap: 8px; transform: translateX(-50%); width: min(460px, calc(100vw - 32px)); pointer-events: none; }
+.toast { display: flex; align-items: flex-start; gap: 10px; padding: 10px 10px 10px 14px; border-radius: 6px; background: var(--raise); border: 1px solid var(--line); color: var(--text); font-size: 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, .45); pointer-events: auto; animation: toast-in .18s ease-out; }
+.toast > div { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.toast p { margin: 0; color: var(--dim); }
+.toast strong { font-size: 12px; }
+.toast-x { border: 0; background: none; color: var(--faint); cursor: pointer; padding: 2px 4px; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(6px); } }
+@media (prefers-reduced-motion: reduce) { .toast { animation: none; } }

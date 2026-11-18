@@ -526,3 +526,13 @@ describe("importing", () => {
     expect(added.map((p) => p.id)).toEqual(["@B/b.jpg", "@B/b.jpg~2"]);
   });
 });
+
+import { friendly } from "./ask";
+describe("friendly errors", () => {
+  it("turns system errors into words", () => {
+    expect(friendly(new Error("The system cannot find the path specified. (os error 3)"))).toMatch(/tidak ditemukan/);
+    expect(friendly("Access is denied. (os error 5)")).toMatch(/izin/);
+    expect(friendly("TypeError: Failed to fetch")).toMatch(/internet/);
+    expect(friendly("something odd")).toBe("something odd");
+  });
+});

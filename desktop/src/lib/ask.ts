@@ -37,4 +37,39 @@ function show(message: string, { ok = "Lanjutkan", cancel = "Batal", title, dang
 }
 
 export const ask = (message: string, ok = "Lanjutkan", cancel = "Batal", opts: Omit<Opts, "ok" | "cancel"> = {}) => show(message, { ok, cancel, ...opts });
-export const tell = (message: string, title?: string) => show(message, { ok: "OK", cancel: null, title }).then(() => undefined);
+/**
+ * A note that does not stop the work: a toast at the bottom that fades after a few seconds
+ * (longer for longer text), or at once with ✕. Read aloud by screen readers.
+ */
+export function tell(message: string, title?: string): Promise<void> {
+  return new Promise((resolve) => {
+    let box = document.getElementById("toasts");
+    if (!box) { box = document.createElement("div"); box.id = "toasts"; box.setAttribute("role", "status"); box.setAttribute("aria-live", "polite"); document.body.append(box); }
+    const t = document.createElement("div"); t.className = "toast";
+    const body = document.createElement("div");
+    if (title) { const h = document.createElement("strong"); h.textContent = title; body.append(h); }
+    for (const para of message.split("\n\n")) { const p = document.createElement("p"); p.textContent = para; body.append(p); }
+    const x = document.createElement("button"); x.type = "button"; x.className = "toast-x"; x.textContent = "✕"; x.setAttribute("aria-label", "Tutup");
+    let timer = 0;
+    const close = () => { clearTimeout(timer); t.remove(); resolve(); };
+    const arm = () => { clearTimeout(timer); timer = window.setTimeout(close, Math.min(14000, 4000 + message.length * 50)); };
+    x.onclick = close;
+    t.onmouseenter = () => clearTimeout(timer); // reading it: keep it
+    t.onmouseleave = arm;
+    t.append(body, x); box.append(t);
+    while (box.children.length > 3) box.firstElementChild?.remove();
+    arm();
+  });
+}
+
+/** An error in words a person can act on, instead of the raw system text. */
+export function friendly(e: unknown): string {
+  const raw = e instanceof Error ? e.message : String(e);
+  const m = raw.toLowerCase();
+  if (/os error (2|3)\b|not found|cannot find/.test(m)) return "File atau folder tidak ditemukan. Mungkin dipindah, diganti nama, atau drive-nya tidak tersambung.";
+  if (/os error 5\b|access is denied|permission denied/.test(m)) return "Tidak punya izin menulis di sana. Tutup program lain yang memakai file itu, atau pilih folder lain.";
+  if (/os error (112|39)\b|no space|disk full/.test(m)) return "Disk penuh. Kosongkan ruang lalu coba lagi.";
+  if (/os error 32\b|being used by another process/.test(m)) return "File sedang dipakai program lain. Tutup program itu lalu coba lagi.";
+  if (/failed to fetch|networkerror|network error|timed out|dns/.test(m)) return "Tidak tersambung ke internet. Periksa koneksi lalu coba lagi.";
+  return raw;
+}

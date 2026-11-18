@@ -1,3 +1,4 @@
+import { friendly } from "../lib/ask";
 import { useMemo, useState } from "react";
 import type { Design } from "../App";
 import { coverFileName, exportAlbum, hasCover, lowResWarnings, printPdf, proofPdf, saveFile, spreadFileName, toSpreads } from "../lib/export";
@@ -58,7 +59,7 @@ export function Ekspor({ photos, design, preset, setPreset, custom, onGo, onDone
         onDone(out === "proof" && toProof ? "proof" : undefined);
       }
     } catch (e) {
-      setMsg(e instanceof DOMException && e.name === "AbortError" ? { ok: false, text: "Ekspor dibatalkan." } : { ok: false, text: `Ekspor gagal: ${e instanceof Error ? e.message : String(e)}` });
+      setMsg(e instanceof DOMException && e.name === "AbortError" ? { ok: false, text: "Ekspor dibatalkan." } : { ok: false, text: `Ekspor gagal: ${friendly(e)}` });
     } finally { setBusy(false); }
   };
   useCommands({ "x.run": { run: () => void run(), enabled: !busy && !!spreads.length } });

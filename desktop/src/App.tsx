@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ask, tell } from "./lib/ask";
+import { ask, friendly, tell } from "./lib/ask";
 import { toSpreads } from "./lib/export";
 import type { Cover } from "./lib/cover";
 import { installKeys, runCommand, setScope, useCommands } from "./lib/keys";
@@ -52,7 +52,10 @@ export function App() {
   const [hist, setHist] = useState<{ past: Design[]; now: Design | null; future: Design[] }>({ past: [], now: null, future: [] });
   const [saveError, setSaveError] = useState("");
   const [saving, setSaving] = useState(false);
-  const [panels, setPanels] = useState(true);
+  const [savedAt, setSavedAt] = useState(0);
+  // Panels stay as the user left them, like Adobe's workspaces.
+  const [panels, setPanelsState] = useState(() => { try { return localStorage.getItem("lwalbum:panels") !== "0"; } catch { return true; } });
+  const setPanels = (v: boolean | ((p: boolean) => boolean)) => setPanelsState((p) => { const n = typeof v === "function" ? v(p) : v; try { localStorage.setItem("lwalbum:panels", n ? "1" : "0"); } catch { /* not kept */ } return n; });
   const [sheet, setSheet] = useState<null | "view" | "edit">(null);
   const [upd, setUpd] = useState(false);
   const [sendProof, setSendProof] = useState(false);
@@ -293,8 +296,8 @@ export function App() {
       const nextMeta: ProjectMeta = { ...m, updated: Date.now(), photos: photos.length, picked: picked.length, size: `${preset.pageWmm / 10} × ${preset.pageHmm / 10} cm · ${preset.pages} hlm` };
       setSaving(true);
       return saveProject({ v: 3, meta: nextMeta, marks, design: hist.now, preset, target })
-        .then((saved) => { setSaveError(""); if (saved.file !== m.file) setMeta(saved); })
-        .catch((e) => setSaveError(String(e)))
+        .then((saved) => { setSaveError(""); setSavedAt(Date.now()); if (saved.file !== m.file) setMeta(saved); })
+        .catch((e) => setSaveError(friendly(e)))
         .finally(() => setSaving(false));
     };
     saveNow.current = save;
@@ -404,13 +407,14 @@ export function App() {
         <Beranda projects={projects} projectsDir={dir} onNew={() => setMaking(true)} onOpen={open}
           onOpenFile={isNative ? () => void openFile() : undefined}
           onDelete={(m) => void remove(m)} onTemplates={() => setTemplates(true)} onKeys={() => setSheet("edit")}
-          onUpdate={(m, patch) => void updateMeta(m, patch).then(refresh).catch((e) => void tell(`Gagal menyimpan: ${e}`))} />
+          onUpdate={(m, patch) => void updateMeta(m, patch).then(refresh).catch((e) => void tell(friendly(e), "Gagal menyimpan"))} />
         {dialogs}
       </div>
     );
   }
 
-  const state = saveError ? "Gagal menyimpan — Ctrl+S untuk coba lagi" : saving ? "Menyimpan…" : "Tersimpan";
+  const hhmm = savedAt ? new Date(savedAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) : "";
+  const state = saveError ? `Gagal menyimpan: ${saveError} Ctrl+S untuk coba lagi.` : saving ? "Menyimpan…" : hhmm ? `Tersimpan otomatis ${hhmm}` : "Tersimpan otomatis";
   const loading = read < photos.length ? `membaca foto ${read.toLocaleString("id-ID")} dari ${photos.length.toLocaleString("id-ID")}` : "";
   const noAlbum = tab !== "kurasi" && !design;
   return (
