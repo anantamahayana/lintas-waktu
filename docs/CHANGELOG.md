@@ -9,6 +9,7 @@ dan **langkah manual** kalau ada. Detail teknis lengkap ada di pesan commit (`gi
 ### 2026-11-18 · Yukti (aplikasi album: alur ala Adobe)
 - Tata letak: Ctrl+klik (dan Shift+klik) menambah/mengurangi bingkai terpilih, juga saat menarik kotak seleksi.
 - Alat baru seperti InDesign: **A** pilih langsung (klik foto langsung mengatur foto di dalam bingkai) dan **Z** alat zoom (klik perbesar, Alt+klik perkecil, kursor kaca pembesar).
+- Tata letak: rating seperti modul Book Lightroom: **P** pilih, **X** tolak, **U** hapus tanda, **0–5** bintang untuk bingkai terpilih (bisa beberapa sekaligus); bintang/tanda tolak tampil di pojok bingkai.
 - **Manual:** tidak ada (masuk rilis berikutnya).
 
 ### 2026-11-18 · NantaPakeAI (dokumentasi aplikasi album)

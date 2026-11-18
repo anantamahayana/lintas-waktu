@@ -336,6 +336,7 @@ export function Sheet({ spread, preset, byId, place, sel, selText, guides, onSel
             : ph?.thumb && <img src={ph.thumb} alt="" draggable={false} style={{ objectPosition: pos, transformOrigin: pos, transform: `scale(${pl.z})` }} />}
           {!ph && !swapWith && <span>{isEmpty(id) ? "Seret foto ke sini" : "Foto tidak ditemukan"}</span>}
         </button>
+        {ph && (ph.stars > 0 || ph.pick === false) && <span className={`rate-badge ${ph.pick === false ? "rej" : ""}`}>{ph.pick === false ? "✕ " : ""}{"★".repeat(ph.stars)}</span>}
         {lowres?.has(id) && <span className="lowres-badge">{lowres.get(id)} dpi</span>}
         {pb && (
           <div className="crop-box" style={{ left: pct(pb.x), top: pct(pb.y), width: pct(pb.w), height: pct(pb.h) }}

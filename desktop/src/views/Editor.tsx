@@ -17,6 +17,8 @@ import { Sheet, trayDrag, type TextSel } from "./Sheet";
 
 type Props = {
   photos: Photo[];
+  /** Rate or flag photos from the layout, like Lightroom's Book module (P/X/U, 0–5). */
+  onMark?: (ids: string[], patch: Partial<Pick<Photo, "pick" | "stars">>) => void;
   design: Design;
   commit: (d: Design, replace?: boolean) => void;
   canUndo: boolean;
@@ -52,7 +54,7 @@ const STEPS = [0.1, 0.15, 0.2, 0.25, 0.33, 0.5, 0.67, 0.75, 1, 1.5, 2, 3, 4];
 type Tool = "select" | "direct" | "hand" | "zoom";
 
 /** Layout editor (Figma page 05): tool rail, photo tray, canvas with options bar and filmstrip, properties. */
-export function Editor({ photos, design, commit, preset, setPreset, custom, panels, registerTemplateUse, projectKey, onSendProof, proofTick = 0 }: Props) {
+export function Editor({ photos, onMark, design, commit, preset, setPreset, custom, panels, registerTemplateUse, projectKey, onSendProof, proofTick = 0 }: Props) {
   const { album, place } = design;
   const { byId, pages } = useLaidPages(photos, design, preset, custom);
   const spreads = useMemo(() => toSpreads(pages), [pages]);
@@ -420,6 +422,8 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
   };
   /** Every page: starred photos into the biggest frames, most stars first. */
   const starsOf = (id: string) => byId.get(id)?.stars ?? 0;
+  /** Photos the rating keys act on: the selected frames that hold a photo. */
+  const rated = (selOnSpread ? group : []).filter((id) => byId.has(id));
   const heroAll = () => setAlbum(heroOn(album, pages, (pg) => pg.ids.filter((id) => starsOf(id) > 0).sort((x, y) => starsOf(y) - starsOf(x))));
   /** Put a photo (from the album or the panel) on a page in a new frame; its old frame stays empty. */
   const placeOnPage = (id: string, pg: LaidPage): boolean => {
@@ -471,6 +475,10 @@ export function Editor({ photos, design, commit, preset, setPreset, custom, pane
   void keyState;
   useCommands({
     "e.select": { run: () => setTool("select"), checked: tool === "select" && !spaceHand },
+    "e.pick": { run: () => onMark?.(rated, { pick: true }), enabled: rated.length > 0 },
+    "e.reject": { run: () => onMark?.(rated, { pick: false }), enabled: rated.length > 0 },
+    "e.unflag": { run: () => onMark?.(rated, { pick: null }), enabled: rated.length > 0 },
+    "e.stars": { run: (c) => { const n = +c.slice(-1); onMark?.(rated, { stars: n === 0 || (rated.length === 1 && starsOf(rated[0]) === n) ? 0 : n }); }, enabled: rated.length > 0 },
     "e.direct": { run: () => setTool("direct"), checked: tool === "direct" && !spaceHand },
     "e.zoomTool": { run: () => setTool("zoom"), checked: zoomTool, enabled: !overview },
     "e.hand": { run: (c) => { if (c === "Space") setSpaceHand(true); else setTool(tool === "hand" ? "select" : "hand"); }, up: () => setSpaceHand(false), checked: hand, enabled: !overview },

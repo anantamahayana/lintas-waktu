@@ -57,6 +57,10 @@ export const CATALOG = {
   "k.esc": E("Keluar zoom / bandingkan", ["Esc"], "kurasi", "Kurasi"),
 
   "e.select": E("Alat pilih", ["V"], "editor", "Tata letak"),
+  "e.pick": E("Tandai pilih (foto terpilih)", ["P"], "editor", "Rating"),
+  "e.reject": E("Tandai tolak", ["X"], "editor", "Rating"),
+  "e.unflag": E("Hapus tanda", ["U"], "editor", "Rating"),
+  "e.stars": E("Bintang 0–5", ["0", "1", "2", "3", "4", "5"], "editor", "Rating"),
   "e.direct": E("Alat pilih langsung: atur foto di dalam bingkai", ["A"], "editor", "Tata letak"),
   "e.zoomTool": E("Alat zoom (klik perbesar, Alt+klik perkecil)", ["Z"], "editor", "Tata letak"),
   "e.hand": E("Geser kanvas (tahan Spasi, atau seret klik tengah)", ["H", "Space"], "editor", "Tata letak"),

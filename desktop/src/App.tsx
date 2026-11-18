@@ -347,7 +347,7 @@ export function App() {
         </>
       )}
       {tab === "editor" && design && (
-        <Editor photos={photos} design={design} commit={commit} canUndo={hist.past.length > 0}
+        <Editor photos={photos} onMark={(ids, patch) => { const set = new Set(ids); setPhotos((ps) => ps.map((p) => (set.has(p.id) ? { ...p, ...patch } : p))); }} design={design} commit={commit} canUndo={hist.past.length > 0}
           preset={preset} setPreset={setPreset} custom={custom} panels={panels}
           registerTemplateUse={(fn) => { tplUse.current = fn; }} projectKey={meta.id} onSendProof={() => setSendProof(true)} proofTick={proofTick} />
       )}
