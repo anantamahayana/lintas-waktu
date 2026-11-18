@@ -1,7 +1,17 @@
 # Catatan perubahan
 
 Yang terbaru di atas. Setiap perubahan yang di-push menambah satu entri di sini (aturannya di `CLAUDE.md`).
-Format: `### 2026-11-18 · Yukti
+Format: `### YYYY-MM-DD · nama` lalu poin singkat. Isinya: apa yang berubah bagi pengguna, file/area utama,
+dan **langkah manual** kalau ada. Detail teknis lengkap ada di pesan commit (`git log`).
+
+---
+
+### 2026-11-18 · NantaPakeAI (dokumentasi aplikasi album)
+- `docs/ALBUM_APP_PLAN.md` ditulis ulang: status per fase, alur kerja sekarang, fitur per modul, teknologi, langkah rilis, pengujian, masalah yang diketahui, backlog, keputusan. `desktop/README.md`: fitur lengkap per modul dengan pintasan, peta kode per file, aturan saat mengubah.
+- Baris format di atas CHANGELOG diperbaiki (sempat tertimpa entri).
+- **Manual:** tidak ada.
+
+### 2026-11-18 · Yukti
 - Aplikasi album 0.4.8: kalau satu bagian aplikasi galat (mis. setelah Ctrl+Z), layar tidak lagi kosong. Muncul pesan "Bagian ini gagal ditampilkan" dengan tombol Kembalikan (Ulangi) / Urungkan lagi / Tampilkan ulang / Ke Beranda, plus "Salin detail galat" untuk dilaporkan. Ctrl+Z/Ctrl+Y tetap jalan dan memulihkan tampilan. Penyebab layar blank setelah Ctrl+Z belum ditemukan (tidak terulang di browser); detail galat berikutnya akan menunjukkannya.
 - **Manual:** tidak ada.
 
@@ -84,11 +94,6 @@ Format: `### 2026-11-18 · Yukti
 - API bisa dipasang di VPS sendiri (IDCloudHost) pengganti Railway: `deploy/vps/` (Docker + Caddy HTTPS, backup DB harian).
 - Tombol Actions "Deploy API ke VPS" (`.github/workflows/deploy-vps.yml`): pasang/perbarui tanpa terminal, rahasia dari GitHub Secrets.
 - **Manual:** jalankan `setup.sh` di Console VPS; DNS `api.lintaswaktuvisual.com` → IP VPS; ganti `API_URL` di Vercel.
-
-### YYYY-MM-DD · nama` lalu poin singkat. Isinya: apa yang berubah bagi pengguna, file/area utama,
-dan **langkah manual** kalau ada. Detail teknis lengkap ada di pesan commit (`git log`).
-
----
 
 ### 2026-11-13 · NantaPakeAI
 - Aplikasi album 0.4.1, dari masukan Yukti: **mengubah jumlah foto atau template satu halaman tidak lagi menggeser foto halaman lain** (termasuk yang dikunci). Halaman yang bertambah mendapat bingkai kosong; yang berkurang mengembalikan foto ke panel, dan foto yang diklik tetap tinggal di bingkai terbesar. Halaman terkunci tidak bisa diubah jumlah/templatenya. Menghapus bingkai terakhir tidak lagi menghapus halaman (sebelumnya semua halaman sesudahnya bergeser). Panorama/pisahkan juga hanya mengubah halaman itu.

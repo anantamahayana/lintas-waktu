@@ -1,162 +1,89 @@
-# Rencana proyek — aplikasi desktop album foto ("Lintas Waktu Album")
+# Aplikasi album "LW Album" — rencana dan status
 
-Status: **fase 1 berjalan.** Bagian pertama (buka folder → kurasi → susun otomatis → edit → ekspor JPG cetak) ada di
-`desktop/` sejak 2026-11-10; daftar yang sudah dan belum ada: `desktop/README.md`. Keputusan pemilik: bagian 9.
+Diperbarui 18 November 2026 · versi terpasang terbaru **0.4.8**.
+Kode: `desktop/` (cara menjalankan, peta kode, daftar fitur lengkap per modul: `desktop/README.md`).
+Riwayat per versi: `docs/CHANGELOG.md` (cari "Aplikasi album" / "album 0.x").
 
-## 1. Tujuan
-Satu aplikasi di laptop untuk **membuat, mengedit, dan mengelola produksi** album foto klien, dari pilihan klien di galeri
-sampai album sampai di tangan mereka. Sekarang album hanya ada sebagai pratinjau kasar di galeri klien
-(`web/src/components/gallery/AlbumPreview.tsx`); desain akhirnya dikerjakan manual di luar sistem.
-
-Berhasil kalau:
-- Album 20 halaman dari 60–80 foto pilihan selesai didesain dalam **≤ 1 jam** (sekarang perkiraan 3–5 jam manual).
-- File cetak keluar sesuai spesifikasi percetakan tanpa diperbaiki ulang (ukuran, bleed, 300 dpi, sRGB).
-- Setiap album punya status yang jelas, jadi tidak ada yang terlupa atau terlambat.
-
-Bukan tujuan versi pertama: retouch foto (tetap di Lightroom), toko online album, aplikasi HP, kolaborasi dua orang
-mengedit bersamaan.
-
-## 2. Pengguna dan alur kerja
-Pengguna: Nanta dan Yukti (2 orang, laptop masing-masing). Klien tidak memasang apa pun; mereka melihat proof di galeri web.
-
-Dua jalur masuk, satu jalur keluar:
-
-```
-Jalur 1 (klien memilih):  Klien memilih di galeri → aplikasi menarik daftar pilihan → cocokkan dengan file asli
-Jalur 2 (kami memilih):   Buka folder acara (ribuan foto) → kurasi cepat di aplikasi → foto terpilih
-        ↓
-Tata letak otomatis → edit per spread → kirim proof ke klien (galeri web ATAU PDF lewat WhatsApp)
-→ revisi sampai disetujui → ekspor file cetak → percetakan → lacak: dicetak → dikirim → diterima
-```
-
-Jalur 2 dipakai untuk acara panjang dengan ribuan foto: kami yang memilih dan mendesain dulu, klien baru melihat
-album jadi dan meminta revisi kalau perlu.
-
-## 3. Fitur
-### A. Membuat
-- Proyek album baru dari sesi yang ada di API (nama klien, tanggal, daftar foto pilihan) atau dari folder biasa.
-- Mencocokkan pilihan klien dengan **file asli resolusi penuh** di laptop lewat nama file; yang tidak ketemu ditandai.
-- **Kurasi cepat** untuk jalur 2: buka folder berisi ribuan foto, lihat satu per satu atau per kisi, tandai dengan
-  keyboard (pilih / lewati / bintang), filter menurut waktu pemotretan, dan penghitung "terpilih 84 dari target 80".
-  Thumbnail dibuat di latar belakang supaya folder 3.000+ foto tetap lancar.
-- Preset ukuran album: **A4 (21×29,7 cm) sebagai bawaan**, tegak dan mendatar, plus 20×30, 25×25, 30×30 cm dan ukuran
-  bebas; jumlah halaman bisa diatur. Preset percetakan terpisah (bleed, zona aman, lipatan).
-- Tata letak otomatis: titik awalnya algoritma `layoutPages` di `AlbumPreview.tsx` (1–3 foto per halaman, mengikuti
-  orientasi), diperluas dengan foto satu spread penuh dan urutan mengikuti waktu pemotretan.
-
-### Semua bisa diatur (prinsip desain)
-Tidak ada angka cetak atau tata letak yang dikunci di kode. Aplikasi datang dengan nilai bawaan yang umum dipakai,
-dan semuanya bisa diubah, disimpan sebagai preset, lalu dipilih per album:
-
-| Yang diatur | Bawaan | Pilihan |
+## Ringkasan status
+| Fase (rencana awal) | Status | Isi yang sudah jalan |
 |---|---|---|
-| Ukuran & orientasi | A4 mendatar | A4 tegak, 20×30, 25×25, 30×30 cm, ukuran bebas (cm) |
-| Jumlah halaman | 20 | bebas; tambah/hapus spread kapan saja |
-| Bleed | 3 mm tiap sisi | 0–10 mm |
-| Zona aman | 5 mm dari tepi potong, 10 mm dari lipatan | bebas |
-| Jilid | lipatan tengah rata (layflat) | jilid biasa (foto tidak melewati lipatan) |
-| Resolusi & warna | 300 dpi, sRGB | 150–600 dpi; profil warna lain menyusul |
-| Format ekspor | JPG per spread, kualitas maksimum | JPG per halaman, PDF satu file, PNG |
-| Nama file | `NamaKlien_01.jpg` | pola bebas |
-| Margin & jarak antar foto | 7% tepi, 2% jarak | bebas, per album atau per halaman |
-| Latar halaman | putih | warna bebas (krem brand, hitam) |
+| 0. Spesifikasi | ✅ | Desain di Figma "Editing Album LW" (halaman 01–10); sejak diterapkan, kode `desktop/src` yang jadi acuan |
+| 1. Editor inti | ✅ | Folder → kurasi → susun otomatis → editor → ekspor JPG/PDF cetak + PDF pratinjau WhatsApp |
+| 2. Sambung ke web | ✅ (sebagian) | **Proof online** dari aplikasi ke `/p/<kode>` + catatan klien kembali ke tab Revisi. *Belum:* menarik pilihan klien dari galeri `/g/` untuk dicocokkan dengan file asli |
+| 3. Produksi | ✅ (lokal) | Papan produksi 7 tahap di Beranda (tersimpan di laptop). *Belum:* status album di server/admin web |
+| 4. Poles | ✅ | Sampul (termasuk panorama), template sendiri, preset cetak bernama, pemeriksaan sebelum ekspor, installer Windows, **pembaruan otomatis** |
 
-Preset percetakan = satu set nilai di atas dengan nama (mis. "Percetakan X · A4 layflat"); bisa dibuat, diduplikat,
-diekspor/diimpor sebagai file untuk dipakai di laptop kedua. Nilai bawaan adalah kebiasaan umum percetakan, **bukan**
-spesifikasi satu percetakan tertentu: sebelum pesanan pertama, cocokkan sekali dengan percetakan yang dipakai.
+Dipakai harian oleh Nanta dan Yukti (Windows). Masukan pengguna dicatat sebagai versi 0.4.x.
 
-**Tata letak halaman dipilih sendiri.** Tata letak otomatis hanya titik awal:
-- Galeri template per halaman dan per spread, dikelompokkan menurut jumlah foto (1, 2, 3, 4, 5+) dan gaya (penuh
-  sampai tepi, bermargin, kolase, satu foto melintasi spread). Klik template → halaman langsung berubah.
-- "Acak ulang" untuk satu halaman, satu spread, atau seluruh album; halaman yang sudah pas bisa **dikunci**.
-- Template buatan sendiri: susun bingkai bebas di halaman, simpan sebagai template, pakai lagi di album lain.
-- Gaya album (set template + margin + latar) bisa disimpan, mis. "Bersih bermargin" dan "Kolase penuh".
+## 1. Tujuan (tetap)
+Satu aplikasi di laptop untuk **membuat, mengedit, dan mengelola produksi** album foto klien, dari pemilihan foto sampai
+album diterima klien. Berhasil kalau album 20 halaman dari 60–80 foto selesai ≤ 1 jam, file cetak lolos tanpa perbaikan,
+dan setiap album punya status yang jelas.
+Bukan tujuan: retouch (tetap di Lightroom), toko online album, aplikasi HP, dua orang mengedit album yang sama bersamaan.
 
-### B. Mengedit
-- Editor spread: seret untuk menukar foto, ganti template halaman, geser/perbesar foto di dalam bingkai, atur margin.
-- Baki foto: yang belum dipakai, yang dipakai dua kali, filter menurut bagian acara.
-- Sampul: foto, judul, nama, tanggal dalam huruf brand (Cormorant Garamond, Montserrat).
-- Undo/redo, simpan otomatis, duplikat album (mis. versi orang tua).
-- Pemeriksaan sebelum cetak: resolusi terlalu rendah, wajah/teks terlalu dekat lipatan atau tepi potong, halaman kosong.
+## 2. Alur kerja sekarang
+```
+Buka folder acara (JPG/PNG/WebP/RAW) → Kurasi (ribuan foto, pilih/bintang/burst/banding)
+→ Tata letak (susun otomatis atau isi sendiri) → Sampul → Pemeriksaan
+→ Kirim proof ke klien (link + PIN, pesan WhatsApp)   atau   PDF pratinjau lewat WhatsApp
+→ Klien memberi catatan bertitik / menyetujui di web → catatan muncul di tab Revisi + pin di spread
+→ Revisi → kirim versi baru (link sama) → Disetujui
+→ Ekspor file cetak (JPG per spread / PDF cetak, sampul `_00_Sampul.jpg`) → Papan produksi: Dipesan → Dicetak → Dikirim → Diterima
+```
+Jalur "klien memilih di galeri `/g/` lalu aplikasi menarik pilihannya" belum ada; sementara folder pilihan klien dibuka langsung.
 
-### C. Mengelola produksi
-- Papan status: Desain → Proof dikirim → Revisi → Disetujui → Dipesan → Dicetak → Dikirim → Diterima.
-- Per album: percetakan, biaya cetak, harga jual, tenggat, nomor resi, catatan.
-- Proof ke klien, **dua cara yang dipilih per album**: (a) pratinjau spread diunggah ke galeri klien, klien memberi
-  komentar per spread dan menekan "Setuju"; (b) PDF pratinjau kecil bernomor halaman untuk dikirim lewat WhatsApp,
-  revisi dan persetujuan dicatat manual di aplikasi. Setiap putaran revisi disimpan sebagai versi (v1, v2, ...).
-- Ekspor: JPG per spread dan PDF siap cetak (300 dpi, sRGB, dengan bleed), plus PDF pratinjau kecil untuk WhatsApp.
-- Daftar tenggat: album mana yang paling dekat batas waktunya.
+## 3. Fitur per modul (ringkas; rincian dan pintasan di `desktop/README.md` dan Ctrl+/ di aplikasi)
+- **Beranda**: proyek baru (nama, titik awal ukuran, semua properti album), proyek terakhir, buka file `.lwalbum` lain, **papan produksi** (7 tahap, seret kartu, klien, tenggat, percetakan, biaya, harga jual, resi, catatan).
+- **Kurasi**: kisi virtual ribuan foto, satu foto, zoom 100%, banding 2–4, burst, saringan jam/kamera/bintang, target jumlah, Pilih semua, RAW lewat pratinjau JPEG di dalam file.
+- **Tata letak (Editor)**: susun otomatis, album kosong diisi dari baki, jumlah foto 1–4 + template per halaman (lokal, tidak menggeser halaman lain), template sendiri, acak, kunci, panorama dua halaman, bingkai bebas (geser/ubah ukuran, magnet), multi-pilih + ratakan/sebar, atur foto dalam bingkai (klik dua kali), teks 6 font, latar/garis per halaman, salin/tempel tata letak, Semua spread (seret urutan), potong/salin/tempel foto, Jadikan utama, catatan revisi per halaman, tab **Revisi** (status proof, catatan klien, pin bernomor di spread, N = tampil/sembunyi), zoom (pinch touchpad, Ctrl+roda di titik kursor, Ctrl+1/0), geser kanvas (Spasi/klik tengah), ← → pindah spread.
+- **Sampul**: foto depan/belakang atau **panorama** satu foto (P), seret/pinch/pusatkan foto, judul/keterangan/punggung + font, warna, lebar punggung, lipatan papan.
+- **Ekspor**: preset cetak bernama (ekspor/impor), ukuran/orientasi/bleed/zona aman/dpi/jilid, pemeriksaan (bingkai kosong, resolusi rendah, catatan terbuka, sampul), JPG per spread, PDF cetak, PDF pratinjau.
+- **Proof online**: Album › Kirim proof ke klien… (Ctrl+Shift+K): login admin situs (token 8 jam), bahasa klien, masa berlaku, catatan boleh/tidak, tanda air, sampul → link + PIN + pesan WhatsApp. Versi baru di link yang sama.
+- **Umum**: menu bar + pintasan yang bisa diubah (Ctrl+,), simpan otomatis + 30 versi lama, urungkan/ulangi, pembaruan otomatis dari GitHub Releases, pesan pemulihan kalau satu bagian galat (0.4.8).
 
-## 4. Teknologi (usulan)
-| Bagian | Pilihan | Alasan |
-|---|---|---|
-| Kerangka desktop | **Tauri 2** | Installer kecil (±10 MB), target **Windows** (WebView2 sudah ada di Windows 10/11), UI ditulis dengan React seperti `web/` |
-| UI | React + TypeScript + Tailwind | Sama dengan situs; komponen logo dan warna brand bisa dipakai ulang |
-| Pengolahan gambar | Rust (`image`, `fast_image_resize`) | Membuat proxy dan mengekspor file besar tanpa membuat UI macet |
-| Data lokal | SQLite + file proyek `.lwalbum` (JSON) | Bekerja tanpa internet; file proyek bisa dicadangkan/dipindah |
-| Sinkron | API FastAPI yang ada (`api/`) | Menarik sesi dan pilihan klien, mengunggah proof, menyimpan status |
-| Lokasi kode | folder `desktop/` di repo ini | Satu repo, satu aturan commit; tidak ikut ter-deploy ke Vercel/Railway |
-
-Prinsip:
-- **File asli tidak pernah diunggah.** Aplikasi mengedit dengan proxy kecil (±2000 px) dan hanya membuka file asli saat ekspor.
-- **Tetap bisa dipakai tanpa internet**; sinkron saat tersambung.
-- Token admin disimpan di keychain sistem operasi, tidak di file.
-
-Alternatif yang ditolak: Electron (installer ±150 MB, boros memori untuk foto besar); aplikasi web saja (tidak bisa
-membaca folder foto asli 20–40 GB di laptop dengan nyaman).
-
-## 5. Perubahan di API dan web
-- API: tabel `albums` (sesi, status, ukuran, percetakan, biaya, tenggat, resi) dan `album_spreads` (urutan, gambar
-  proof, komentar klien, disetujui); endpoint admin untuk CRUD dan unggah proof; endpoint galeri untuk komentar dan
-  persetujuan (dilindungi PIN galeri yang ada).
-- Web: tab "Album" di galeri klien (lihat proof, komentar, tombol Setuju; EN/ID); halaman admin ringkas untuk melihat
-  status semua album dari HP.
-
-## 6. Tahapan
-Perkiraan kasar untuk pengerjaan paruh waktu; dikoreksi setelah fase 0.
-
-| Fase | Isi | Hasil yang bisa dipakai | Perkiraan |
-|---|---|---|---|
-| 0. Spesifikasi | Sketsa layar; daftar ±20 template halaman awal; bentuk file preset | Sketsa yang disetujui pemilik | 1 minggu |
-| 1. Editor inti | Proyek dari folder, proxy, **kurasi cepat**, tata letak otomatis, editor spread dengan galeri template dan kunci halaman, pengaturan preset cetak, simpan/undo, ekspor JPG + PDF cetak + **PDF pratinjau WhatsApp**, catatan revisi manual | Album pertama (jalur 2) bisa dipilih, didesain, direvisi, dan dicetak | 5–6 minggu |
-| 2. Sambung ke galeri | Tarik sesi + pilihan klien, cocokkan file asli, unggah proof, komentar + setuju di galeri | Klien menyetujui album tanpa kirim-kiriman file | 2 minggu |
-| 3. Produksi | Papan status, biaya, tenggat, resi, halaman status di admin | Semua album terpantau di satu tempat | 1–2 minggu |
-| 4. Poles | Sampul, template buatan sendiri, gaya album, pemeriksaan sebelum cetak, installer Windows, pembaruan otomatis | Siap dipakai harian oleh dua orang | 2 minggu |
-
-Setiap fase berakhir dengan satu album sungguhan dikerjakan dari awal sampai akhir sebagai uji.
-
-## 7. Cara menguji
-- Tes unit untuk tata letak (setiap foto dipakai tepat sekali, tidak ada sel di luar halaman) dan hitungan ekspor
-  (ukuran piksel = ukuran cm × 300 dpi + bleed).
-- Tes API (`cd api && python -m pytest -q`) untuk endpoint album dan izin PIN.
-- Uji cetak: satu album contoh ke percetakan di akhir fase 1; bandingkan warna dan potongan dengan layar.
-- Uji beban: kurasi folder 3.000 foto dan proyek 150 foto asli (±25 MB per file) tetap lancar di laptop 8 GB RAM.
-
-## 8. Risiko
-| Risiko | Penanganan |
+## 4. Teknologi dan data
+| Bagian | Pilihan |
 |---|---|
-| Warna cetak beda dari layar | Versi 1 hanya sRGB; uji cetak di fase 1; profil percetakan menyusul kalau perlu |
-| Spesifikasi tiap percetakan berbeda | Preset per percetakan yang bisa diedit, bukan angka tetap di kode |
-| File besar membuat aplikasi lambat | Edit dengan proxy; file asli hanya dibuka saat ekspor, satu spread per kali |
-| Nama file asli berubah setelah diunggah | Cocokkan dengan nama + waktu pemotretan (EXIF); sisanya dicocokkan manual |
-| Installer diberi peringatan oleh Windows (SmartScreen) | Untuk dua pengguna internal cukup "tetap jalankan"; tanda tangan kode (berbayar) tidak diperlukan |
-| Menyita waktu dari pekerjaan klien | Berhenti setelah fase 1 kalau editor inti saja sudah cukup menghemat waktu |
+| Kerangka | **Tauri 2** (Rust) + React + TypeScript + Vite; Windows saja (WebView2) |
+| File proyek | `Documents\LW Album\Proyek\*.lwalbum` (JSON), 30 versi lama di `.versi`; folder foto diingat per proyek |
+| Gambar | thumbnail dibuat di Rust (`src-tauri/src/photos.rs`) dan di-cache; ekspor dari file asli di kanvas |
+| Pratinjau web | `npm run dev` di browser (Chrome/Edge) untuk mencoba UI; folder dipilih ulang, hanya JPG/PNG/WebP, ekspor .zip |
+| API | `https://api.lintaswaktuvisual.com` (`desktop/src/lib/proofs.ts`, bisa diganti lewat localStorage `lwalbum:api`) |
+| Pembaruan | `tauri-plugin-updater`, `releases/latest/download/latest.json` di repo ini, ditandatangani kunci privat (secret `TAURI_SIGNING_PRIVATE_KEY`); kunci publik di `tauri.conf.json` |
 
-## 9. Keputusan
-Dijawab pemilik 2026-11-10:
-1. **Sistem operasi:** Windows saja.
-2. **Ukuran:** biasanya A4; ukuran lain tetap disediakan.
-3. **Penjualan:** album adalah tambahan berbayar, bukan isi paket.
-4. **Persetujuan klien:** dua cara disediakan (galeri web dan PDF lewat WhatsApp), dipilih per album.
-5. **Cakupan:** hanya untuk Lintas Waktu; tanpa akun, lisensi, atau tanda tangan kode.
-6. **Sumber foto:** bukan hanya pilihan klien; untuk acara panjang kami yang memilih (jalur 2, kurasi cepat).
-7. **Fleksibel di semua hal:** spesifikasi cetak, ukuran/orientasi, dan tata letak tiap halaman dipilih di dalam
-   aplikasi (lihat "Semua bisa diatur"); aplikasi memakai nilai bawaan umum, tidak menunggu spesifikasi percetakan.
+Prinsip tetap: file asli tidak pernah diunggah (proof memakai JPEG ±2.000 px), aplikasi tetap jalan tanpa internet
+kecuali proof online, semua angka cetak dan tata letak bisa diatur (tidak ada spesifikasi percetakan yang dikunci di kode).
 
-Tidak ada keputusan yang masih terbuka. Satu pemeriksaan sebelum pesanan cetak pertama: cocokkan preset dengan percetakan.
+## 5. Rilis (siapa pun yang boleh push ke `main`: Nanta, Yukti)
+1. Naikkan versi di `desktop/package.json`, `desktop/package-lock.json` (2 tempat), `desktop/src-tauri/tauri.conf.json`,
+   `desktop/src-tauri/Cargo.toml`, dan entri `lw-album` di `desktop/src-tauri/Cargo.lock`.
+2. `cd desktop && npm test && npx tsc --noEmit`; tambah entri CHANGELOG ("Aplikasi album 0.x.y: …"); commit, push ke `main`.
+3. GitHub Actions → **Album app (Windows installer)** → Run workflow, centang *release*, isi catatan singkat (bahasa Indonesia).
+4. ±5–15 menit kemudian terbit GitHub Release `album-v0.x.y`; aplikasi yang terpasang menawarkan pembaruan saat dibuka.
+Jangan membuat GitHub Release lain di repo ini (aplikasi menganggap rilis terbaru = pembaruan). Kabari rekan sebelum merilis
+supaya nomor versi tidak bentrok.
 
-## 10. Langkah berikutnya
-Tulis spesifikasi fase 0 (daftar template awal, sketsa layar: kurasi, editor spread, pengaturan preset) dan buat
-kerangka `desktop/` dengan Tauri dan layar pertama (buka folder → kurasi → tata letak otomatis → ekspor satu spread)
-sebagai bukti alur.
+## 6. Pengujian
+- `cd desktop && npm test`: tata letak (setiap foto dipakai sekali, perubahan halaman lokal, panorama), hitungan cetak (mm → px, bleed), sampul.
+- Coba di pratinjau web (`npm run dev`) untuk alur UI; fitur khusus Windows (folder, RAW, ekspor ke folder, pembaruan) dicoba setelah rilis di laptop.
+- Uji cetak: cocokkan preset dengan percetakan sebelum pesanan pertama; bandingkan warna dan potongan.
+
+## 7. Masalah yang diketahui
+- **Layar kosong setelah Ctrl+Z** (dilaporkan Yukti): sejak 0.4.8 muncul pesan pemulihan + "Salin detail galat"; akar masalah belum ketemu. Kalau terjadi lagi, kirim detail galatnya.
+- Pinch-zoom touchpad di Tata letak bergantung pada driver touchpad (WebView2 mengirimnya sebagai Ctrl+roda); kalau tidak jalan, Ctrl+roda tetap bisa.
+- Windows SmartScreen memperingatkan installer pertama (tanpa tanda tangan kode): pilih "More info → Run anyway". Pembaruan berikutnya tidak memunculkannya.
+
+## 8. Belum dikerjakan / berikutnya (urut perkiraan manfaat)
+1. Pin catatan klien untuk **sampul** di modul Sampul (sekarang pin hanya di spread).
+2. Menarik **pilihan klien dari galeri `/g/`** dan mencocokkan dengan file asli (nama + waktu EXIF).
+3. **Status album di server** (papan produksi tersinkron antara laptop Nanta dan Yukti, terlihat di admin web).
+4. Profil warna percetakan (ICC) kalau hasil cetak meleset dari layar.
+5. Desain proof mobile (kanvas artifact "Proof album mobile") disalin ke file Figma.
+
+## 9. Keputusan pemilik
+Dijawab 10 November 2026: Windows saja; A4 ukuran bawaan (lain tetap ada); album = tambahan berbayar; persetujuan klien
+lewat galeri web atau PDF WhatsApp; hanya untuk Lintas Waktu (tanpa akun/lisensi/tanda tangan kode); sumber foto bisa
+pilihan klien atau kurasi kami; semua angka cetak dan tata letak bisa diatur.
+Ditambah kemudian: tema gelap + aksen biru `#2f6fe4` sesuai Figma (11 Nov); pintasan terpusat di `keys.ts`, pindah modul
+Ctrl+Alt+1–4 (11 Nov); GitHub Releases repo ini khusus aplikasi album (12 Nov); edit jumlah/template halaman tidak boleh
+menggeser halaman lain (13 Nov, masukan Yukti); Yukti boleh merilis sendiri (18 Nov).
