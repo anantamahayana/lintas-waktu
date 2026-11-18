@@ -1,7 +1,11 @@
 # Catatan perubahan
 
 Yang terbaru di atas. Setiap perubahan yang di-push menambah satu entri di sini (aturannya di `CLAUDE.md`).
-Format: `### 2026-11-17 · NantaPakeAI
+Format: `### 2026-11-18 · NantaPakeAI
+- Dokumentasi diperbarui untuk kolaborator: `docs/CONTEXT.md` (arsitektur VPS, aplikasi album, proof, pembayaran, klien, bagian "Mulai berkontribusi"), `docs/DEPLOYMENT.md` (VPS menggantikan Railway), `CLAUDE.md` (deploy API lewat Actions, tes `desktop/`).
+- **Manual:** tidak ada.
+
+### 2026-11-17 · NantaPakeAI
 - Invoice: rekening **BCA 6690749317 a.n. I KOMANG ANANTA MAHAYANA** tercetak otomatis di invoice yang belum lunas (bawaan, juga kalau kolom rekening dikosongkan). Pengaturan situs punya tombol "Pakai rekening BCA (template)".
 - Invoice & kuitansi: angka Total dan jumlah diterima memakai huruf yang sama dengan rincian (sans, tebal, lebih besar) supaya mudah dibaca.
 - **Manual:** tidak ada.

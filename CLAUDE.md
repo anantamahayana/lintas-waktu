@@ -9,7 +9,7 @@ Baru di sini? Baca `docs/CONTEXT.md` dulu.
 2. Cek juga pull request yang masih terbuka, supaya tidak mengerjakan hal yang sama.
 
 ## Siapa push ke mana
-- **Pemilik** boleh commit dan push langsung ke `main` (= deploy produksi Vercel + Railway).
+- **Pemilik** boleh commit dan push langsung ke `main` (= deploy produksi Vercel; API di VPS lewat Actions → "Deploy API ke VPS").
 - **Kolaborator** kerja di branch sendiri (`nama/topik`, mis. `rina/halaman-harga`), lalu buka pull request ke `main`.
   Pemilik yang menggabungkan. Jangan push langsung ke `main` kecuali pemilik mengizinkan.
 - Push hanya ke `anantamahayana/lintas-waktu`, tidak pernah ke repo photo-selection-platform asli.
@@ -33,7 +33,7 @@ Tujuannya: siapa pun (dan Claude siapa pun) bisa tahu apa yang berubah hanya dar
 
 ## Umum
 - **Jangan pernah menambahkan atribusi Claude** di commit atau PR: tanpa `Co-Authored-By: Claude`, tanpa "Generated with Claude Code", tanpa link sesi. Commit atas nama orang yang mengerjakan (pemilik: NantaPakeAI).
-- Sebelum commit: tes API (`cd api && python -m pytest -q`) dan `cd web && npx tsc --noEmit && npm run lint` harus bersih.
+- Sebelum commit: tes API (`cd api && python -m pytest -q`) dan `cd web && npx tsc --noEmit && npm run lint` harus bersih; kalau mengubah `desktop/`, juga `cd desktop && npm test && npx tsc --noEmit`.
 - Tanya dulu sebelum perubahan besar. Kalau diminta "jangan lakukan apa-apa", cukup jawab.
 - Jangan menulis rahasia (password, key, token, PIN) di repo atau chat.
 - Desain: kode di `web/` adalah acuan (lihat `docs/BRAND.md`); Figma sudah usang. Animasi elegan tapi ringan.

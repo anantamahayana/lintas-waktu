@@ -1,10 +1,10 @@
 # Deploy & operasional — Lintas Waktu
 
-Per 25 September 2026 · live sejak 23 September 2026. Tidak ada rahasia di file ini — hanya nama variabel.
+Diperbarui 18 November 2026 · live sejak 23 September 2026. Tidak ada rahasia di file ini — hanya nama variabel.
 "?" = belum dipastikan; cek di dashboard.
 
 ## Alur
-`main` → deploy otomatis ke **Vercel** (web) dan **Railway** (API). Push ke `main` = produksi; tidak ada staging.
+`main` → deploy otomatis ke **Vercel** (web). **API (VPS) tidak otomatis**: Actions → "Deploy API ke VPS" setelah perubahan `api/`. Push ke `main` = produksi; tidak ada staging.
 Kerja lain di branch terpisah, gabung ke `main` lewat pull request.
 
 ## Vercel — web
@@ -12,27 +12,24 @@ Kerja lain di branch terpisah, gabung ke `main` lewat pull request.
 |---|---|
 | Proyek | `lintas-waktu` (team "Lintas Waktu", plan Hobby) |
 | Root Directory | `web` · Framework Preset **Next.js** (dengan "Other" situs 404) |
-| Function Region | **Singapore (sin1)** — sejak 25 Sep 2026, sama dengan Railway (sebelumnya default Washington) |
+| Function Region | **Singapore (sin1)** — sejak 25 Sep 2026, (sebelumnya default Washington) |
 | Domain | **https://www.lintaswaktuvisual.com** (utama) · `lintaswaktuvisual.com` → 308 ke www · `lintas-waktu-omega.vercel.app` |
-| Env | `API_URL` = https://api.lintaswaktuvisual.com (tujuan rewrite `/api/*`) · `REVALIDATE_SECRET` (sama dengan Railway) · `NEXT_PUBLIC_SITE_URL` = https://www.lintaswaktuvisual.com (dicek 5 Okt 2026: sitemap memakai www; apex `lintaswaktuvisual.com` → 308 ke www di Vercel → Domains) |
+| Env | `API_URL` = https://api.lintaswaktuvisual.com (tujuan rewrite `/api/*`) · `REVALIDATE_SECRET` (sama dengan API) · `NEXT_PUBLIC_SITE_URL` = https://www.lintaswaktuvisual.com (dicek 5 Okt 2026: sitemap memakai www; apex `lintaswaktuvisual.com` → 308 ke www di Vercel → Domains) |
 | Sengaja tidak diset | `NEXT_PUBLIC_API_URL` — browser memanggil `/api/{gallery,admin,public}/*` di origin yang sama, `web/next.config.ts` meneruskannya ke `API_URL` |
 
 Catatan: plan Hobby resminya untuk non-komersial — pertimbangkan Pro.
 
-## Railway — API
+## API — VPS IDCloudHost (sejak 13 Nov 2026)
 | | |
 |---|---|
-| Proyek / service | "incredible-enjoyment" / `lintas-waktu` · plan trial (? upgrade ke Hobby sebelum kredit habis) |
-| Domain | https://api.lintaswaktuvisual.com (VPS IDCloudHost 103.217.144.86, sejak 13 Nov 2026; pasang/perbarui: Actions → "Deploy API ke VPS", file `deploy/vps/`) |
-| Build | Root Directory `api`, Dockerfile (`api/railway.json`, healthcheck `/api/health`). Build dari root repo (Railpack) gagal. |
-| Region | **Southeast Asia (Singapore)**, 1 replica — sejak 25 Sep 2026 (sebelumnya US West). Klien di Bali/Indonesia; jangan tambah replica selama database SQLite di volume. |
-| Volume | `lintas-waktu-volume` di `/data`, ±454 MB (plan trial) |
-| Env | `PORT=8080` · `DATABASE_URL=sqlite:////data/photo_platform.db` · `CACHE_DIR`, `UPLOAD_DIR` di bawah `/data` (? path persisnya) · `FRONTEND_URL` (? pastikan = https://www.lintaswaktuvisual.com — dipakai untuk link galeri/invoice) · `GOOGLE_SERVICE_ACCOUNT_JSON` · `ADMIN_PASSWORD` · `REVALIDATE_SECRET` · `SECRET_KEY` (?) |
-| `ADMIN_PASSWORD_RESET` | sudah dihapus. Hanya untuk lupa password panel: set `1` + `ADMIN_PASSWORD` baru, deploy, login, hapus lagi. |
+| Server | `lintas-waktu-api`, Ubuntu 24.04, 2 vCPU / 2 GB / 40 GB, SouthJKT, IP 103.217.144.86, user `lw` |
+| Domain | https://api.lintaswaktuvisual.com (Cloudflare A record, DNS only; HTTPS otomatis oleh Caddy) |
+| Isi | Docker Compose di `/srv/lintas-waktu/repo/deploy/vps` (`api` + `caddy`); data di `/srv/lintas-waktu/data` (database, uploads, cache, backups) |
+| Pasang / perbarui | GitHub Actions → **Deploy API ke VPS** (`.github/workflows/deploy-vps.yml`): kirim `api.env` dari Secrets lalu jalankan `deploy/vps/setup.sh` |
+| Secrets GitHub | `VPS_PASSWORD`, `SECRET_KEY`, `ADMIN_PASSWORD`, `REVALIDATE_SECRET`, `GOOGLE_SERVICE_ACCOUNT_JSON` (nilai hanya di GitHub dan `/srv/lintas-waktu/api.env`) |
+| Railway (lama) | dipakai 23 Sep – 13 Nov 2026; berhenti karena langganan, volume lama tidak dipindahkan |
 
-Ruang disk: volume menyimpan database **dan** cache foto. Cache tidak pernah memakan sisa ruang di bawah `CACHE_MIN_FREE_MB` (default 150): foto besar lama dihapus lebih dulu atau tidak di-cache. Saat start, API membersihkan cache kalau disk hampir penuh dan menulis satu baris `storage: disk …` di log (isi volume: cache, db, backups, uploads). Kejadian 25 Sep 2026: volume penuh → SQLite gagal → API crash berulang.
-
-Database: SQLite di volume. Tanpa Alembic — `migrate()` jalan saat start. Data produksi diisi lewat /admin.
+Database: SQLite di `/srv/lintas-waktu/data`. Tanpa Alembic — `migrate()` jalan saat start. Data produksi diisi lewat /admin.
 Revalidasi: API memanggil `/api/revalidate` di Vercel dengan `REVALIDATE_SECRET`.
 
 ## Backup API (VPS)
@@ -65,7 +62,7 @@ Folder Drive harus di-share ke email service account.
   - **Kalau kunci privat hilang**, aplikasi yang sudah terpasang tidak bisa diperbarui lagi: buat kunci baru (`npx @tauri-apps/cli@2 signer generate -w lw-album.key`), ganti kunci publik di dua file di atas dan secret-nya, lalu pasang installer baru secara manual sekali di setiap laptop.
 
 ## Masalah yang diketahui
-- **Link galeri klien pernah HTTP 500** (preview fotografer normal). Pencatatan kunjungan kini dibungkus try/except (commit `147a0cc`) dan endpoint kembali 200. Akar masalah belum diketahui — cari log `could not record gallery visit` di Railway.
+- **Link galeri klien pernah HTTP 500** (preview fotografer normal). Pencatatan kunjungan kini dibungkus try/except (commit `147a0cc`) dan endpoint kembali 200. Akar masalah belum diketahui — cari log `could not record gallery visit` di server (`sudo docker compose logs api`).
 - **Galeri besar (±784 foto) berat di Safari** — lihat `docs/PLAN.md` (grid virtual, penyimpanan pilihan, warm-up; sudah di `main`).
 - **Sebagian pengguna Biznet/XL tidak bisa membuka situs tanpa VPN.** Dugaan: DNS ISP (cache negatif sejak sebelum domain terdaftar / filter DNS) atau blokir IP. Tes: DNS 1.1.1.1 / 8.8.8.8; kalau tetap gagal, pertimbangkan Cloudflare sebagai proxy. Hasil tes: ?
 
